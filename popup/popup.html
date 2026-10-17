@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v2.2</title>
+    <title>Recall v2.3</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v2.2</span>
+        <span>Recall v2.3</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -45,6 +45,8 @@
       <button class="chip" role="radio" aria-checked="false" data-days="30">30 days</button>
     </div>
 
+    <label class="view-option"><input id="single-video" type="checkbox" checked /> One video at a time</label>
+
     <div id="index-now" class="index-now" hidden>
       <span id="index-now-text">Index this video now</span>
       <button id="index-now-btn" class="btn small">Index</button>
@@ -56,6 +58,11 @@
     </div>
 
     <main id="results" class="results" aria-live="polite"></main>
+    <nav id="result-pages" class="result-pages" aria-label="Ranked videos" hidden>
+      <button id="previous-video" class="btn ghost small" disabled>Previous</button>
+      <span id="page-label" role="status"></span>
+      <button id="next-video" class="btn small" disabled>Next closest</button>
+    </nav>
 
     <footer class="foot">
       <span>On-device search · local index</span>

@@ -29,6 +29,10 @@ body { width: 440px; min-height: 260px; max-height: 590px; display: flex; flex-d
 #q:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 .filters { display: flex; gap: 6px; padding: 10px 16px 4px; }
+.view-option { display: flex; align-items: center; gap: 6px; margin: 6px 16px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.view-option input { margin: 0; accent-color: var(--accent); }
+.result-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px 12px; }
+#page-label { color: var(--ink-2); font-size: 12px; text-align: center; }
 .chip {
   border: 1px solid var(--line); background: transparent; color: var(--ink-2);
   font: 500 12px/1 var(--font); padding: 6px 10px; border-radius: 999px; cursor: pointer;

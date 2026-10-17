@@ -5,12 +5,14 @@ const q = $('q');
 const details = $('details');
 const refineToggle = $('refine-toggle');
 const refinePanel = $('refine-panel');
+const singleVideo = $('single-video');
 const resultsEl = $('results');
 const statusEl = $('status');
 let sinceDays = 0;
 let searchSeq = 0;
 let activeIndex = -1;
 let currentTab = null;
+let resultOffset = 0;
 
 const send = (msg) => chrome.runtime.sendMessage(msg);
 
@@ -42,6 +44,7 @@ function ago(ts) {
 }
 
 function empty(title, lines = [], hint = '') {
+  $('result-pages').hidden = true;
   resultsEl.textContent = '';
   const box = document.createElement('div');
   box.className = 'empty';
@@ -95,13 +98,19 @@ function openResult(url, background) {
 // Search
 // ---------------------------------------------------------------------------
 async function runSearch() {
+  clearTimeout(debounce);
   const seq = ++searchSeq;
   const original = q.value.trim();
   const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
   // Refinement belongs to this open popup; reopening starts with an independent query.
   chrome.storage.session.set({ lastQuery: original, sinceDays }).catch(() => {});
   if (!original) { showIdle(); return; }
-  const res = await send({ type: 'search', query, sinceDays });
+  $('previous-video').disabled = true;
+  $('next-video').disabled = true;
+  $('page-label').textContent = 'Searching…';
+  $('result-pages').hidden = !singleVideo.checked;
+  const res = await send({ type: 'search', query, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset })
+    .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
     empty('Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
@@ -109,14 +118,25 @@ async function runSearch() {
   }
   if (res.empty) { showIdle(); return; }
   if (!res.results.length) {
+    if (singleVideo.checked && resultOffset > 0) {
+      resultOffset = 0; // The library may have changed while browsing matches.
+      return runSearch();
+    }
     empty('No match yet', ['Nothing you’ve watched lines up with that.'], sinceDays ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
     return;
   }
-  render(res.results, query);
+  render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
+  $('result-pages').hidden = !singleVideo.checked;
+  $('page-label').textContent = resultOffset ? `Video ${resultOffset + 1}` : 'Best match';
+  $('previous-video').disabled = resultOffset === 0;
+  $('next-video').disabled = res.results.length < 2;
 }
 
 let debounce;
 function scheduleSearch() {
+  resultOffset = 0;
+  $('previous-video').disabled = true;
+  $('next-video').disabled = true;
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
@@ -142,11 +162,13 @@ details.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     clearTimeout(debounce);
+    resultOffset = 0;
     runSearch();
   }
 });
 
 refineToggle.addEventListener('click', () => {
+  resultOffset = 0;
   clearTimeout(debounce);
   const open = refinePanel.hidden;
   refinePanel.hidden = !open;
@@ -173,7 +195,7 @@ q.addEventListener('keydown', (e) => {
     clearTimeout(debounce);
     const target = items[activeIndex >= 0 ? activeIndex : 0];
     if (target && activeIndex >= 0) openResult(target.href, e.ctrlKey || e.metaKey);
-    else runSearch();
+    else { resultOffset = 0; runSearch(); }
   }
 });
 
@@ -181,10 +203,25 @@ document.querySelectorAll('.chip').forEach((chip) => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(c === chip)));
     sinceDays = Number(chip.dataset.days) || 0;
+    resultOffset = 0;
     clearTimeout(debounce);
     runSearch();
     q.focus();
   });
+});
+
+singleVideo.addEventListener('change', () => {
+  resultOffset = 0;
+  chrome.storage.local.set({ singleVideoView: singleVideo.checked }).catch(() => {});
+  runSearch();
+});
+$('previous-video').addEventListener('click', () => {
+  resultOffset = Math.max(0, resultOffset - 1);
+  runSearch();
+});
+$('next-video').addEventListener('click', () => {
+  resultOffset++;
+  runSearch();
 });
 
 // ---------------------------------------------------------------------------
@@ -280,7 +317,8 @@ $('start-empty').addEventListener('click', async () => {
   q.focus();
   const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays']).catch(() => ({}));
   await refreshStatus();
-  const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
+  const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
+  singleVideo.checked = singleVideoView !== false;
   $('start-choice').hidden = !!onboardingComplete || stats.videos > 0;
   setupIndexNow();
   if (saved && saved.sinceDays) {

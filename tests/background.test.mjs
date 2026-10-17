@@ -63,3 +63,21 @@ test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported sche
     'https://www.youtube.com/not-a-video?v=dQw4w9WgXcQ',
   ]) assert.equal(videoIdFromUrl(url), null, url);
 });
+
+test('single-video searches use unique video pages while list searches retain their settings', async () => {
+  chrome.storage = {local: {get: async () => ({settings: {perVideo: 5}})}};
+  chrome.runtime.getContexts = async () => [{}];
+  chrome.runtime.sendMessage = async message => message;
+  const list = await request({type: 'search', query: 'battery', sinceDays: 7});
+  assert.equal(list.perVideo, 5);
+  assert.equal(list.limit, 12);
+  const page = await request({type: 'search', query: 'battery', sinceDays: 7, singleVideo: true, offset: 13});
+  assert.equal(page.perVideo, 1);
+  assert.equal(page.limit, 2);
+  assert.equal(page.offset, 13);
+  assert.equal(page.sinceDays, 7);
+  assert.equal((await request({type: 'search', singleVideo: true})).offset, 0);
+  for (const offset of [-1, 0.5, '1', NaN, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.match((await request({type: 'search', singleVideo: true, offset})).error, /position/);
+  }
+});

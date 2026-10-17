@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.3.0 update
+
+One video at a time is now the default popup view. All 40 Node tests pass, including 25-video pagination, best-timestamp selection, uniqueness, date/score eligibility and validated background routing. A deliberate ignored-offset regression was caught and restored. The new single-video browser regression uses the real model/ranker with 13 controlled transcripts and one imported title: all 14 distinct videos can be browsed, including beyond result 12. It checks correct timestamp/title-only links, next/previous boundaries, query/refinement/date resets, delayed-page rejection, list opt-out persistence and empty-query navigation. Light/dark screenshots were inspected. The existing refinement browser regression also passes. Live YouTube capture was not changed or retested for this search-view update.
+
 ## Version 2.2.0 update
 
 Added optional Refine beside the popup search box. All 37 Node tests pass. The new tests/browser/refine-search.cjs browser test verifies independent default searches, combined and editable clues, keyboard focus and submission, date filters, clearing, closing refinement, popup reopen and delayed-response rejection. Controlled responses isolate UI races; a second phase uses the real local MiniLM model and ranker with two saved transcript fixtures. The refined Minecraft query opened 1:12, then an independent battery query opened 0:42. Light/dark popup screenshots were inspected and horizontal overflow was checked. YouTube capture itself was not changed or retested for this UI update.
