@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v3.1</title>
+    <title>Recall v3.2</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v3.1</span>
+        <span>Recall v3.2</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -56,6 +56,7 @@
       <button id="index-now-btn" class="btn small">Index</button>
     </div>
 
+    <section id="page-capture" class="page-capture" hidden><p id="page-capture-status" role="status"></p><div><button id="page-save-now" class="btn ghost small">Save this page now</button> <button id="page-forget" class="btn ghost small">Forget and block site</button></div></section>
     <section id="speech" class="speech" aria-labelledby="speech-heading" hidden>
       <h2 id="speech-heading">Speech-to-text</h2>
       <p>For videos without usable captions. Starts automatically if caption capture fails. English, on this device. Captures only the player audio you play; no microphone. First use downloads a speech model and uses extra CPU.</p>

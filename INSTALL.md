@@ -1,4 +1,4 @@
-# Recall v3.1 installation
+# Recall v3.2 installation
 
 ## From this repository
 
@@ -6,9 +6,11 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.1.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.2.0. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.1 fixes overbroad public-page exclusions and speeds full-text ranking, title imports and recaptures. Updating from v2.13–v3.0 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. The schema-5 upgrade prepares normalized text once without re-embedding existing content. Extra cached text counts against the 64 MiB web-content budget, so a library near that limit can downgrade older web content to titles sooner. Captions, scenes, dates and imported title metadata are preserved. See [UPDATE-3.1.md](docs/UPDATE-3.1.md).
+Version 3.2 adds cached result paging, larger bounded database reads, protected storage, capture status/logs and optional imported-history retention. Updating from v2.13–v3.1 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Database schema remains 5; updating from v3.1 requires no migration or re-import. Earlier versions receive the normalized-text upgrade documented in UPDATE-3.1.md. See [UPDATE-3.2.md](docs/UPDATE-3.2.md) for measurements and review decisions.
+
+Storage protection adds the `unlimitedStorage` permission; site access remains optional and Recall's own content/image limits remain active. Storage & capture diagnostics shows approximate usage including model caches and the last 100 domain/reason events from this browser session. **Keep imported history** defaults to Forever. Choose 90 days or 1 year only when you want older imported entries removed by original visit date, including imported transcripts. Export a backup first if you want to keep a separate copy.
 
 ## Enable websites and articles
 
@@ -24,7 +26,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.1.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.2.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -48,6 +50,6 @@ Index backup restore now sends one video or image per request and shows durable 
 
 ## Data retention
 
-Imported history stays protected after background transcript fetching, even when full transcripts are saved. New imports carry their origin; after watching a video, the retention setting applies even if only scenes were captured. Legacy title-only records with scenes also expire; legacy records without origin information or scenes keep the import exemption to avoid deleting old imports. For videos you actually watch, retention applies to the latest watch or indexing date. Rewatching an already indexed video updates recency without re-embedding it. Background Add transcript preserves import protection and does not pretend the video was rewatched today. If v2.11 or an earlier version lost an imported flag, re-import the same Takeout file: an exact original watch-date match repairs a missing flag without replacing transcript text. Explicit watched flags and newer watch dates are not changed; already deleted records cannot be recovered without the source file or a backup.
+With Keep imported history set to Forever, imported history stays protected after background transcript fetching, even when full transcripts are saved. New imports carry their origin; after watching a video, the retention setting applies even if only scenes were captured. Legacy title-only records with scenes also expire; legacy records without origin information or scenes keep the import exemption to avoid deleting old imports. For videos you actually watch, retention applies to the latest watch or indexing date. Rewatching an already indexed video updates recency without re-embedding it. Background Add transcript preserves import protection and does not pretend the video was rewatched today. If v2.11 or an earlier version lost an imported flag, re-import the same Takeout file: an exact original watch-date match repairs a missing flag without replacing transcript text. Explicit watched flags and newer watch dates are not changed; already deleted records cannot be recovered without the source file or a backup.
 
 Model downloads and thumbnail requests use the network. Transcripts, vectors and settings live in the current browser profile. Uninstalling or switching profiles does not transfer that library automatically; export a backup first.

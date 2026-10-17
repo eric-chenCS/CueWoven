@@ -3,6 +3,7 @@
 // extension's background worker.
 (function () {
   'use strict';
+  if(chrome.extension?.inIncognitoContext)return;
   if (window.__recallBridgeLoaded) return;
   window.__recallBridgeLoaded = true;
 
@@ -101,6 +102,7 @@
     if (!document.hidden) tick();
   }
 
+  function logCapture(reason){if(!isForcedIndex())send({type:'capture-outcome',kind:'video',reason,outcome:reason==='saved'?'saved':'skipped'}).catch(()=>{});}
   async function onVideo(video) {
     if (!video || typeof video.videoId !== 'string' || !/^[\w-]{6,20}$/.test(video.videoId)) return;
     if (current && current.videoId === video.videoId) {
@@ -117,7 +119,7 @@
     const s = await settings();
     globalThis.__recallScenes?.start(speechClock, s);
     globalThis.__recallScreen?.start(speechClock, s);
-    if (!s.enabled) return;
+    if (!s.enabled) {logCapture(excluded?'blocked-domain':'paused');return;}
     startDwell(Math.max(0, Number(s.dwellSeconds) || 0), video.videoId);
   }
 
@@ -146,19 +148,20 @@
       const video = Object.assign({}, current, { watchedAt: isForcedIndex() ? undefined : Date.now() });
       const check = await send({ type: 'should-index', videoId: video.videoId, manual, watchedAt: video.watchedAt });
       if (check && check.error) return { ok: false, reason: check.error };
-      if (!check || !check.index) return { ok: true, skipped: true, reason: check && check.reason };
+      if(!check||!check.index){logCapture(check?.reason==='Indexing is paused'?'paused':'duplicate');return {ok:true,skipped:true,reason:check&&check.reason};}
 
       const t = await requestTranscript(video.videoId, manual);
       const segments = (t.segments || []).slice(0, MAX_SEGMENTS);
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
+        logCapture('captions-unavailable');
         await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason });
         if (!isForcedIndex() && current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
         return { ok: false, reason };
       }
       const res = await send({ type: 'index-video', video, segments, method: t.method });
       if (!res || res.error) return { ok: false, reason: (res && res.error) || 'Indexing failed' };
-      return { ok: true, chunkCount: res.chunkCount, title: video.title };
+      logCapture('saved');return { ok: true, chunkCount: res.chunkCount, title: video.title };
     })();
     try {
       return await running;

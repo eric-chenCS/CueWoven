@@ -10,7 +10,7 @@ import {policy} from './lib/web-items.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -157,6 +157,7 @@ function requirePopup(sender) {
 }
 async function speechContext(tabId) {
   const tab = await chrome.tabs.get(tabId);
+  if(tab.incognito)throw Error('Incognito capture is excluded.');
   if(!tab.url?.startsWith('https://www.youtube.com/watch?'))return webAccess.context(tabId);
   if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded in website settings. Allow youtube.com to resume.');
   const id = videoIdFromUrl(tab.url);
@@ -290,6 +291,7 @@ const handlers = {
   },
   // From YouTube tabs
   async 'should-index'({ videoId, manual, watchedAt },sender) {
+    if(sender?.tab?.incognito)return {index:false,reason:'Incognito capture is excluded.'};
     const s = await getSettings();
     if(s.youtubeBlocked){settleWaiter(sender?.tab?.id,{ok:false,reason:'YouTube is excluded.'});return {index:false,reason:'YouTube is excluded.'};}
     if (!manual && !s.enabled) return { index: false, reason: 'Indexing is paused' };
@@ -302,6 +304,7 @@ const handlers = {
   },
   async 'index-video'({ video, segments, method }, sender) {
     try {
+      if(sender.tab?.incognito)throw Error('Incognito capture is excluded.');
       if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded.');
       const res = await engine('index', { video, segments, method });
       flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
@@ -340,6 +343,7 @@ const handlers = {
   async clear() {
     await requireTranscriptJobIdle();
     const r = await engine('clear');
+    await webAccess.clearLog();
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
   },
@@ -357,9 +361,9 @@ const handlers = {
       return { ok: false, reason: 'Refresh this tab after enabling its site in Library & settings, then try again.' };
     }
   },
-  prune: async () => engine('prune', { maxAgeDays: (await getSettings()).maxAgeDays }),
+  prune: async () => {const s=await getSettings();return engine('prune',{maxAgeDays:s.maxAgeDays,importMaxAgeDays:s.importMaxAgeDays});},
 };
-const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
+const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,requirePopup,beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
 Object.assign(handlers,webAccess.handlers);
 chrome.permissions?.onAdded?.addListener(()=>webAccess.sync().catch(()=>{}));
 chrome.permissions?.onRemoved?.addListener(async removed=>{if(removed.origins?.length||removed.permissions?.includes('scripting')){const settings=await webAccess.config();await chrome.storage.local.set({webCapture:{...settings,paused:true}});}webAccess.sync().catch(()=>{});});
