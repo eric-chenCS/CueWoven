@@ -23,6 +23,19 @@ test('line deduplication preserves digits, negation, word order and new subtitle
   assert.deepEqual(novelScreenLines(['NEWS LIVE'],recent,90),['NEWS LIVE'],'later occurrences keep their own timestamp');
   assert.deepEqual(novelScreenLines(['NEWS LIVE'],recent,0),['NEWS LIVE'],'seeking back beyond the time window keeps evidence');
 });
+
+test('OCR keeps fuller fragments in either order without confusing whole tokens',()=>{
+  for(const words of [['Chemical','Chemical reactions trap lithium'],['Chemical reactions trap lithium','Chemical']]){
+    assert.equal(recognizedScreenText(data(words.map(text=>line(text)))),'Chemical reactions trap lithium');
+  }
+  for(const words of [
+    ['The dose is 10 mg','The dose is 90 mg'],
+    ['The battery is safe to use','The battery is not safe to use'],
+    ['Alice defeated Bob in the final','Bob defeated Alice in the final'],
+    ['Use C','Use C++'],['The price is 5','The price is 5%'],
+    ['A reactor','A reaction'],['A dose of 1.5 mg','A dose of 15 mg'],
+  ])assert.equal(recognizedScreenText(data(words.map(text=>line(text)))),words.join(' '));
+});
 test('OCR observation metadata is bounded and survives backup record validation',()=>{
   const row=screenRecord({videoId:'aaaaaaaaaaa',start:42,text:'New caption',observedLines:['NEWS LIVE','New caption']});
   assert.deepEqual(row.observedLines,['NEWS LIVE','New caption']);assert.equal(row.text,'New caption');
