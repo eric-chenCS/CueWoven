@@ -24,11 +24,12 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
    const ranking={frames1000Ms:bench(1000),frames2000Ms:bench(2000)};
    const start=performance.now(),read=await db.scenes.vectors(),metadataReadMs=performance.now()-start;
    const before=(await req(database.transaction('scenes').objectStore('scenes').getAll())).reduce((n,row)=>n+row.bytes,0);
+   const normalStart=performance.now();await db.scenes.put({...all[0],image,indexedAt:30000});const normalPutMs=performance.now()-normalStart;
    const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;const ctx=canvas.getContext('2d'),pixels=ctx.createImageData(320,180);let seed=12345;for(let i=0;i<pixels.data.length;i+=4){seed=(seed*1664525+1013904223)>>>0;pixels.data[i]=seed&255;pixels.data[i+1]=(seed>>>8)&255;pixels.data[i+2]=(seed>>>16)&255;pixels.data[i+3]=255;}ctx.putImageData(pixels,0,0);const noisy=canvas.toDataURL('image/jpeg',.6);
    const large=database.transaction('scenes','readwrite'),finished=done(large);for(const row of all)large.objectStore('scenes').put(compressedScene({...row,image:noisy}));await finished;
    const putStart=performance.now();await db.scenes.put({...all[0],image:noisy,indexedAt:30000});const budgetPutMs=performance.now()-putStart;
    const bounded=await req(database.transaction('scenes').objectStore('scenes').getAll());database.close();
-   return {migration:{sameImage:first.image===image,blob:raw.image instanceof Blob,start:first.start,watch:legacy.watchedAt,count:legacy.sceneCount},ranking,metadataReadMs,metadataCount:read.length,imagesExcluded:read.every(row=>!('image' in row)),normalBytes:before,budgetBytes:bounded.reduce((n,row)=>n+row.bytes,0),budgetCount:bounded.length,budget:SCENE_BYTES_TOTAL,budgetPutMs};
+   return {migration:{sameImage:first.image===image,blob:raw.image instanceof Blob,start:first.start,watch:legacy.watchedAt,count:legacy.sceneCount},ranking,metadataReadMs,metadataCount:read.length,imagesExcluded:read.every(row=>!('image' in row)),normalBytes:before,normalPutMs,budgetBytes:bounded.reduce((n,row)=>n+row.bytes,0),budgetCount:bounded.length,budget:SCENE_BYTES_TOTAL,budgetPutMs};
   },image);
   console.log('SCENE_STORAGE_RESULT',JSON.stringify(results));assert.deepEqual(results.migration,{sameImage:true,blob:true,start:20,watch:12345,count:1});assert.equal(results.metadataCount,2000);assert.ok(results.imagesExcluded);assert.ok(results.budgetBytes<=results.budget);assert.ok(results.budgetCount<2000);assert.ok(results.ranking.frames2000Ms<100);assert.ok(results.metadataReadMs<500);
   const textLimits=await page.evaluate(async()=>{
