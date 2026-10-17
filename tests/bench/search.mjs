@@ -20,3 +20,4 @@ const measure = (fn) => {
 const before = measure(oldRank), after = measure(rank);
 if (JSON.stringify(before.ids) !== JSON.stringify(after.ids)) throw Error("Rank order changed in the full-passage benchmark");
 console.log(JSON.stringify({ passages: meta.length, items: videos.size, wordsPerPassage: meta[0].text.split(" ").length, beforeMs: before.ms, afterMs: after.ms, speedup: before.ms / after.ms, scope: "Synthetic 30,000 full passages; cached normalization excludes one-time migration; in-memory ranking only, excluding IndexedDB, model loading and query embedding." }, null, 2));
+if(after.ms>Number(process.env.RECALL_RANK_BUDGET_MS||400))throw Error('Full-passage ranking exceeded the calibrated performance budget. Re-profile before adjusting RECALL_RANK_BUDGET_MS for another machine.');
