@@ -14,6 +14,14 @@ let historyImportBusy = false;
 let latestJob = null;
 let jobWaiter = null;
 let libraryRefresh;
+let libraryDirty=false;
+function scheduleLibraryRefresh(){
+  clearTimeout(libraryRefresh);
+  libraryRefresh=setTimeout(()=>{
+    if(libraryBusy()||historyImportBusy)return;
+    libraryDirty=false;loadLibrary().catch(()=>{});
+  },500);
+}
 
 function updateTranscriptButton() {
   const count = videos.filter(needsTranscript).length;
@@ -128,9 +136,9 @@ $('filter').addEventListener('input', renderLibrary);
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
-  if (msg.type === 'index-changed' && !historyImportBusy) {
-    clearTimeout(libraryRefresh);
-    libraryRefresh = setTimeout(() => loadLibrary().catch(() => {}), 500);
+  if (msg.type === 'index-changed') {
+    libraryDirty=true;
+    if(!historyImportBusy&&!libraryBusy())scheduleLibraryRefresh();
   }
   if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
   if (msg.type === 'model-status' && msg.state.status === 'loading') {
@@ -478,7 +486,7 @@ $('clear').addEventListener('click', async () => {
   loadLibrary();
 });
 
-onLibraryBusy(()=>setBulkControls(bulkBusy));
+onLibraryBusy(()=>{setBulkControls(bulkBusy);if(!libraryBusy()&&libraryDirty)scheduleLibraryRefresh();});
 loadSettings();
 loadLibrary();
 

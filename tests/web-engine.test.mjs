@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWebEngine } from "../offscreen/web-engine.js";
 const input = { kind: "page", url: "https://example.com/article", title: "Public science", watchedAt: 17e11, text: "Coral reefs lose their algae when ocean temperatures become too warm." };
-function fixture(embed) {
+function fixture(embed,onChange) {
   const records = new Map(), rows = new Map(), calls = [];
   const db = { listVideos: async () => [...records.values()], getVideo: async (id) => records.get(id), touchWatch: async (id, date) => {
     records.set(id, { ...records.get(id), watchedAt: date, historyImported: false });
@@ -12,7 +12,7 @@ function fixture(embed) {
     rows.set(video.videoId, { id: video.videoId, passages, pageFingerprint: options.pageFingerprint });
     return { ok: true, video };
   } } };
-  const engine = createWebEngine({ db, embed: embed || (async (texts) => texts.map(() => new Float32Array(384))) });
+  const engine = createWebEngine({ db, embed: embed || (async (texts) => texts.map(() => new Float32Array(384))),onChange });
   return { engine, records, rows, calls };
 }
 test("unchanged page text reuses vectors, but evicted content can be indexed again", async () => {
@@ -28,6 +28,24 @@ test("unchanged page text reuses vectors, but evicted content can be indexed aga
   row.passages = row.passages.filter((p) => p.source === "Title");
   await f.engine.capture(input);
   assert.equal(embeddings, 2);
+});
+test('history batches embed titles together and notify the library once per completed batch',async()=>{
+  const batches=[];let changes=0;
+  const f=fixture(async texts=>{batches.push(texts);return texts.map(()=>new Float32Array(384))},()=>changes++);
+  const rows=Array.from({length:32},(_,i)=>({...input,url:'https://example.com/article/'+i,title:'Science article '+i}));
+  assert.deepEqual(await f.engine.importItems(rows),{imported:32,skipped:0});
+  assert.equal(batches.length,1);assert.equal(batches[0].length,32);assert.equal(changes,1);
+  assert.deepEqual(await f.engine.importItems(rows),{imported:0,skipped:32});assert.equal(batches.length,1);assert.equal(changes,1);
+});
+test('a changed page only embeds new passage text and preserves updated offsets and anchors',async()=>{
+  const batches=[],f=fixture(async texts=>{batches.push(texts);return texts.map(()=>new Float32Array(384))});
+  const first=Array.from({length:220},(_,i)=>'word'+i).join(' '),second=first.replace('word200','changed200');
+  await f.engine.capture({...input,text:first});await f.engine.capture({...input,text:second});
+  assert.equal(batches.length,2);assert.equal(batches[1].length,1);assert.ok(batches[1][0].includes('changed200'));assert.ok(f.calls.at(-1).passages.every(row=>typeof row.lexicalText==='string'));
+});
+test('canceling a batched history embedding prevents pending titles from being saved',async()=>{
+  let finish,signal;const ready=new Promise(resolve=>signal=resolve),f=fixture(texts=>{signal();return new Promise(resolve=>finish=()=>resolve(texts.map(()=>new Float32Array(384))))});
+  const pending=f.engine.importItems([input]);await ready;f.engine.cancel();finish();await assert.rejects(pending,/stopped/);assert.equal(f.calls.length,0);
 });
 test("canceling a pending page embedding prevents a later write after deletion", async () => {
   let finish, signal;

@@ -8,7 +8,7 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
-import { rank } from '../lib/search.js';
+import { rank,phraseText } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
@@ -120,7 +120,7 @@ const indexCache=createRevisionCache(async()=>{
   const meta = new Array(usable.length);
   usable.forEach((c, i) => {
     matrix.set(c.vec, i * DIM);
-    meta[i] = { videoId: c.videoId, start: c.start, text: c.text,kind:c.kind };
+    meta[i] = { videoId: c.videoId, start: c.start, text: c.text,kind:c.kind,lexicalText:c.lexicalText??phraseText(c.text) };
   });
   return { videos, index: { matrix, dim: DIM, meta } };
 });

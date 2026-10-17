@@ -1,5 +1,5 @@
 import { cleanItem, pagePassages, quantize, webHit, policy, WEB_PASSAGES } from "../lib/web-items.js";
-import { queryTerms } from "../lib/search.js";
+import { prepareQuery, normalizedPassage } from "../lib/search.js";
 export function createWebEngine({ db, embed, onChange = () => {
 } }) {
   let metadata = null, loading = null, epoch = 0;
@@ -8,13 +8,19 @@ export function createWebEngine({ db, embed, onChange = () => {
     if (!loading) loading = db.listVideos().then((rows) => metadata = new Map(rows.filter((row) => policy.webId(row.videoId)).map((row) => [row.videoId, row]))).finally(() => loading = null);
     return loading;
   };
-  async function pack(rows) {
-    const vectors = await embed(rows.map((row) => row.text));
-    return rows.map((row, i) => ({ ...row, ...quantize(vectors[i]) }));
+  async function pack(rows, existing = []) {
+    const reusable = new Map(existing.filter((row) => row.vec?.length === 384).map((row) => [row.text, row]));
+    const missing = [...new Set(rows.filter((row) => !reusable.has(row.text)).map((row) => row.text))];
+    if (missing.length) {
+      const vectors = await embed(missing);
+      missing.forEach((text, i) => reusable.set(text, quantize(vectors[i])));
+    }
+    return rows.map((row) => normalizedPassage({ ...row, vec: reusable.get(row.text).vec, scale: reusable.get(row.text).scale }));
   }
   async function save(input, rows, { replaceSource, replaceRange, imported = false, restore = false, pageFingerprint, indexedAt } = {}) {
     const started = epoch, video = await cleanItem({ ...input, watchedAt: input.watchedAt || Date.now() }), title = { start: 0, text: video.title, source: video.kind === "search" ? "Search" : "Title" };
-    const packed = await pack([title, ...rows].slice(0, WEB_PASSAGES));
+    const previous = restore ? null : await db.items.get(video.videoId);
+    const packed = await pack([title, ...rows].slice(0, WEB_PASSAGES), previous?.passages);
     if (started !== epoch) return { disabled: true };
     const result = await db.items.put({ ...video, ...indexedAt ? { indexedAt } : {} }, packed, { replaceSource, replaceRange, imported, restore, pageFingerprint });
     if (metadata) metadata.set(video.videoId, result.video);
@@ -47,6 +53,7 @@ export function createWebEngine({ db, embed, onChange = () => {
       if (!Array.isArray(items) || !items.length || items.length > 32) throw Error("Import 1–32 history items at a time.");
       const valid = await Promise.all(items.map(cleanItem));
       let imported = 0, skipped = 0;
+      const pending = [];
       for (const video of valid) {
         if (started !== epoch) throw Error("History import stopped for a library change. Saved items remain; re-import to continue.");
         const old = await db.getVideo(video.videoId);
@@ -54,9 +61,18 @@ export function createWebEngine({ db, embed, onChange = () => {
           skipped++;
           continue;
         }
-        const saved = await save(video, [], { imported: true });
-        if (saved.disabled) throw Error("History import stopped for a library change. Re-import to continue.");
-        imported++;
+        pending.push(video);
+      }
+      const titles = await pack(pending.map((video) => ({ text: video.title, start: 0, source: video.kind === "search" ? "Search" : "Title" })));
+      try {
+        for (const [i, video] of pending.entries()) {
+          if (started !== epoch) throw Error("History import stopped for a library change. Re-import to continue.");
+          const result = await db.items.put(video, [titles[i]], { imported: true });
+          if (metadata) metadata.set(video.videoId, result.video);
+          imported++;
+        }
+      } finally {
+        if (imported) onChange();
       }
       return { imported, skipped };
     },
@@ -88,11 +104,11 @@ export function createWebEngine({ db, embed, onChange = () => {
       return save(valid, rows, { restore: true, imported: input.historyImported === true, indexedAt: Number.isFinite(date) && date > 0 && date <= Date.now() + 6e4 ? date : Date.now() });
     },
     async search(query, vector, { sinceMs = 0, kind = "all", perVideo = 2, limit = 2048 } = {}) {
-      const records = await cache(), best = [], terms = queryTerms(query);
+      const records = await cache(), best = [], prepared = prepareQuery(query);
       await db.items.scan((item) => {
         const video = records.get(item.id);
         if (!video || kind !== "all" && video.kind !== kind || sinceMs && (video.watchedAt || video.indexedAt || 0) < sinceMs) return;
-        const hits = item.passages.map((row) => webHit(query, vector, video, row, terms)).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, perVideo);
+        const hits = item.passages.map((row) => webHit(query, vector, video, row, prepared)).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, perVideo);
         best.push(...hits);
         if (best.length > limit + 512) {
           best.sort((a, b) => b.score - a.score);
