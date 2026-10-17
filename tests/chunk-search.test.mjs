@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chunkTranscript } from '../lib/chunk.js';
-import { rank, queryTerms, formatTime, deepLink } from '../lib/search.js';
+import { rank, queryTerms, formatTime, deepLink, normalizedPassage, prepareQuery, scoredEvidence, passageEvidence } from '../lib/search.js';
 
 const seg = (start, words) => ({ start, dur: 2, text: Array.from({ length: words }, (_, i) => `w${start}_${i}`).join(' ') });
 
@@ -87,6 +87,14 @@ test('helpers', () => {
   assert.equal(formatTime(65), '1:05');
   assert.equal(formatTime(3725.9), '1:02:05');
   assert.equal(deepLink('abc_DEF-123', 252.7), 'https://www.youtube.com/watch?v=abc_DEF-123&t=252s');
+});
+test('prepared lexical matching preserves Unicode, word boundaries, phrases and low-vector exact rescue',()=>{
+  const video={title:'Ocean science',channel:'Lab'},query='"cafe coral"',prepared=prepareQuery(query),row=normalizedPassage({text:'Café coral is healthy.'});
+  const expected=passageEvidence(query,prepared.terms,row.text,video.title,video.channel);
+  assert.deepEqual(scoredEvidence(prepared,row,video,0,.15),expected);
+  assert.equal(scoredEvidence(prepareQuery('bank'),normalizedPassage({text:'riverbank'}),video,0,.15),null);
+  assert.equal(scoredEvidence(prepareQuery('batteries decay'),normalizedPassage({text:'Batteries decay over many cycles.'}),video,.01,.15).phrase,true);
+  const cached={text:'different raw text',lexicalText:'cafe coral is healthy'};assert.equal(scoredEvidence(prepared,cached,video,0,.15).quoted,true);
 });
 
 test('title-only history matches are marked and filtered by their original watch date',()=>{
