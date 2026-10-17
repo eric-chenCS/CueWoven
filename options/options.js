@@ -2,13 +2,14 @@ import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js'
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
 let historyImportBusy = false;
 let latestJob = null;
 let jobWaiter = null;
+let libraryRefresh;
 
 function updateTranscriptButton() {
   const count = videos.filter(v => v.method === 'history-title').length;
@@ -121,7 +122,10 @@ $('filter').addEventListener('input', renderLibrary);
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
-  if (msg.type === 'index-changed' && !historyImportBusy) loadLibrary();
+  if (msg.type === 'index-changed' && !historyImportBusy) {
+    clearTimeout(libraryRefresh);
+    libraryRefresh = setTimeout(() => loadLibrary().catch(() => {}), 500);
+  }
   if (msg.type === 'bulk-progress') onBulkProgress(msg);
   if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
   if (msg.type === 'import-progress') $('data-msg').textContent = `Importing… ${msg.done} of ${msg.total}`;
@@ -339,6 +343,7 @@ function applyTranscriptJob(job) {
     const label = {done: 'Finished', paused: 'Paused', interrupted: 'Interrupted'}[job.status] || job.status;
     $('bulk-summary').textContent = `${label}: ${job.done} indexed${job.skipped ? `, ${job.skipped} already there` : ''}, ${job.failed} failed. ${job.total - job.completed} not attempted.${job.reason ? ' ' + job.reason : ''}`;
     if (jobWaiter?.id === job.id) { jobWaiter.resolve({results: job.results}); jobWaiter = null; }
+    clearTimeout(libraryRefresh);
     loadLibrary().catch(() => {});
   }
 }
@@ -389,6 +394,7 @@ async function loadSettings() {
   $('dwellSeconds').value = String(s.dwellSeconds);
   $('maxAgeDays').value = String(s.maxAgeDays);
   $('perVideo').value = String(s.perVideo);
+  $('transcriptMode').value = s.transcriptMode === 'tabs' ? 'tabs' : 'quiet';
   $('transcriptConcurrency').value = String([3, 6, 8, 12].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
 
@@ -400,6 +406,7 @@ async function saveSettings() {
     maxAgeDays: Number($('maxAgeDays').value),
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
+    transcriptMode: $('transcriptMode').value,
   };
   await chrome.storage.local.set({ settings });
   $('saved').textContent = 'Saved';
@@ -407,7 +414,7 @@ async function saveSettings() {
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
   if (settings.maxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency']) $(id).addEventListener('change', saveSettings);
+for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'transcriptMode']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

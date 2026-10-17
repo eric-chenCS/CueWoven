@@ -2,11 +2,12 @@
 // and the offscreen document that holds the model and the index.
 import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
+import { fetchTranscript } from './lib/fetch-transcript.js';
 import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -70,8 +71,21 @@ function flashBadge(tabId, text, color) {
 // ---------------------------------------------------------------------------
 const waiters = new Map(); // tabId -> resolve({ok, reason})
 
-async function fetchVideoTranscript(id, onTab = () => {}) {
+async function fetchVideoTranscript(id, onTab = () => {}, allowTabs = false) {
   if ((await engine('has', {videoId: id})).has) return {videoId: id, status: 'skipped', reason: 'Already indexed'};
+  let transcript;
+  try { transcript = await fetchTranscript(id); } catch (error) {
+    if (error.rateLimited) {
+      if (jobsReady) (await jobsReady).pause();
+      return {videoId: id, status: 'failed', reason: error.message, rateLimited: true};
+    }
+    if (!allowTabs) return {videoId: id, status: 'failed', reason: error.message};
+  }
+  if (transcript) {
+    const res = await engine('index', transcript);
+    chrome.runtime.sendMessage({type: 'index-changed'}).catch(() => {});
+    return {videoId: id, status: 'done', chunkCount: res.chunkCount, title: res.video.title};
+  }
   const tab = await chrome.tabs.create({url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
   // Register immediately, before awaiting storage or mute operations.
   const outcome = new Promise(resolve => {
@@ -103,7 +117,7 @@ function getTranscriptJobs() {
     }
     const jobs = createTranscriptQueue({
       initial: transcriptJob,
-      processVideo: fetchVideoTranscript,
+      processVideo: (id, onTab) => fetchVideoTranscript(id, onTab, jobs.get()?.mode === 'tabs'),
       beforeStart: () => engine('warmup'),
       onChange(job) {
         if (['running', 'pausing'].includes(job.status)) {
@@ -143,8 +157,9 @@ async function bulkIndex(urls) {
         return item;
       };
       report('working');
-      const result = await fetchVideoTranscript(id);
+      const result = await fetchVideoTranscript(id, undefined, (await getSettings()).transcriptMode === 'tabs');
       results.push(report(result.status, result));
+      if (result.rateLimited) break;
     }
     return { results };
   } finally {
@@ -169,7 +184,8 @@ const handlers = {
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
     const concurrency = [3, 6, 8, 12].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
-    return {job: (await getTranscriptJobs()).start(ids, concurrency)};
+    const mode = settings.transcriptMode === 'tabs' ? 'tabs' : 'quiet';
+    return {job: (await getTranscriptJobs()).start(ids, mode === 'tabs' ? Math.min(concurrency, 2) : concurrency, mode)};
   },
   async 'transcript-job-status'(_msg, sender) {
     requireLibrary(sender);

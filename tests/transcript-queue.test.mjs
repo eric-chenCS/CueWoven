@@ -94,3 +94,10 @@ test('invalid concurrency cannot open an unbounded number of tabs', () => {
     assert.equal(queue.get(), null);
   }
 });
+
+test('fallback mode permits two workers and rejects higher limits or unknown modes', async () => {
+  const queue = createTranscriptQueue({processVideo: async () => ({status: 'done'})});
+  for (const [limit, mode] of [[3, 'tabs'], [12, 'tabs'], [6, 'unknown']]) assert.throws(() => queue.start(ids(5), limit, mode), /two/);
+  queue.start(ids(5), 2, 'tabs');await queue.wait();
+  assert.equal(queue.get().mode, 'tabs');assert.equal(queue.get().concurrency, 2);assert.equal(queue.get().done, 5);
+});
