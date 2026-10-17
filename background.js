@@ -7,7 +7,7 @@ import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -23,7 +23,7 @@ async function ensureOffscreen() {
       .createDocument({
         url: OFFSCREEN_PATH,
         reasons: ['WORKERS'],
-        justification: 'Runs the on-device embedding model and the local search index.',
+        justification: 'Runs local search and automatic player-audio transcription when captions are unavailable.',
       })
       .catch((e) => {
         if (!/single offscreen/i.test(String(e && e.message))) throw e;
@@ -59,11 +59,13 @@ async function getSettings() {
 // ---------------------------------------------------------------------------
 // Toolbar badge feedback
 // ---------------------------------------------------------------------------
+let speechBadgeTab = null;
 function flashBadge(tabId, text, color) {
+  if (tabId === speechBadgeTab) return;
   if (tabId == null) return;
   chrome.action.setBadgeBackgroundColor({ tabId, color }).catch(() => {});
   chrome.action.setBadgeText({ tabId, text }).catch(() => {});
-  setTimeout(() => chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {}), 4000);
+  setTimeout(() => {if (tabId !== speechBadgeTab) chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {});}, 4000);
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +135,7 @@ function requireLibrary(sender) {
 }
 
 async function requireTranscriptJobIdle() {
+  if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
   if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
 }
 
@@ -172,7 +175,73 @@ function settleWaiter(tabId, outcome) {
 // ---------------------------------------------------------------------------
 // Message router
 // ---------------------------------------------------------------------------
+
+function requirePopup(sender) {
+  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('popup/popup.html')) throw new Error('Use the Recall popup to control speech-to-text.');
+}
+async function speechContext(tabId) {
+  const tab = await chrome.tabs.get(tabId);
+  const id = videoIdFromUrl(tab.url);
+  if (!id || !tab.url.startsWith('https://www.youtube.com/watch?') || new URL(tab.url).searchParams.get('recall_index') === '1') throw new Error('Open a normal YouTube video first.');
+  const clock = await chrome.tabs.sendMessage(tabId, {type: 'speech-context'});
+  if (clock?.video?.videoId !== id || clock.forced) throw new Error('Refresh the YouTube tab so Recall can read its playback timing.');
+  return {tab, clock};
+}
+
+
+async function startSpeech(tabId) {
+  if (!Number.isInteger(tabId)) throw new Error('Invalid video tab.');
+  const {tab, clock} = await speechContext(tabId);
+  if (!tab.active || clock.paused) throw new Error('Play a video in the active YouTube tab first.');
+  const ready = await engine('speech-prepare', {tabId, video: clock.video});
+  try {
+    const latest = await speechContext(tabId);
+    if (latest.clock.video.videoId !== ready.video.videoId) throw new Error('The video changed while loading the speech model.');
+    return await engine('speech-start', {id: ready.id});
+  } catch (error) {
+    if ((await engine('speech-status')).id === ready.id) await engine('speech-stop', {reason: error.message});
+    throw error;
+  }
+}
+
 const handlers = {
+  async 'speech-start'({tabId}, sender) {requirePopup(sender);return startSpeech(tabId);},
+  async 'speech-auto-start'(_msg, sender) {
+    const settings = await getSettings();
+    if (!settings.enabled || settings.speechEnabled === false) return {disabled: true};
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid automatic speech request.');
+    const {clock} = await speechContext(sender.tab.id);
+    if (!clock.visible || clock.paused || clock.ad) return {inactive: true};
+    const state = await engine('speech-status');
+    if (state.status !== 'idle') {
+      if (state.tabId === sender.tab.id) return state;
+      await engine('speech-stop', {reason: 'Switched to a different watched video.'});
+    }
+    return startSpeech(sender.tab.id);
+  },
+  async 'speech-pcm'({id, pcm, clock}, sender) {
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid speech audio source.');
+    return engine('speech-pcm', {id, tabId: sender.tab.id, pcm, clock});
+  },
+  async 'speech-page-ended'({id}, sender) {
+    const state = await engine('speech-status');
+    if (state.id === id && state.tabId === sender.tab?.id) return engine('speech-stop', {reason: 'The video ended or changed.'});
+    return {ignored: true};
+  },
+  async 'speech-audio-open'({tabId, id}, sender) {
+    if (sender.url !== chrome.runtime.getURL(OFFSCREEN_PATH)) throw new Error('Invalid audio capture request.');
+    return chrome.tabs.sendMessage(tabId, {type: 'speech-audio-open', id});
+  },
+  async 'speech-audio-close'({tabId, id}, sender) {
+    if (sender.url !== chrome.runtime.getURL(OFFSCREEN_PATH)) throw new Error('Invalid audio capture request.');
+    return chrome.tabs.sendMessage(tabId, {type: 'speech-audio-close', id}).catch(() => ({ok: true}));
+  },
+  async 'speech-stop'(_data, sender) {requirePopup(sender);return engine('speech-stop');},
+  async 'speech-status'() {return engine('speech-status');},
+  async 'speech-clock'({tabId}, sender) {
+    if (sender.url !== chrome.runtime.getURL(OFFSCREEN_PATH)) throw new Error('Invalid audio timing request.');
+    return (await speechContext(tabId)).clock;
+  },
   async 'transcript-job-start'({urls}, sender) {
     requireLibrary(sender);
     if (bulkRunning) throw new Error('A pre-load is already running.');
@@ -288,6 +357,16 @@ const handlers = {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (sender.id !== chrome.runtime.id) return false;
+  if (msg.type === 'speech-state' && sender.url === chrome.runtime.getURL(OFFSCREEN_PATH)) {
+    const active = ['preparing', 'recording', 'stopping'].includes(msg.state.status);
+    if (speechBadgeTab !== null && (!active || speechBadgeTab !== msg.state.tabId)) chrome.action.setBadgeText({tabId: speechBadgeTab, text: ''}).catch(() => {});
+    speechBadgeTab = active ? msg.state.tabId : null;
+    if (speechBadgeTab !== null) {
+      chrome.action.setBadgeBackgroundColor({tabId: speechBadgeTab, color: '#2563eb'}).catch(() => {});
+      chrome.action.setBadgeText({tabId: speechBadgeTab, text: msg.state.status === 'recording' ? 'STT' : '…'}).catch(() => {});
+    }
+    return false;
+  }
   const fn = handlers[msg.type];
   if (!fn) return false; // e.g. broadcasts from the offscreen document
   Promise.resolve()
@@ -319,6 +398,13 @@ function onCaptureWindowRemoved(windowId) {
 }
 chrome.windows?.onRemoved?.addListener(onCaptureWindowRemoved);
 chrome.tabs?.onRemoved?.addListener((tabId, info) => {
+  if (tabId === speechBadgeTab) engine('speech-stop', {reason: 'The video tab was closed.'}).catch(() => {});
   if (info?.isWindowClosing && captureTabs.has(tabId)) onCaptureWindowRemoved(info.windowId);
   settleWaiter(tabId, {ok: false, reason: 'Capture tab closed'});
+});
+
+
+chrome.storage?.onChanged?.addListener((changes, area) => {
+  const settings = changes.settings?.newValue;
+  if (area === 'local' && settings && (settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
 });

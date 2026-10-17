@@ -1,4 +1,12 @@
-# Review of the supplied findings — Recall v2.0.0
+# Review — Recall v2.8.0
+
+Reviewed the automatic speech fallback across correctness, module boundaries, input validation, privacy, cleanup and resource use. Audio originates in the isolated content script's current player, is transferred as bounded PCM packets and is never persisted or uploaded. No microphone, tabCapture, activeTab or other new permission was added. Only trusted extension contexts can forward audio-open/close controls; the controller validates the session/tab before accepting packets. Captured history tabs are excluded. Text renders through textContent, and full captions take precedence transactionally.
+
+Review fixes include end/navigation cleanup, canceled module-open protection, packet-error cleanup, session-aware failure handling, the settings off switch, tab closure and coalesced progress updates. The browser test now waits for actual media end and explicitly polls backend state before restarting. The new Node tests cover automatic/deferred fallback and excluded caption/history cases. Removing the pause/ad guard failed the speech regression and was restored. All 87 Node tests, the real-model speech browser test, the existing import/search/background regressions and one actual public YouTube speech fallback passed. The speech UI screenshot was inspected.
+
+Known practical limits are documented: English recognition errors, approximate timestamps, partial played coverage, first-use downloads, extra CPU, one live session, bounded backlog and unsupported/protected players. The unchanged locked dependency audit still reports native Node findings; the affected paths are not in the shipped browser runtime. This review does not certify every YouTube video, minimum browser version or sustained hardware performance. No unresolved release-blocking finding was identified in the tested scope.
+
+# Historical review of the supplied findings — Recall v2.0.0
 
 | Finding | Matches current code? | Resolution |
 |---|---|---|

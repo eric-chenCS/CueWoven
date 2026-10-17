@@ -11,7 +11,11 @@
   const DEFAULTS = { enabled: true, dwellSeconds: 20 };
   const MAX_SEGMENTS = 20000;
 
+  let playbackRevision = 0;
+  for (const event of ['seeking', 'ratechange', 'pause', 'play']) document.addEventListener(event, () => {playbackRevision++;}, true);
+
   let current = null;       // { videoId, title, channel, lengthSeconds }
+  let speechPending = null;
   let dwellTimer = null;
   let reqCounter = 0;
   const pending = new Map(); // reqId -> resolve
@@ -101,6 +105,7 @@
       return;
     }
     current = video;
+    speechPending = null;
     clearDwell();
     if (isForcedIndex()) {
       run(true);
@@ -110,6 +115,22 @@
     if (!s.enabled) return;
     startDwell(Math.max(0, Number(s.dwellSeconds) || 0), video.videoId);
   }
+
+  function speechClock() {
+    const media = document.querySelector('video');
+    return {video: current, time: media?.currentTime, paused: !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!document.querySelector('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !document.hidden};
+  }
+
+  async function trySpeech() {
+    if (!speechPending || speechPending !== current?.videoId || isForcedIndex()) return;
+    const clock = speechClock();
+    if (!clock.visible || clock.paused || clock.ad) return;
+    const id = speechPending;
+    speechPending = null;
+    const response = await send({type: 'speech-auto-start'});
+    if (response?.inactive && current?.videoId === id) speechPending = id;
+  }
+  for (const event of ['play', 'playing', 'visibilitychange']) document.addEventListener(event, trySpeech, true);
 
   let running = null;
   async function run(manual) {
@@ -126,6 +147,7 @@
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
         await send({ type: 'index-failed', videoId: video.videoId, reason });
+        if (!isForcedIndex() && current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
         return { ok: false, reason };
       }
       const res = await send({ type: 'index-video', video, segments, method: t.method });
@@ -156,6 +178,16 @@
     if (msg.type === 'index-now') {
       run(true).then(sendResponse);
       return true;
+    }
+    if (msg.type === 'speech-audio-open') {
+      globalThis.__recallPageAudio.start(msg.id, speechClock).then(sendResponse).catch(error => sendResponse({error: error.message}));return true;
+    }
+    if (msg.type === 'speech-audio-close') {
+      globalThis.__recallPageAudio.stop(msg.id).then(() => sendResponse({ok: true})).catch(error => sendResponse({error: error.message}));return true;
+    }
+    if (msg.type === 'speech-context') {
+      sendResponse(speechClock());
+      return false;
     }
     if (msg.type === 'get-video') {
       sendResponse({ video: current });

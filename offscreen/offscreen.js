@@ -1,5 +1,7 @@
 // Offscreen document: owns the embedding model and the local vector index.
 // MV3 service workers can't comfortably run WASM models, so the heavy work lives here.
+import { createLiveSpeech } from '../lib/live-speech.js';
+import { createSpeechModel } from './speech-model.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { rank } from '../lib/search.js';
 import * as db from '../lib/db.js';
@@ -130,10 +132,11 @@ async function storeChunks(video, chunks, method, indexedAt) {
   const vecs = await embed(chunks.map((c) => embedText(video.title, c.text)));
   const existing = await db.getVideo(video.videoId);
   const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), chunkCount: chunks.length, method: method || null });
+  if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
   await db.replaceVideo(
     record,
-    chunks.map((c, i) => ({ videoId: record.videoId, start: c.start, text: c.text, vec: vecs[i] }))
+    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i] }))
   );
   invalidate();
   return { chunkCount: chunks.length, video: record };
@@ -181,7 +184,7 @@ async function exportIndex() {
   const out = [];
   for (const v of videos) {
     const chunks = (await db.chunksOf(v.videoId)).sort((a, b) => a.start - b.start);
-    out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text })) }));
+    out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
   return { format: 'recall-export', version: 1, model: MODEL_ID, exportedAt: new Date().toISOString(), videos: out };
 }
@@ -194,7 +197,7 @@ async function importIndex({ data }) {
     if (!v || typeof v.videoId !== 'string' || !Array.isArray(v.chunks)) continue;
     const chunks = v.chunks
       .filter((c) => c && typeof c.text === 'string' && c.text.trim())
-      .map((c) => ({ start: Number(c.start) || 0, text: c.text.slice(0, 2000) }));
+      .map((c) => ({ start: Number(c.start) || 0, text: c.text.slice(0, 2000), ...(Number.isFinite(c.speechStart) && c.speechStart >= 0 && Number.isFinite(c.speechEnd) && c.speechEnd > c.speechStart && c.speechEnd - c.speechStart <= 180 ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) }));
     if (!chunks.length) continue;
     await storeChunks(v, chunks, v.method || 'import', Number(v.indexedAt) || Date.now());
     imported++;
@@ -211,12 +214,56 @@ async function prune({ maxAgeDays }) {
   return { removed: old.length };
 }
 
+
+async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
+  if (!video || !/^[\w-]{11}$/.test(video.videoId) || !Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd) || rangeStart < 0 || rangeEnd <= rangeStart || rangeEnd - rangeStart > 180 || !Array.isArray(segments) || segments.length > 1000) throw new Error('Invalid speech transcript.');
+  const existing = await db.getVideo(video.videoId);
+  if (existing && !['history-title', 'speech-local'].includes(existing.method)) return {skipped: true};
+  const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: String(s.text || '').slice(0, 2000)})));
+  if (!chunks.length) return {chunkCount: 0};
+  const vecs = await embed(chunks.map(c => embedText(video.title, c.text)));
+  const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i]})), rangeStart, rangeEnd);
+  if (!result.skipped) {invalidate();broadcast({type: 'index-changed'});}
+  return result;
+}
+
+const speechModel = createSpeechModel();
+const speech = createLiveSpeech({
+  prepareModel: speechModel.prepare, transcribe: speechModel.transcribe, releaseModel: speechModel.release,
+  openAudio: async () => {
+    const {id, tabId} = speech.status();
+    const response = await chrome.runtime.sendMessage({type: 'speech-audio-open', id, tabId});
+    if (response?.error) throw new Error(response.error);
+    return {close: () => chrome.runtime.sendMessage({type: 'speech-audio-close', id, tabId}).catch(() => {})};
+  },
+  save: appendSpeech,
+  readClock: async tabId => {
+    const response = await chrome.runtime.sendMessage({type: 'speech-clock', tabId});
+    if (response?.error) throw new Error(response.error);
+    return response;
+  },
+  onChange: state => broadcast({type: 'speech-state', state}),
+});
+
 const handlers = {
+  'speech-prepare': data => speech.prepare(data),
+  'speech-start': data => speech.start(data),
+  'speech-stop': ({reason}) => speech.stop(reason),
+  'speech-status': async () => speech.status(),
+  'speech-pcm': async ({id, tabId, pcm, clock}) => {
+    const state = speech.status();
+    if (state.id !== id || state.tabId !== tabId || state.status !== 'recording') return {ignored: true};
+    if (typeof pcm !== 'string' || pcm.length > 45000) throw new Error('Invalid speech audio packet.');
+    const bytes = Uint8Array.from(atob(pcm), c => c.charCodeAt(0));
+    if (bytes.byteLength !== 32000) throw new Error('Invalid speech audio size.');
+    const samples = new Int16Array(bytes.buffer), audio = Float32Array.from(samples, s => s / 32768);
+    await speech.packet(audio, 16000, clock);return {ok: true};
+  },
   ping: async () => ({ ok: true }),
   warmup: async () => { await getExtractor(); return { ok: true }; },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
-    return { has: !!video && video.method !== 'history-title' };
+    return { has: !!video && !['history-title', 'speech-local'].includes(video.method) };
   },
   'import-history': importHistory,
   'touch-watch': async ({ videoId, watchedAt }) => {
