@@ -1,0 +1,11 @@
+# Recall v2.7
+
+The v2.6 request-only mode is replaced with player-based capture in one separate minimized Recall window. Six muted YouTube tabs are processed at once by default; the Parallel videos setting offers three or six. Older settings of eight/twelve fall back to six. No API key, external transcript service, or new permission is required.
+
+Capture tabs stay out of your main tab bar. The window is created minimized and unfocused, remains open during fetching, and closes after completion or pause. It can appear in your taskbar and can be restored. A closed window cannot keep running. Closing it yourself pauses new work rather than reopening it repeatedly. Any unrelated tabs you add to it are preserved during cleanup.
+
+Pause existing work, reload Recall, reopen Library & settings, and click Fetch missing transcripts. Titles and original imported dates stay saved. Settings can close after a job begins; keep the browser open. A service-worker restart interrupts the job; tracked capture tabs and an owned capture window are cleaned up on the next status check. Pause before reloading the extension. Extension/browser restarts can discard temporary job tracking; close any leftover capture window and retry missing transcripts. A moved or navigated anchor does not authorize closing a user window.
+
+Window isolation reduces clutter; it does not eliminate the memory/CPU cost of loading six YouTube players, and minimized pages may run more slowly. Choose three if your computer feels laggy. Caption availability still depends on YouTube and the browser session; this change restores the player/session path rather than guaranteeing every video.
+
+Verification includes real extension window APIs, six concurrent controlled captures, minimized/unfocused state, main-window isolation, closing settings during work, timestamp search, pause, manual window closure without recreation, and safe cleanup. New capture tabs are followed by a minimize-only update because Chromium can restore their window. Tests disable Playwright viewport emulation, which also resizes windows. A headed Windows run verified both minimized state and main-window focus. Opening player URLs directly avoids a reproduced pending about:blank navigation stall.

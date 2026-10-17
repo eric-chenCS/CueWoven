@@ -75,7 +75,7 @@ test('warmup errors stop the job with a useful message instead of hanging', asyn
   assert.equal(queue.get().completed, 0);
 });
 
-for (const concurrency of [3, 6, 8, 12, undefined]) {
+for (const concurrency of [3, 6, undefined]) {
   test(`queue respects parallel limit ${concurrency ?? 'default 6'}`, async () => {
     let active = 0, peak = 0;
     const queue = createTranscriptQueue({processVideo: async () => {
@@ -89,15 +89,23 @@ for (const concurrency of [3, 6, 8, 12, undefined]) {
 }
 test('invalid concurrency cannot open an unbounded number of tabs', () => {
   const queue = createTranscriptQueue({processVideo: async () => ({status: 'done'})});
-  for (const limit of [0, -1, 1, 13, 1000, Infinity, NaN, '12', null]) {
+  for (const limit of [0, -1, 1, 8, 12, 13, 1000, Infinity, NaN, '12', null]) {
     assert.throws(() => queue.start(ids(25), limit), /parallel videos/);
     assert.equal(queue.get(), null);
   }
 });
 
-test('fallback mode permits two workers and rejects higher limits or unknown modes', async () => {
-  const queue = createTranscriptQueue({processVideo: async () => ({status: 'done'})});
-  for (const [limit, mode] of [[3, 'tabs'], [12, 'tabs'], [6, 'unknown']]) assert.throws(() => queue.start(ids(5), limit, mode), /two/);
-  queue.start(ids(5), 2, 'tabs');await queue.wait();
-  assert.equal(queue.get().mode, 'tabs');assert.equal(queue.get().concurrency, 2);assert.equal(queue.get().done, 5);
+
+test('job remains busy until capture-window cleanup finishes', async () => {
+  let clean;
+  const queue=createTranscriptQueue({processVideo:async()=>({status:'done'}),afterFinish:()=>new Promise(resolve=>clean=resolve)});
+  queue.start(ids(1));await tick();assert.equal(queue.get().status,'running');assert.throws(()=>queue.start(ids(1)),/already/);
+  clean();await queue.wait();assert.equal(queue.get().status,'done');
+});
+test('cleanup still runs after warmup failure and reports cleanup failures honestly', async () => {
+  let cleaned=0;
+  const queue=createTranscriptQueue({processVideo:async()=>({status:'done'}),beforeStart:async()=>{throw Error('offline')},afterFinish:async()=>{cleaned++}});
+  queue.start(ids(1));await queue.wait();assert.equal(cleaned,1);assert.equal(queue.get().status,'interrupted');
+  const failed=createTranscriptQueue({processVideo:async()=>({status:'done'}),afterFinish:async()=>{throw Error('Cleanup failed')}});
+  failed.start(ids(1));await failed.wait();assert.equal(failed.get().status,'interrupted');assert.equal(failed.get().reason,'Cleanup failed');
 });

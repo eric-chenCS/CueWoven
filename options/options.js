@@ -2,7 +2,7 @@ import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js'
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' };
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -394,8 +394,7 @@ async function loadSettings() {
   $('dwellSeconds').value = String(s.dwellSeconds);
   $('maxAgeDays').value = String(s.maxAgeDays);
   $('perVideo').value = String(s.perVideo);
-  $('transcriptMode').value = s.transcriptMode === 'tabs' ? 'tabs' : 'quiet';
-  $('transcriptConcurrency').value = String([3, 6, 8, 12].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
+  $('transcriptConcurrency').value = String([3, 6].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
 
 let savedTimer;
@@ -406,7 +405,6 @@ async function saveSettings() {
     maxAgeDays: Number($('maxAgeDays').value),
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
-    transcriptMode: $('transcriptMode').value,
   };
   await chrome.storage.local.set({ settings });
   $('saved').textContent = 'Saved';
@@ -414,7 +412,7 @@ async function saveSettings() {
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
   if (settings.maxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'transcriptMode']) $(id).addEventListener('change', saveSettings);
+for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
