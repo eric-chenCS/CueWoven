@@ -1,4 +1,4 @@
-// Packs the extension (with vendor/) into recall-v2.11.zip for local sharing
+// Packs the extension (with vendor/) into recall-v2.12.zip for local sharing
 // or for copying to another machine. Uses system zip or Windows' built-in tar.
 import { execFileSync } from 'node:child_process';
 import { existsSync, unlinkSync } from 'node:fs';
@@ -8,10 +8,10 @@ if (!existsSync('vendor/transformers.bundle.js')) {
   process.exit(1);
 }
 const items = ['manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses', 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];
-if (existsSync('recall-v2.11.zip')) unlinkSync('recall-v2.11.zip');
+if (existsSync('recall-v2.12.zip')) unlinkSync('recall-v2.12.zip');
 if (process.platform === 'win32') {
-  execFileSync('tar.exe', ['-a', '-cf', 'recall-v2.11.zip', ...items], { stdio: 'inherit' });
+  execFileSync('tar.exe', ['-a', '-cf', 'recall-v2.12.zip', ...items], { stdio: 'inherit' });
 } else {
-  execFileSync('zip', ['-qr', 'recall-v2.11.zip', ...items], { stdio: 'inherit' });
+  execFileSync('zip', ['-qr', 'recall-v2.12.zip', ...items], { stdio: 'inherit' });
 }
-console.log('✓ recall-v2.11.zip');
+console.log('✓ recall-v2.12.zip');

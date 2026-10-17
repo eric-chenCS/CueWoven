@@ -17,3 +17,9 @@ test('watched scene-only entries expire while explicitly imported titles survive
  assert.equal(shouldForgetVideo({method:'history-title',historyImported:true,sceneCount:1,indexedAt:old},30,now),false);
  assert.equal(shouldForgetVideo({method:'history-title',historyImported:false,indexedAt:old,watchedAt:now},30,now),false);
 });
+
+test('background-fetched imported transcripts retain their exemption at 31 days',()=>{
+ const fetched=now-31*864e5;
+ for(const method of ['captions','speech-local','import'])assert.equal(shouldForgetVideo({method,historyImported:true,indexedAt:fetched,watchedAt:old},30,now),false);
+ assert.equal(shouldForgetVideo({method:'captions',historyImported:false,indexedAt:fetched,watchedAt:old},30,now),true);
+});

@@ -24,6 +24,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   assert.equal(await page.evaluate(()=>bulkCalls.length),53,'history queue must not truncate at 50');
   assert.equal(await page.evaluate(()=>bulkCalls[0]),'aaaaaaaaa52','newest watched video first');
   const list=await page.evaluate(()=>chrome.runtime.sendMessage({type:'list'}));
+  assert.ok(list.videos.every(video=>video.historyImported===true),'captions never remove imported protection');
   assert.equal(list.videos.length,53);assert.equal(list.videos.filter(v=>v.method==='history-title').length,52);
   assert.equal(list.videos.find(v=>v.videoId==='aaaaaaaaa52').watchedAt,Date.parse(entries[52].time));
   const search=await page.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'why does a phone battery hold less energy after charging many times'}));

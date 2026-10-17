@@ -148,7 +148,7 @@
       const segments = (t.segments || []).slice(0, MAX_SEGMENTS);
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
-        await send({ type: 'index-failed', videoId: video.videoId, reason });
+        await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason });
         if (!isForcedIndex() && current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
         return { ok: false, reason };
       }

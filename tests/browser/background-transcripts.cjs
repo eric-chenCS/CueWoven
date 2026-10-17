@@ -66,6 +66,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   page=await context.newPage();await page.goto(`${base}/options/options.html`);
   await page.waitForFunction(()=>document.querySelector('#bulk-summary').textContent.startsWith('Finished:'));
   const saved=await page.evaluate(()=>chrome.runtime.sendMessage({type:'list'}));
+  assert.ok(saved.videos.every(video=>video.historyImported===true),'background captions keep imported retention');assert.ok(finished.results.every(result=>result.title.startsWith('Battery science ')));
   assert.equal(saved.videos.length,8);assert.ok(saved.videos.every(v=>v.method!=='history-title'&&v.watchedAt===Date.parse('2020-01-01')));
   const search=await page.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'why a phone battery holds less charge over time'}));
   assert.equal(search.results[0].start,42);assert.equal(search.results[0].titleOnly,false);

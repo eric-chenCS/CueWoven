@@ -109,5 +109,12 @@ test('speech language prefers original metadata and ASR over translated captions
  const captions=tracks=>({captions:{playerCaptionsTracklistRenderer:{captionTracks:tracks}}});
  assert.equal(P.speechLanguage(captions([{languageCode:'en'},{kind:'asr',languageCode:'es'}])),'es');
  assert.equal(P.speechLanguage({...captions([{languageCode:'es'}]),videoDetails:{defaultAudioLanguage:'en-GB'}}),'en-GB');
- assert.equal(P.speechLanguage(captions([{languageCode:'es'}])),'es');assert.equal(P.speechLanguage({}),null);
+ assert.equal(P.speechLanguage(captions([{languageCode:'es'}])),'und');assert.equal(P.speechLanguage({}),null);
+});
+
+test('uploaded mixed subtitle languages do not imply English audio',()=>{
+ const player=tracks=>({captions:{playerCaptionsTracklistRenderer:{captionTracks:tracks}}});
+ assert.equal(P.speechLanguage(player([{languageCode:'es'},{languageCode:'en'}])),'und');assert.equal(P.speechLanguage(player([{languageCode:'en'},{languageCode:'es'}])),'und');
+ assert.equal(P.speechLanguage(player([{languageCode:'en-GB'},{languageCode:'en'}])),'en-GB');
+ assert.equal(P.speechLanguage(player([{kind:'asr',languageCode:'es'},{languageCode:'en'}])),'es');
 });

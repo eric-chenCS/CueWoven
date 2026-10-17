@@ -30,10 +30,12 @@ $('welcome-empty').addEventListener('click', async () => {
 // Library
 // ---------------------------------------------------------------------------
 let videos = [];
+let videoTitles=new Map();
 
 async function loadLibrary() {
   const res = await send({ type: 'list' });
   videos = (res && res.videos) || [];
+  videoTitles=new Map(videos.map(video=>[video.videoId,video.title]));
   const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
   $('welcome').hidden = !!onboardingComplete || videos.length > 0;
   if (videos.length && !onboardingComplete) await chrome.storage.local.set({ onboardingComplete: true });
@@ -144,6 +146,7 @@ async function saveHistoryTitles(entries) {
   let imported = 0;
   let skipped = 0;
   let processed = 0;
+  let repaired = 0;
   let complete = false;
   try {
     for (let i = 0; i < entries.length; i += 16) {
@@ -153,9 +156,10 @@ async function saveHistoryTitles(entries) {
       if (!res || res.error) throw new Error(res?.error || 'The import did not respond.');
       imported += res.imported;
       skipped += res.skipped;
+      repaired += res.repaired || 0;
       processed += batch.length;
     }
-    $('history-import-msg').textContent = `Added ${imported} searchable video titles; ${skipped} already saved. Open Recall to search your past videos.`;
+    $('history-import-msg').textContent = `Added ${imported} searchable video titles; ${skipped} already saved. ${repaired ? `Restored history protection for ${repaired} videos. ` : ''}Open Recall to search your past videos.`;
     complete = true;
   } catch (e) {
     $('history-import-msg').textContent = `Import stopped after adding ${imported} titles: ${e.message}. Already added videos are saved; re-import to continue.`;
@@ -294,26 +298,36 @@ $('history-index').addEventListener('click', async () => {
 // Bulk pre-load
 // ---------------------------------------------------------------------------
 const logRows = new Map();
+const finishedRows=new Set(),logTimers=new Map();
 
 function onBulkProgress(p) {
+  if(finishedRows.has(p.videoId))return;
   let li = logRows.get(p.videoId);
   if (!li) {
     li = document.createElement('li');
-    li.innerHTML = '<span class="st"></span><span class="what"></span><span class="why"></span>';
+    li.innerHTML = '<span class="what"></span><span class="st"></span><span class="why"></span>';
     $('bulk-log').append(li);
     logRows.set(p.videoId, li);
     if (logRows.size > 100) {
       const oldest = logRows.keys().next().value;
       logRows.get(oldest).remove();
       logRows.delete(oldest);
+      clearTimeout(logTimers.get(oldest));logTimers.delete(oldest);
     }
   }
   const labels = { working: 'Indexing', done: 'Done', failed: 'Failed', skipped: 'Skipped' };
   const st = li.querySelector('.st');
   st.textContent = labels[p.status] || p.status;
   st.className = 'st ' + p.status;
-  li.querySelector('.what').textContent = p.title || p.videoId;
+  li.querySelector('.what').textContent = p.title || videoTitles.get(p.videoId) || 'YouTube video';
   li.querySelector('.why').textContent = p.status === 'done' ? `· ${p.chunkCount} moments` : p.reason ? '· ' + p.reason : '';
+  if(p.status!=='working'){
+    finishedRows.add(p.videoId);
+    logTimers.set(p.videoId,setTimeout(()=>{
+      li.classList.add('fading');
+      logTimers.set(p.videoId,setTimeout(()=>{li.remove();logRows.delete(p.videoId);logTimers.delete(p.videoId);},300));
+    },5000));
+  }
 }
 
 function setBulkControls(busy) {
@@ -329,7 +343,7 @@ function setBulkControls(busy) {
 function applyTranscriptJob(job) {
   if (!job || latestJob?.id === job.id && job.revision < latestJob.revision) return;
   const changed = latestJob?.id !== job.id;
-  if (changed) { $('bulk-log').textContent = ''; logRows.clear(); }
+  if (changed) { for(const timer of logTimers.values())clearTimeout(timer);logTimers.clear();finishedRows.clear();$('bulk-log').textContent = ''; logRows.clear(); }
   latestJob = job;
   const busy = ['running', 'pausing'].includes(job.status);
   if (changed || bulkBusy !== busy) setBulkControls(busy);
