@@ -1,5 +1,7 @@
 import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
 import {restoreBackup} from '../lib/backup.js';
+import {itemLink} from '../lib/web-items.js';
+import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
@@ -15,7 +17,7 @@ let libraryRefresh;
 
 function updateTranscriptButton() {
   const count = videos.filter(needsTranscript).length;
-  $('history-transcripts').disabled = bulkBusy || historyImportBusy || !count;
+  $('history-transcripts').disabled = bulkBusy || historyImportBusy || libraryBusy() || !count;
   $('history-transcripts').textContent = count ? `Fetch missing transcripts (${count})` : 'Fetch missing transcripts';
 }
 
@@ -42,7 +44,7 @@ async function loadLibrary() {
   const moments = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
   const stats = $('stats');
   stats.textContent = '';
-  for (const [n, label] of [[videos.length, videos.length === 1 ? 'video' : 'videos'], [moments, 'spoken/title moments'],[videos.reduce((n,v)=>n+(v.sceneCount || 0),0),'saved scenes'],[videos.reduce((n,v)=>n+(v.screenCount||0),0),'on-screen text moments']]) {
+  for (const [n, label] of [[videos.length, videos.length === 1 ? 'item' : 'items'], [moments, 'saved text moments'],[videos.reduce((n,v)=>n+(v.sceneCount || 0),0),'saved scenes'],[videos.reduce((n,v)=>n+(v.screenCount||0),0),'on-screen text moments']]) {
     const s = document.createElement('span');
     s.className = 'stat';
     const b = document.createElement('b');
@@ -64,13 +66,13 @@ function renderLibrary() {
   if (matches.length > 200) {
     const note = document.createElement('p');
     note.className = 'note';
-    note.textContent = `Showing 200 of ${matches.length} videos. Filter titles or channels to find more.`;
+    note.textContent = `Showing 200 of ${matches.length} items. Filter titles, channels or sites to find more.`;
     lib.append(note);
   }
   if (!list.length) {
     const p = document.createElement('p');
     p.className = 'empty-lib';
-    p.textContent = videos.length ? 'No videos match that filter.' : 'Nothing indexed yet. Watch a captioned YouTube video, or pre-load some above.';
+    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube, import history or enable website capture above.';
     lib.append(p);
     return;
   }
@@ -80,7 +82,7 @@ function renderLibrary() {
     const img = document.createElement('img');
     img.loading = 'lazy';
     img.alt = '';
-    img.src = `https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/mqdefault.jpg`;
+    img.src = v.kind?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/mqdefault.jpg`;
     const info = document.createElement('div');
     info.className = 'info';
     const t = document.createElement('div');
@@ -94,7 +96,7 @@ function renderLibrary() {
     actions.className = 'actions';
     const open = document.createElement('a');
     open.className = 'btn ghost small';
-    open.href = `https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`;
+    open.href = itemLink({...v,titleOnly:true})||`https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`;
     open.target = '_blank';
     open.rel = 'noopener';
     open.textContent = 'Open';
@@ -112,11 +114,11 @@ function renderLibrary() {
       const index = document.createElement('button');
       index.className = 'btn ghost small';
       index.textContent = 'Add transcript';
-      index.disabled = bulkBusy || historyImportBusy;
+      index.disabled = bulkBusy || historyImportBusy || libraryBusy();
       index.addEventListener('click', () => runBulk([v.videoId]));
       actions.prepend(index);
     }
-    del.disabled = historyImportBusy || bulkBusy;
+    del.disabled = historyImportBusy || bulkBusy || libraryBusy();
     row.append(img, info, actions);
     lib.append(row);
   }
@@ -138,7 +140,8 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 async function saveHistoryTitles(entries) {
-  if (historyImportBusy || bulkBusy) return;
+  if (historyImportBusy || bulkBusy || libraryBusy()) return;
+  const release=beginLibraryTask();
   historyImportBusy = true;
   const controls = ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'history-transcripts', 'welcome-import', 'history-scan', 'history-save', 'history-index', 'bulk-go', 'import', 'clear'];
   controls.forEach(id => { $(id).disabled = true; });
@@ -166,6 +169,7 @@ async function saveHistoryTitles(entries) {
   } finally {
     historyImportBusy = false;
     controls.forEach(id => { $(id).disabled = false; });
+    release();
     await loadLibrary();
   }
   return complete;
@@ -332,7 +336,7 @@ function onBulkProgress(p) {
 
 function setBulkControls(busy) {
   bulkBusy = busy;
-  for (const id of ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'welcome-import', 'history-save', 'history-scan', 'import', 'clear', 'bulk-go']) $(id).disabled = busy || historyImportBusy;
+  for (const id of ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'welcome-import', 'history-save', 'history-scan', 'import', 'clear', 'bulk-go']) $(id).disabled = busy || historyImportBusy || libraryBusy();
   $('bulk-go').textContent = busy ? 'Fetching in background…' : 'Index these videos';
   $('bulk-stop').hidden = !busy;
   updateTranscriptButton();
@@ -363,7 +367,7 @@ function applyTranscriptJob(job) {
 }
 
 async function runBulk(urls, all = false) {
-  if (bulkBusy || historyImportBusy) return;
+  if (bulkBusy || historyImportBusy || libraryBusy()) return;
   if (!urls.length) { $('bulk-summary').textContent = all ? 'No missing transcripts for these videos.' : 'Paste at least one YouTube link.'; return; }
   setBulkControls(true);
   $('bulk-summary').scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -446,33 +450,35 @@ $('export').addEventListener('click', async () => {
   a.download = `recall-index-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  $('data-msg').textContent = `Exported ${data.videos.length} videos.`;
+  $('data-msg').textContent = `Exported ${data.videos.length} videos`+(data.items?.length?` and ${data.items.length} web items`:'')+'.';
 });
 
 $('import').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  if(historyImportBusy || bulkBusy)return;
+  if(historyImportBusy || bulkBusy || libraryBusy())return;
+  const release=beginLibraryTask();
   historyImportBusy=true;setBulkControls(bulkBusy);
   $('data-msg').textContent='Reading file…';
   try {
     let data;try{data=JSON.parse(await file.text());}catch{throw Error('That file isn’t valid JSON.');}
     $('data-msg').textContent='Restoring… Keep this page open. First use may download models.';
     const res=await restoreBackup(data,send,({done,total})=>{$('data-msg').textContent=`Restoring… ${done}/${total} items. Keep this page open.`;});
-    $('data-msg').textContent=`Imported ${res.imported} videos.`;
+    $('data-msg').textContent=`Imported ${res.imported} ${data.items?.length?'items':'videos'}.`;
   }catch(error){$('data-msg').textContent=error.message;}
-  finally{historyImportBusy=false;setBulkControls(bulkBusy);loadLibrary();}
+  finally{historyImportBusy=false;release();setBulkControls(bulkBusy);loadLibrary();}
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!confirm('Delete every indexed video and transcript from this browser? This can’t be undone.')) return;
+  if (!confirm('Delete every saved video, page, search query and transcript from this browser? This cannot be undone.')) return;
   const response = await send({ type: 'clear' });
   if (response?.error) { $('data-msg').textContent = response.error; return; }
   $('data-msg').textContent = 'Everything was deleted.';
   loadLibrary();
 });
 
+onLibraryBusy(()=>setBulkControls(bulkBusy));
 loadSettings();
 loadLibrary();
 

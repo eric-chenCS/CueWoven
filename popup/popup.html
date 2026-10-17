@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v2.15</title>
+    <title>Recall v3.0</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,14 +10,14 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v2.15</span>
+        <span>Recall v3.0</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
 
     <section id="start-choice" class="start-choice" aria-labelledby="start-heading" hidden>
       <h2 id="start-heading">How would you like to start?</h2>
-      <p>Import your past YouTube history, or start with zero saved videos. You can import later.</p>
+      <p>Import past video, browser or search history, or start empty. Website capture is optional.</p>
       <div class="start-actions">
         <button id="start-import" class="btn small">Import history</button>
         <button id="start-empty" class="btn ghost small">Start empty</button>
@@ -28,7 +28,7 @@
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="q" type="search" autocomplete="off" spellcheck="false"
-               placeholder="that video where the guy explains black holes…" aria-label="Search what you've watched" />
+               placeholder="that article, video or search about black holes…" aria-label="Search your Recall library" />
       </div>
       <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add details to your current search" disabled>Refine</button>
     </div>
@@ -48,7 +48,8 @@
       <button class="chip" role="radio" aria-checked="false" data-days="30">30 days</button>
     </div>
 
-    <label class="view-option"><input id="single-video" type="checkbox" checked /> One video at a time</label>
+    <div class="source-options"><label for="kind-filter">Search</label><select id="kind-filter"><option value="all">Everything</option><option value="video">Videos</option><option value="page">Pages</option><option value="search">Searches</option></select><button id="web-pause-popup" class="btn ghost small" hidden>Pause sites</button></div>
+    <label class="view-option"><input id="single-video" type="checkbox" checked /> One result at a time</label>
 
     <div id="index-now" class="index-now" hidden>
       <span id="index-now-text">Index this video now</span>
