@@ -422,6 +422,7 @@ async function loadSettings() {
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   $('maxAgeDays').value = String(s.maxAgeDays);
+  $('importMaxAgeDays').value=String(s.importMaxAgeDays||0);
   $('perVideo').value = String(s.perVideo);
   $('transcriptConcurrency').value = String([3, 6].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
@@ -435,6 +436,7 @@ async function saveSettings() {
     screenTextEnabled:$('screenTextEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
+    importMaxAgeDays:Number($('importMaxAgeDays').value),
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
@@ -442,9 +444,9 @@ async function saveSettings() {
   $('saved').textContent = 'Saved';
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
-  if (settings.maxAgeDays) send({ type: 'prune' }).then(loadLibrary);
+  if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

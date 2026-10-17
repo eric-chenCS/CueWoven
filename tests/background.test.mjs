@@ -22,6 +22,7 @@ test('videoIdFromUrl understands common YouTube link shapes', () => {
 
 const request = (msg, sender = { id: 'x', tab: { id: 1 }, url: 'options/options.html' }) =>
   new Promise(resolve => assert.equal(onMessage(msg, sender, resolve), true));
+test('incognito YouTube requests stop before any indexing or model access',async()=>{const result=await request({type:'should-index',videoId:'aaaaaaaaaaa'},{id:'x',tab:{id:7,incognito:true},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.equal(result.index,false);assert.match(result.reason,/Incognito/);});
 
 test('history scanning requires the library page, permission and a valid range', async () => {
   let reads = 0;
@@ -51,7 +52,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {

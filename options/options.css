@@ -69,3 +69,6 @@ textarea { width: 100%; resize: vertical; margin-bottom: 10px; font-family: ui-m
 #history-msg { margin-top: 10px; }
 #history-filter { width: 100%; margin-bottom: 10px; }
 code { font-size: 12px; }
+.diagnostic-table {overflow:auto;max-height:360px;margin-top:12px;}
+.diagnostic-table table {width:100%;border-collapse:collapse;text-align:left;font-size:12px;}
+.diagnostic-table th,.diagnostic-table td {padding:8px;border-bottom:1px solid var(--line);overflow-wrap:anywhere;}
