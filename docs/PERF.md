@@ -1,3 +1,9 @@
+# Demo responsiveness and restore (v2.11)
+
+Popup open preloads CLIP text inference only when saved scene records exist, alongside text warmup. Inference still releases after 60 seconds idle; reopening begins loading sooner rather than keeping every model alive indefinitely. Warmup is coalesced, real queued searches take priority, and frame/restore image work waits for pending warmup. Unit/browser checks verify routing and worker reuse; no quantified real-device latency improvement is claimed.
+
+The settings restore path sends one video or one image per background request instead of a complete library. The actual file-input browser regression verifies request sizes and preserved scene search. A 53-video unit regression checks ordering/progress/failure durability. This bounds request scope, not individual transcript size or total restore time. Unchanged models, runtime bundle and media/storage caps apply.
+
 # Retrieval accuracy and migration (v2.10)
 
 Saved text vectors now use the spoken passage; title/channel context is scored separately. Legacy upgrades process 16 chunks per model batch, yield between batches, and update only vectors after checking current chunk identity. Parent existence is read once per video within each write transaction. Search stays available and cache reads coalesce; revision checks discard builds invalidated during asynchronous reads. Upgrading a large library still requires CPU time and can temporarily mix old/new vector recipes. No lower CPU or RAM claim is made.
