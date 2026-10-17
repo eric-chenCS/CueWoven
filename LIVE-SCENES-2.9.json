@@ -1,0 +1,21 @@
+{
+  "version": "2.9.0",
+  "testedAt": "2026-10-17T18:43:22.152Z",
+  "environment": "Isolated Chromium; no user cookies/history; no mocked video/image/model responses",
+  "videoId": "jNQXAC9IVRw",
+  "sceneSaved": true,
+  "spokenMethod": "speech-local",
+  "results": [
+    {
+      "videoId": "jNQXAC9IVRw",
+      "start": 11.877368,
+      "matchSources": [
+        "AI speech",
+        "Scene"
+      ],
+      "scene": true
+    }
+  ],
+  "snapshotBytes": 11323,
+  "snapshotTime": 11.877368
+}

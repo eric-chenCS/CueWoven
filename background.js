@@ -7,7 +7,7 @@ import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -135,6 +135,7 @@ function requireLibrary(sender) {
 }
 
 async function requireTranscriptJobIdle() {
+  if ((await engine('vision-status')).busy) throw new Error('Wait for scene processing to finish before changing saved data.');
   if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
   if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
 }
@@ -205,6 +206,18 @@ async function startSpeech(tabId) {
 }
 
 const handlers = {
+  async 'scene-frame'(input,sender) {
+    const settings=await getSettings();if (!settings.enabled || settings.scenesEnabled === false) return {disabled:true};
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
+    const {tab,clock}=await speechContext(sender.tab.id);
+    if (!tab.active || !clock.visible || clock.video.videoId !== input.video?.videoId) throw new Error('Only the current watched video can save scenes.');
+    return engine('scene-index',{video:input.video,start:input.start,image:input.image});
+  },
+  async 'scene-capture-error'({reason},sender) {
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
+    chrome.runtime.sendMessage({type:'vision-state',state:{status:'error',error:String(reason).slice(0,300)}}).catch(()=>{});return {ok:true};
+  },
+  'vision-status':()=>engine('vision-status'),
   async 'speech-start'({tabId}, sender) {requirePopup(sender);return startSpeech(tabId);},
   async 'speech-auto-start'(_msg, sender) {
     const settings = await getSettings();
@@ -407,4 +420,5 @@ chrome.tabs?.onRemoved?.addListener((tabId, info) => {
 chrome.storage?.onChanged?.addListener((changes, area) => {
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
+  if (area === 'local' && settings && (settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
 });
