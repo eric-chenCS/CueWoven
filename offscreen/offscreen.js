@@ -1,6 +1,6 @@
 // Offscreen document: owns the embedding model and the local vector index.
 // MV3 service workers can't comfortably run WASM models, so the heavy work lives here.
-import { createLiveSpeech } from '../lib/live-speech.js';
+import { createLiveSpeech, cleanSpeechText } from '../lib/live-speech.js';
 import { createSpeechModel } from './speech-model.js';
 import {createVisionModel} from './vision-model.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
@@ -128,6 +128,7 @@ function cleanVideo(v) {
     title: String(v.title || '').slice(0, 300),
     channel: String(v.channel || '').slice(0, 200),
     lengthSeconds: Number(v.lengthSeconds) || 0,
+    ...(typeof v.historyImported==='boolean'?{historyImported:v.historyImported}:{}),
     watchedAt: Number.isFinite(v.watchedAt) && v.watchedAt > 0 ? v.watchedAt : undefined,
   };
 }
@@ -146,7 +147,7 @@ async function storeChunks(video, chunks, method, indexedAt) {
   return { chunkCount: chunks.length, video: record };
 }
 
-async function importHistory({ videos }) {
+async function importHistory({ videos, historyImported=true }) {
   const batch = validateHistoryBatch(videos);
   const pending = [];
   for (const video of batch) if (!await db.getVideo(video.videoId)) pending.push(video);
@@ -154,7 +155,7 @@ async function importHistory({ videos }) {
   const vecs = await embed(pending.map(v => `${v.title}. ${v.channel}`));
   let imported = 0;
   for (const [i, v] of pending.entries()) {
-    const record = {...cleanVideo(v), indexedAt: Date.now(), chunkCount: 1, method: 'history-title'};
+    const record = {...cleanVideo(v), indexedAt: Date.now(), chunkCount: 1, method: 'history-title',historyImported};
     const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}]);
     if (added) { imported++; invalidate(); }
   }
@@ -253,7 +254,8 @@ async function indexScene(input) {
   if (sceneTask || sceneSearches || indexImportBusy) return {busy:true};
   sceneTask = (async()=>{
     const vec = await visionModel.image(scene.image);
-    if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}]});
+    if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
+    await db.touchWatch(scene.video.videoId,Date.now());
     const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,vec,indexedAt:Date.now(),watchedAt:Date.now()});
     invalidate();broadcast({type:'index-changed'});return response;
   })();
@@ -278,7 +280,7 @@ async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
   if (!video || !/^[\w-]{11}$/.test(video.videoId) || !Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd) || rangeStart < 0 || rangeEnd <= rangeStart || rangeEnd - rangeStart > 180 || !Array.isArray(segments) || segments.length > 1000) throw new Error('Invalid speech transcript.');
   const existing = await db.getVideo(video.videoId);
   if (existing && !['history-title', 'speech-local'].includes(existing.method)) return {skipped: true};
-  const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: String(s.text || '').slice(0, 2000)})));
+  const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: cleanSpeechText(String(s.text || '').slice(0, 2000))})));
   if (!chunks.length) return {chunkCount: 0};
   const vecs = await embed(chunks.map(c => embeddingText({...video,method:'speech-local'},c.text)));
   const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION})), rangeStart, rangeEnd);
@@ -322,7 +324,10 @@ const handlers = {
     await speech.packet(audio, 16000, clock);return {ok: true};
   },
   ping: async () => ({ ok: true }),
-  warmup: async () => { await getExtractor(); await getIndex();return { ok: true }; },
+  warmup: async ({scenes=false}) => {
+    const visual=scenes?db.listVideos().then(videos=>videos.some(video=>video.sceneCount>0)?visionModel.warmup():null).catch(()=>null):null;
+    await Promise.all([getExtractor(),getIndex(),visual]);return {ok:true};
+  },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
     return { has: !!video && !['history-title', 'speech-local'].includes(video.method) };

@@ -1,6 +1,6 @@
 // Serialize scene inference and release its worker after inactivity.
 export function createVisionModel(onState = () => {}) {
-  let worker = null, nextId = 0, timer, running = false, queuedText = null;
+  let worker = null, nextId = 0, timer, running = false, queuedText = null, warming = null;
   const pending = new Map();
   function release() {
     clearTimeout(timer);worker?.terminate();worker = null;
@@ -41,5 +41,10 @@ export function createVisionModel(onState = () => {}) {
     queuedText?.reject(new Error('A newer scene search replaced this query.'));
     return new Promise((resolve,reject)=>{queuedText={query,resolve,reject}});
   }
-  return {image: image => call('image', {image}), text, release};
+  function warmup() {
+    if(warming)return warming;
+    if(queuedText)return Promise.resolve(); // A real pending query already warms text inference.
+    warming=text('a video scene').finally(()=>{warming=null});return warming;
+  }
+  return {image: async image => {if(warming)await warming.catch(()=>{});return call('image',{image});}, text, warmup, release};
 }

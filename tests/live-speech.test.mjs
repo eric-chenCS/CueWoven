@@ -63,3 +63,11 @@ test('resampling averages samples and timestamp conversion respects playback spe
  assert.throws(()=>downsample(samples(),8000),/Unsupported/);
  assert.deepEqual(speechSegments({text:'words'},42,2,3),[{start:42,dur:6,text:'words'}]);
 });
+
+test('speech noise tags and standalone filler never become saved moments',async()=>{
+ const noisy={chunks:[{text:'[Music]',timestamp:[0,1]},{text:'(upbeat music)',timestamp:[1,2]},{text:'Thank you.',timestamp:[2,3]},{text:'[Music] Battery electrodes lose capacity.',timestamp:[3,5]}]};
+ assert.deepEqual(speechSegments(noisy,40,1,5),[{start:43,dur:2,text:'Battery electrodes lose capacity.'}]);
+ assert.equal(speechSegments({text:'Thank you for explaining battery chemistry.'},0,1,5)[0].text,'Thank you for explaining battery chemistry.');
+ assert.equal(speechSegments({text:'I study (music theory) every day.'},0,1,5)[0].text,'I study (music theory) every day.');
+ const f=fixture({transcribe:async()=>({text:'[Music] Thank you.'})});await f.start();await f.feed(15);await f.controller.stop();assert.equal(f.saved.length,0);
+});

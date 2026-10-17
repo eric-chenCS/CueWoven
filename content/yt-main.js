@@ -112,7 +112,7 @@
   let lastAnnounced = null;
   async function announce(force) {
     const videoId = currentVideoId();
-    if (!videoId) return;
+    if (!videoId) {lastAnnounced=null;post({type:'video-reset'});return;}
     if (!force && videoId === lastAnnounced) return;
     lastAnnounced = videoId;
     const pr = await waitForPlayerResponse(videoId);
@@ -125,6 +125,7 @@
         title: d.title || document.title.replace(/ - YouTube$/, ''),
         channel: d.author || '',
         lengthSeconds: Number(d.lengthSeconds) || 0,
+        audioLanguage: P.speechLanguage(pr),
       },
     });
   }

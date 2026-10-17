@@ -37,3 +37,11 @@ test('scene input rejects external images, oversized data, decompression bombs a
   jpeg[9]=255;assert.throws(()=>validateScene({...good,image:'data:image/jpeg;base64,'+jpeg.toString('base64')}),/320/);
   assert.equal(SCENES_TOTAL,1000);assert.equal(SCENES_PER_VIDEO,120);
 });
+
+test('noise-floor scene hits cannot displace eligible transcripts',()=>{
+ const words=[hit('strong',42,.8),hit('decent',80,.4)],scenes=[hit('noise',20,.23,{scene:true})];
+ assert.deepEqual(fuseMatches(words,scenes).map(row=>row.videoId),['strong','decent']);
+ const videos=new Map([['noise',{}],['useful',{}]]);
+ const ranked=rankScenes([1,0],[{key:'noise:1',videoId:'noise',vec:[.23,.97]},{key:'useful:1',videoId:'useful',vec:[.27,.96]}],videos);
+ assert.deepEqual(ranked.map(row=>row.videoId),['useful']);
+});
