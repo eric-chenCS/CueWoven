@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const tick = () => new Promise(resolve => setImmediate(resolve));
-async function fixture({forced=false,paused=false,captions=false}={}) {
+async function fixture({forced=false,paused=false,captions=false,language=null}={}) {
   const messages=[],events=new Map(),media={paused,currentTime:100,playbackRate:1};let listener, browserWindow;
   const location=new URL(`https://www.youtube.com/watch?v=aaaaaaaaaaa${forced?'&recall_index=1':''}`);
   const add=(name,fn)=>{if(!events.has(name))events.set(name,[]);events.get(name).push(fn)};
@@ -17,7 +17,7 @@ async function fixture({forced=false,paused=false,captions=false}={}) {
   };
   ctx.window=ctx;vm.createContext(ctx);browserWindow=vm.runInContext('window',ctx);
   vm.runInContext(readFileSync(new URL('../content/yt-bridge.js',import.meta.url),'utf8'),ctx);
-  events.get('message').forEach(fn=>fn({source:browserWindow,origin:location.origin,data:{source:'recall-main',type:'video',video:{videoId:'aaaaaaaaaaa',title:'Test'}}}));
+  events.get('message').forEach(fn=>fn({source:browserWindow,origin:location.origin,data:{source:'recall-main',type:'video',video:{videoId:'aaaaaaaaaaa',title:'Test',audioLanguage:language}}}));
   await new Promise(resolve=>listener({type:'index-now'},{},resolve));await tick();
   return {messages,media,async play(){media.paused=false;events.get('playing').forEach(fn=>fn());await tick()}};
 }
@@ -34,4 +34,9 @@ test('history capture tabs never fall back to speech',async()=>{
 test('a caption failure while paused defers speech until playback, without another recording action',async()=>{
   const f=await fixture({paused:true});assert.equal(f.messages.some(m=>m.type==='speech-auto-start'),false);
   await f.play();await f.play();assert.equal(f.messages.filter(m=>m.type==='speech-auto-start').length,1);
+});
+
+test('known non-English videos never start the English-only fallback',async()=>{
+ const f=await fixture({language:'es'});await f.play();assert.equal(f.messages.some(row=>row.type==='speech-auto-start'),false);
+ const english=await fixture({language:'en-GB'});assert.equal(english.messages.some(row=>row.type==='speech-auto-start'),true);
 });

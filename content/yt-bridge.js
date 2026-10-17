@@ -124,6 +124,7 @@
 
   async function trySpeech() {
     if (!speechPending || speechPending !== current?.videoId || isForcedIndex()) return;
+    if (current.audioLanguage && !/^en(?:-|$)/i.test(current.audioLanguage)) {speechPending=null;return;}
     const clock = speechClock();
     if (!clock.visible || clock.paused || clock.ad) return;
     const id = speechPending;
@@ -166,7 +167,8 @@
     if (event.source !== window || event.origin !== location.origin) return;
     const d = event.data;
     if (!d || d.source !== FROM_MAIN) return;
-    if (d.type === 'video') onVideo(d.video);
+    if (d.type === 'video-reset') {current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();}
+    else if (d.type === 'video') onVideo(d.video);
     else if (d.type === 'transcript' && pending.has(d.reqId)) {
       const resolve = pending.get(d.reqId);
       pending.delete(d.reqId);

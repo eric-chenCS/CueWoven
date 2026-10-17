@@ -104,3 +104,10 @@ test('transcript panel parsing supports both YouTube layouts and skips malformed
   assert.equal(result[1].start, 65);
   assert.equal(result[1].text, 'new caption');
 });
+
+test('speech language prefers original metadata and ASR over translated captions',()=>{
+ const captions=tracks=>({captions:{playerCaptionsTracklistRenderer:{captionTracks:tracks}}});
+ assert.equal(P.speechLanguage(captions([{languageCode:'en'},{kind:'asr',languageCode:'es'}])),'es');
+ assert.equal(P.speechLanguage({...captions([{languageCode:'es'}]),videoDetails:{defaultAudioLanguage:'en-GB'}}),'en-GB');
+ assert.equal(P.speechLanguage(captions([{languageCode:'es'}])),'es');assert.equal(P.speechLanguage({}),null);
+});

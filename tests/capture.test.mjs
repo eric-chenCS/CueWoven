@@ -36,7 +36,7 @@ function fixture({on=true, fetchBody=()=>'', userChanges=false, clockStep=0}={})
   vm.runInContext(readFileSync(new URL('../lib/parse.js',import.meta.url),'utf8'),ctx);
   vm.runInContext(readFileSync(new URL('../content/yt-main.js',import.meta.url),'utf8'),ctx);
   const browserWindow=vm.runInContext('window',ctx);
-  return {ctx,requests,button,state:()=>({pressed,clicks}),timerCount:()=>timerCount,async request(){
+  return {ctx,requests,button,posted,docEvents,location,state:()=>({pressed,clicks}),timerCount:()=>timerCount,async request(){
     await events.get('message')({source:browserWindow,origin:location.origin,data:{source:'recall-bridge',type:'getTranscript',videoId:id,reqId:1,allowDom:false}});
     return posted.find(m=>m.type==='transcript');
   }};
@@ -80,4 +80,10 @@ test('caption polling uses elapsed time when inactive tabs throttle timers',asyn
   assert.match((await f.request()).error,/No transcript found/);
   assert.equal(f.timerCount(),5,'a 4.5-second wait must not become 15 slow timer cycles');
   assert.equal(f.state().pressed,'false');
+});
+
+test('A to home to A announces the video again in the same document',async()=>{
+ const f=fixture();await new Promise(resolve=>setImmediate(resolve));assert.equal(f.posted.filter(row=>row.type==='video').length,1);
+ f.location.pathname='/';f.location.search='';await f.docEvents.get('yt-navigate-finish')();assert.equal(f.posted.at(-1).type,'video-reset');
+ f.location.pathname='/watch';f.location.search='?v='+id;await f.docEvents.get('yt-navigate-finish')();assert.equal(f.posted.filter(row=>row.type==='video').length,2);
 });

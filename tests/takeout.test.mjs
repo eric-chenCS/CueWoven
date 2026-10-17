@@ -38,3 +38,9 @@ test('history import validates the full message batch before writing',()=>{
     assert.throws(()=>validateHistoryBatch(value));
   }
 });
+
+test('localized Takeout action prefixes are removed from saved titles',()=>{
+ for(const prefix of ['Has visto','Viste','Vous avez regardé','Hai guardato','Você assistiu','Angesehen']){
+ const [video]=parseTakeoutHistory([{title:prefix+' A science video',titleUrl:'https://www.youtube.com/watch?v=aaaaaaaaaaa',time:'2025-01-01T00:00:00Z'}]);assert.equal(video.title,'A science video');
+ }
+});

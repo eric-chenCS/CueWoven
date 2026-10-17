@@ -139,3 +139,8 @@ test('interrupted-job cleanup closes only tracked tabs still showing their captu
   assert.equal(response.job.completed, 1);
   assert.deepEqual(response.job.active, []);
 });
+
+test('known non-English audio is rejected before the English model is prepared',async()=>{
+ chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),sendMessage:async()=>({video:{videoId:'aaaaaaaaaaa',audioLanguage:'es'},paused:false})};
+ const response=await request({type:'speech-start',tabId:1},{id:'x',url:'popup/popup.html'});assert.match(response.error,/English audio only/);
+});

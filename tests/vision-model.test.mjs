@@ -26,3 +26,21 @@ test('canceling visual inference rejects active and waiting work and permits ret
     const retry=model.text('retry'),worker=workers[1];worker.onmessage({data:{id:worker.requests[0].id,result:new Float32Array(512)}});await retry;
   }finally{model.release();globalThis.Worker=previous}
 });
+
+test('popup prewarming loads the text model once and a real query reuses its worker',async()=>{
+ const previous=globalThis.Worker,workers=[];globalThis.Worker=class {constructor(){workers.push(this)}requests=[];postMessage(message){this.requests.push(message)}terminate(){}};
+ const model=createVisionModel();try{
+  const warm=model.warmup();assert.equal(model.warmup(),warm);const worker=workers[0];assert.equal(worker.requests[0].type,'text');
+  worker.onmessage({data:{id:worker.requests[0].id,result:new Float32Array(512)}});await warm;
+  const search=model.text('cats');assert.equal(workers.length,1);worker.onmessage({data:{id:worker.requests[1].id,result:new Float32Array(512)}});await search;
+ }finally{model.release();globalThis.Worker=previous}
+});
+
+test('image restore waits for prewarming instead of failing busy',async()=>{
+ const previous=globalThis.Worker,workers=[];globalThis.Worker=class {constructor(){workers.push(this)}requests=[];postMessage(message){this.requests.push(message)}terminate(){}};
+ const model=createVisionModel();try{
+  const warm=model.warmup(),image=model.image('fixture'),worker=workers[0];assert.equal(worker.requests.length,1);
+  worker.onmessage({data:{id:worker.requests[0].id,result:new Float32Array(512)}});await warm;await new Promise(resolve=>setImmediate(resolve));assert.equal(worker.requests[1].type,'image');
+  worker.onmessage({data:{id:worker.requests[1].id,result:new Float32Array(512)}});await image;
+ }finally{model.release();globalThis.Worker=previous}
+});

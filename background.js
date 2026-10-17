@@ -140,34 +140,6 @@ async function requireTranscriptJobIdle() {
   if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
 }
 
-let bulkRunning = false;
-async function bulkIndex(urls) {
-  if (bulkRunning) throw new Error('A pre-load is already running');
-  bulkRunning = true;
-  const results = [];
-  // Keep this bounded operation alive while a tab is fetching its transcript.
-  const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
-  try {
-    captureWindow.begin();
-    await engine('warmup');
-    const ids = Array.from(new Set(urls.map(videoIdFromUrl).filter(Boolean)));
-    for (const [n, id] of ids.entries()) {
-      const report = (status, extra = {}) => {
-        const item = Object.assign({ videoId: id, status, n: n + 1, total: ids.length }, extra);
-        chrome.runtime.sendMessage(Object.assign({ type: 'bulk-progress' }, item)).catch(() => {});
-        return item;
-      };
-      report('working');
-      const result = await fetchVideoTranscript(id);
-      results.push(report(result.status, result));
-    }
-    return { results };
-  } finally {
-    clearInterval(keepAlive);
-    try { await captureWindow.close(); } finally { bulkRunning = false; }
-  }
-}
-
 function settleWaiter(tabId, outcome) {
   const w = tabId != null && waiters.get(tabId);
   if (w) w(outcome);
@@ -193,6 +165,7 @@ async function speechContext(tabId) {
 async function startSpeech(tabId) {
   if (!Number.isInteger(tabId)) throw new Error('Invalid video tab.');
   const {tab, clock} = await speechContext(tabId);
+  if (clock.video.audioLanguage && !/^en(?:-|$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
   if (!tab.active || clock.paused) throw new Error('Play a video in the active YouTube tab first.');
   const ready = await engine('speech-prepare', {tabId, video: clock.video});
   try {
@@ -257,7 +230,6 @@ const handlers = {
   },
   async 'transcript-job-start'({urls}, sender) {
     requireLibrary(sender);
-    if (bulkRunning) throw new Error('A pre-load is already running.');
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
@@ -332,7 +304,7 @@ const handlers = {
     return engine('search', { query, sinceDays, perVideo: s.perVideo, limit: 12 });
   },
   status: () => engine('status'),
-  warmup: () => engine('warmup'),
+  warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),
   list: () => engine('list'),
   async delete({ videoId }) {
     await requireTranscriptJobIdle();
@@ -352,10 +324,6 @@ const handlers = {
     const r = await engine('import', { data });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
-  },
-  async 'bulk-index'({urls}) {
-    if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Transcript fetching is already running.');
-    return bulkIndex(Array.isArray(urls) ? urls.slice(0, 50) : []);
   },
   async 'index-tab'({ tabId }) {
     try {

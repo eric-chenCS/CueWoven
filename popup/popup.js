@@ -11,6 +11,7 @@ const statusEl = $('status');
 let sinceDays = 0;
 let searchSeq = 0;
 let activeIndex = -1;
+let renderedSeq = -1;
 let currentTab = null;
 let resultOffset = 0;
 
@@ -132,6 +133,7 @@ async function runSearch() {
     return;
   }
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
+  renderedSeq=seq;
   $('result-pages').hidden = !singleVideo.checked;
   $('page-label').textContent = resultOffset ? `Video ${resultOffset + 1}` : 'Best match';
   $('previous-video').disabled = resultOffset === 0;
@@ -188,7 +190,7 @@ refineToggle.addEventListener('click', () => {
   runSearch();
 });
 
-q.addEventListener('keydown', (e) => {
+q.addEventListener('keydown', async (e) => {
   const items = Array.from(resultsEl.querySelectorAll('.result'));
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     if (!items.length) return;
@@ -200,8 +202,13 @@ q.addEventListener('keydown', (e) => {
     e.preventDefault();
     clearTimeout(debounce);
     const target = items[activeIndex >= 0 ? activeIndex : 0];
-    if (target && activeIndex >= 0) openResult(target.href, e.ctrlKey || e.metaKey);
-    else { resultOffset = 0; runSearch(); }
+    if (target && renderedSeq===searchSeq && (activeIndex>=0 || singleVideo.checked)) openResult(target.href, e.ctrlKey || e.metaKey);
+    else {
+      if(!singleVideo.checked)resultOffset=0;
+      const requested=searchSeq+1;await runSearch();
+      const fresh=resultsEl.querySelector('.result');
+      if(singleVideo.checked && fresh && renderedSeq===requested && searchSeq===requested)openResult(fresh.href,e.ctrlKey||e.metaKey);
+    }
   }
 });
 
@@ -345,7 +352,7 @@ $('start-empty').addEventListener('click', async () => {
   } else {
     showIdle();
   }
-  if (stats.videos) send({ type: 'warmup' }); // no model download is needed for an empty library
+  if (stats.videos) send({ type: 'warmup',scenes:stats.scenes>0 }).catch(()=>{}); // no model download is needed for an empty library
 })();
 
 // Caption failures start speech automatically; the popup exposes status and controls.

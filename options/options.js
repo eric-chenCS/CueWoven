@@ -1,4 +1,5 @@
 import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
+import {restoreBackup} from '../lib/backup.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
@@ -127,9 +128,7 @@ chrome.runtime.onMessage.addListener((msg) => {
     clearTimeout(libraryRefresh);
     libraryRefresh = setTimeout(() => loadLibrary().catch(() => {}), 500);
   }
-  if (msg.type === 'bulk-progress') onBulkProgress(msg);
   if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
-  if (msg.type === 'import-progress') $('data-msg').textContent = `Importing… ${msg.done} of ${msg.total}`;
   if (msg.type === 'model-status' && msg.state.status === 'loading') {
     $('bulk-summary').textContent = `Loading the model… ${Math.round(msg.state.progress * 100)}%`;
   }
@@ -438,18 +437,16 @@ $('import').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  $('data-msg').textContent = 'Reading file…';
-  let data;
+  if(historyImportBusy || bulkBusy)return;
+  historyImportBusy=true;setBulkControls(bulkBusy);
+  $('data-msg').textContent='Reading file…';
   try {
-    data = JSON.parse(await file.text());
-  } catch (_) {
-    $('data-msg').textContent = 'That file isn’t valid JSON.';
-    return;
-  }
-  $('data-msg').textContent = 'Importing… (first import may download the model)';
-  const res = await send({ type: 'import', data });
-  $('data-msg').textContent = res && !res.error ? `Imported ${res.imported} videos.` : (res && res.error) || 'Import failed.';
-  loadLibrary();
+    let data;try{data=JSON.parse(await file.text());}catch{throw Error('That file isn’t valid JSON.');}
+    $('data-msg').textContent='Restoring… Keep this page open. First use may download models.';
+    const res=await restoreBackup(data,send,({done,total})=>{$('data-msg').textContent=`Restoring… ${done}/${total} items. Keep this page open.`;});
+    $('data-msg').textContent=`Imported ${res.imported} videos.`;
+  }catch(error){$('data-msg').textContent=error.message;}
+  finally{historyImportBusy=false;setBulkControls(bulkBusy);loadLibrary();}
 });
 
 $('clear').addEventListener('click', async () => {
