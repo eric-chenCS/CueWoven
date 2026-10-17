@@ -51,7 +51,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {
@@ -72,6 +72,15 @@ test('speech controls and audio forwarding reject unrelated pages', async () => 
 test('import capture tabs never start automatic speech', async () => {
   chrome.tabs = {get: async () => ({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})};
   assert.match((await request({type:'speech-auto-start'}, {id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})).error, /normal YouTube/);
+});
+
+test('scene capture respects off switches and validates the sending page',async()=>{
+  chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:false}})}};
+  assert.deepEqual(await request({type:'scene-frame'}),{disabled:true});
+  chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:true}})}};
+  assert.match((await request({type:'scene-frame'})).error,/Invalid scene source/);
+  chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})};
+  assert.match((await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})).error,/normal YouTube/);
 });
 
 test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported schemes', () => {

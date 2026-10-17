@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v2.8</title>
+    <title>Recall v2.9</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v2.8</span>
+        <span>Recall v2.9</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -38,6 +38,7 @@
       <p id="refine-hint">These clues are combined with the search above. Changing that search or closing Refine clears them.</p>
     </section>
 
+    <p id="scene-status" class="scene-hint" role="status" aria-live="polite" hidden></p>
     <div class="filters" role="radiogroup" aria-label="Watched within">
       <button class="chip" role="radio" aria-checked="true" data-days="0">Any time</button>
       <button class="chip" role="radio" aria-checked="false" data-days="1">Today</button>
@@ -85,6 +86,7 @@
         <div class="body">
           <div class="title"></div>
           <div class="snippet"></div>
+          <div class="match-sources" aria-label="Match evidence"></div>
           <div class="meta"></div>
         </div>
       </a>

@@ -1,0 +1,39 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {rankScenes,fuseMatches,validateScene,SCENES_TOTAL,SCENES_PER_VIDEO} from '../lib/scenes.js';
+const hit=(videoId,start,score,extra={})=>({videoId,start,score,title:videoId,...extra});
+test('fusion includes visual-only matches without comparing raw cosine scales',()=>{
+  const out=fuseMatches([hit('weak-title',0,0.3,{titleOnly:true})],[hit('cats',20,0.27,{scene:true})],{perVideo:1});
+  assert.equal(out[0].videoId,'cats');assert.deepEqual(out[0].matchSources,['Scene']);
+});
+test('strong transcript matches keep their timestamp and nearby scene evidence',()=>{
+  const out=fuseMatches([hit('battery',42,0.8)],[hit('battery',40,0.28,{scene:true,key:'snapshot'})],{perVideo:1});
+  assert.equal(out[0].start,42);assert.equal(out[0].sceneStart,40);assert.deepEqual(out[0].matchSources,['Transcript','Scene']);
+});
+test('distant scene evidence does not claim to confirm a transcript moment',()=>{
+  const out=fuseMatches([hit('battery',42,0.8)],[hit('battery',200,0.28,{scene:true})],{perVideo:1});
+  assert.equal(out[0].start,42);assert.deepEqual(out[0].matchSources,['Transcript']);
+});
+test('fusion paginates across all matching videos, with stable unique-video pages',()=>{
+  const words=Array.from({length:25},(_,i)=>hit('word'+i,i*20,0.8));
+  const scenes=Array.from({length:25},(_,i)=>hit('scene'+i,i*20,0.28,{scene:true}));
+  const all=fuseMatches(words,scenes,{limit:100,perVideo:1});
+  assert.equal(new Set(all.map(h=>h.videoId)).size,50);
+  for(let i=0;i<50;i++)assert.equal(fuseMatches(words,scenes,{offset:i,limit:1,perVideo:1})[0].videoId,all[i].videoId);
+});
+test('scene ranking filters weak, orphan, wrong-dimension and old matches',()=>{
+  const videos=new Map([['a',{watchedAt:10}],['old',{watchedAt:1}]]);
+  const scenes=[{key:'a:1',videoId:'a',start:20,vec:[1,0]},{key:'old:1',videoId:'old',vec:[1,0]},{key:'orphan:1',videoId:'missing',vec:[1,0]},{key:'a:2',videoId:'a',vec:[0.1,0.99]},{key:'a:3',videoId:'a',vec:[1]}];
+  const results=rankScenes([1,0],scenes,videos,{sinceMs:5});assert.equal(results.length,1);assert.equal(results[0].start,20);assert.equal(results[0].scene,true);
+});
+test('scene input rejects external images, oversized data, decompression bombs and bad timestamps',()=>{
+  const scene={video:{videoId:'aaaaaaaaaaa'},start:20,image:'https://example.com/private.jpg'};
+  assert.throws(()=>validateScene(scene),/image/);
+  assert.throws(()=>validateScene({...scene,start:-1}),/timestamp/);
+  assert.throws(()=>validateScene({...scene,image:'data:image/jpeg;base64,'+'a'.repeat(100000)}),/image/);
+  const jpeg=Buffer.from([255,216,255,192,0,17,8,0,180,1,64,3,1,17,0,2,17,0,3,17,0]);
+  const good={...scene,image:'data:image/jpeg;base64,'+jpeg.toString('base64')};
+  assert.equal(validateScene(good).key,'aaaaaaaaaaa:1');
+  jpeg[9]=255;assert.throws(()=>validateScene({...good,image:'data:image/jpeg;base64,'+jpeg.toString('base64')}),/320/);
+  assert.equal(SCENES_TOTAL,1000);assert.equal(SCENES_PER_VIDEO,120);
+});

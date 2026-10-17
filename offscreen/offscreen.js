@@ -2,6 +2,8 @@
 // MV3 service workers can't comfortably run WASM models, so the heavy work lives here.
 import { createLiveSpeech } from '../lib/live-speech.js';
 import { createSpeechModel } from './speech-model.js';
+import {createVisionModel} from './vision-model.js';
+import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { rank } from '../lib/search.js';
 import * as db from '../lib/db.js';
@@ -11,6 +13,7 @@ import { shouldForgetVideo } from '../lib/retention.js';
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const DIM = 384;
 const BATCH = 16;
+let indexImportBusy = false;
 
 // Transformers.js is imported lazily so the library, export and delete still work
 // (with a clear message) if `pnpm run setup` hasn't been run yet.
@@ -167,16 +170,27 @@ async function search({ query, limit, perVideo, sinceDays, offset }) {
   const q = String(query || '').trim();
   if (!q) return { results: [] };
   const { videos, index } = await getIndex();
-  if (!index.meta.length) return { results: [], empty: true };
+  const hasScenes = [...videos.values()].some(video=>video.sceneCount>0);
+  if (!index.meta.length && !hasScenes) return { results: [], empty: true };
   const [qv] = await embed([q]);
   const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs, offset }) };
+  if (!hasScenes) return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs, offset }) };
+  const words = rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs});
+  try {
+    const visual = await searchScenes(q,{limit:1000,perVideo,sinceMs});
+    if (!visual.results.length) return {results:rank(qv,index,videos,{query:q,limit,perVideo,sinceMs,offset})};
+    const combined=fuseMatches(words,visual.results,{limit,perVideo,offset});
+    const results=await Promise.all(combined.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
+    return {results:results.filter(hit=>!hit.scene || hit.image)};
+  } catch (error) {
+    return {results:rank(qv,index,videos,{query:q,limit,perVideo,sinceMs,offset}),sceneError:'Scene search unavailable: '+error.message};
+  }
 }
 
 async function status() {
   const videos = await db.listVideos();
   const chunks = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
-  return { videos: videos.length, chunks, model: modelState };
+  return { videos: videos.length, chunks, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState };
 }
 
 async function exportIndex() {
@@ -186,11 +200,18 @@ async function exportIndex() {
     const chunks = (await db.chunksOf(v.videoId)).sort((a, b) => a.start - b.start);
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
-  return { format: 'recall-export', version: 1, model: MODEL_ID, exportedAt: new Date().toISOString(), videos: out };
+  const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt})=>({videoId,start,image,indexedAt}));
+  return { format: 'recall-export', version: 1, model: MODEL_ID, exportedAt: new Date().toISOString(), videos: out, scenes };
 }
 
-// Imports store text only and re-embed here, so files stay small and survive model changes.
+// Backups store text/images and re-embed here so vectors survive model changes.
 async function importIndex({ data }) {
+  if (indexImportBusy) throw new Error('An index import is already running.');
+  indexImportBusy = true;
+  try {return await restoreIndex(data);} finally {indexImportBusy = false;}
+}
+async function restoreIndex(data) {
+  if (sceneTask) await sceneTask.catch(()=>{});
   if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Recall export file');
   let imported = 0;
   for (const v of data.videos) {
@@ -203,6 +224,14 @@ async function importIndex({ data }) {
     imported++;
     broadcast({ type: 'import-progress', done: imported, total: data.videos.length });
   }
+  if (Array.isArray(data.scenes)) {
+    for (const scene of data.scenes.slice(-1000)) {
+      const video = await db.getVideo(scene?.videoId);if (!video) continue;
+      const valid = validateScene({...scene,video});
+      const vec = await visionModel.image(valid.image);
+      await db.scenes.put({...valid,videoId:video.videoId,indexedAt:Number(scene.indexedAt)||Date.now(),watchedAt:video.watchedAt,vec});
+    }
+  }
   return { imported };
 }
 
@@ -211,7 +240,36 @@ async function prune({ maxAgeDays }) {
   const old = (await db.listVideos()).filter(v => shouldForgetVideo(v, maxAgeDays));
   for (const v of old) await db.deleteVideo(v.videoId);
   if (old.length) invalidate();
-  return { removed: old.length };
+  const scenesRemoved = await db.scenes.prune(Date.now()-maxAgeDays*864e5);
+  if (scenesRemoved) invalidate();
+  return { removed: old.length, scenesRemoved };
+}
+
+let visionState = {status:'idle'}, sceneTask = null, sceneSearches = 0;
+const visionModel = createVisionModel(state=>{visionState=state;broadcast({type:'vision-state',state});});
+async function indexScene(input) {
+  const scene = validateScene(input);
+  if (sceneTask || sceneSearches || indexImportBusy) return {busy:true};
+  sceneTask = (async()=>{
+    const vec = await visionModel.image(scene.image);
+    if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}]});
+    const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,vec,indexedAt:Date.now(),watchedAt:Date.now()});
+    invalidate();broadcast({type:'index-changed'});return response;
+  })();
+  try {return await sceneTask;} finally {sceneTask = null;}
+}
+async function searchScenes(query,options) {
+  if (indexImportBusy) throw new Error('Wait for the index import to finish before searching scenes.');
+  sceneSearches++;
+  try {
+    if (sceneTask) await sceneTask.catch(()=>{});
+    const scenes = await db.scenes.vectors();
+    if (!scenes.length) return {results:[],empty:true};
+    const vector = await visionModel.text(query);
+    const videos = new Map((await db.listVideos()).map(video=>[video.videoId,video]));
+    const hits = rankScenes(vector,scenes,videos,options);
+    return {results:hits};
+  } finally {sceneSearches--;}
 }
 
 
@@ -246,6 +304,9 @@ const speech = createLiveSpeech({
 });
 
 const handlers = {
+  'scene-index': indexScene,
+  'vision-status': async()=>({...visionState,busy:!!sceneTask || sceneSearches>0 || indexImportBusy}),
+  'vision-stop': async()=>{visionModel.release();return {ok:true};},
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),
   'speech-stop': ({reason}) => speech.stop(reason),

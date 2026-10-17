@@ -1,3 +1,9 @@
+# Scene sampling and unified search (v2.9)
+
+Frames are encoded at no more than 320 × 180, at most once per 20 wall seconds and per playback bucket, only from a visible playing video. The live saved JPEG data URL was 11,323 characters; the hard input limit is 90,000 characters. Caps are 120 snapshots per video and 1,000 total. These caps bound frame storage rather than claiming every video fits a fixed byte size. Search reads scene metadata/vectors through a cursor and loads image data only for final displayed matches. One inference runs at a time, with at most the newest text query waiting; new frames skip a busy worker. The visual worker expires after 60 seconds idle.
+
+The real CLIP model test took 3,678 ms to initialize/embed a public image. The existing bundle grew from 868,255 to 868,380 bytes when exposing the model classes; additional weights download separately. This is a single-run diagnostic and package-size measurement, not a CPU, memory or throughput improvement. Visual work adds cost, especially alongside speech recognition. Both models indexed one live public YouTube session successfully; the user can disable snapshots if the extra load is undesirable. The storage-cap and bounded-worker tests guard resource growth.
+
 # Automatic speech fallback (v2.8)
 
 Recognition runs in a separate worker using quantized Whisper tiny.en on one WASM thread. The audio worklet emits one second of 16 kHz mono PCM per message, with no video frames sent to the extension. Recognition uses 15-second windows, one inference at a time, at most two queued windows plus the in-flight window. Silence is skipped. Backlog stops capture instead of growing indefinitely, and the worker is released after stopping. Speech model progress notifications are coalesced to percentage changes. Background history capture tabs never load the speech model.

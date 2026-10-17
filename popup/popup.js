@@ -74,13 +74,17 @@ function render(results, query) {
     const node = tpl.content.firstElementChild.cloneNode(true);
     const url = r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, r.start);
     node.href = url;
-    node.querySelector('img').src = `https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`;
+    node.querySelector('img').src = r.image || `https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`;
+    if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
     node.querySelector('.title').textContent = r.title || r.videoId;
-    highlight(node.querySelector('.snippet'), r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', Math.round(r.score * 100) + (r.titleOnly ? '% title match' : '% match')]
+    highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
+    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.scene ? 'Visual match' : Math.round(r.score * 100) + (r.titleOnly ? '% title match' : '% match')]
       .filter(Boolean)
       .join(' · ');
+    for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'AI speech':'Transcript']) {
+      const indicator=document.createElement('span');indicator.textContent=label;node.querySelector('.match-sources').append(indicator);
+    }
     node.addEventListener('click', (e) => {
       e.preventDefault();
       openResult(url, e.ctrlKey || e.metaKey);
@@ -116,7 +120,8 @@ async function runSearch() {
     empty('Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
     return;
   }
-  if (res.empty) { showIdle(); return; }
+  if (res.sceneError) renderVision({status:'error',error:res.sceneError});
+  if (res.empty) {showIdle();return;}
   if (!res.results.length) {
     if (singleVideo.checked && resultOffset > 0) {
       resultOffset = 0; // The library may have changed while browsing matches.
@@ -259,13 +264,14 @@ async function refreshStatus() {
   if (!s || s.error) { statusEl.textContent = ''; return; }
   stats = s;
   if (s.videos) $('start-choice').hidden = true;
-  statusEl.textContent = `${s.videos} video${s.videos === 1 ? '' : 's'} · ${s.chunks} moments`;
+  statusEl.textContent = `${s.videos} video${s.videos === 1 ? '' : 's'} · ${s.chunks} moments` + (s.scenes ? ` · ${s.scenes} scenes` : '');
   showModel(s.model);
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (msg.type === 'speech-state') renderSpeech(msg.state);
+  if (msg.type === 'vision-state') renderVision(msg.state);
   if (msg.type === 'model-status') showModel(msg.state);
   if (msg.type === 'index-changed') refreshStatus();
   return false;
@@ -323,6 +329,7 @@ $('start-empty').addEventListener('click', async () => {
   $('start-choice').hidden = !!onboardingComplete || stats.videos > 0;
   await setupIndexNow();
   refreshSpeech();
+  send({type:'vision-status'}).then(renderVision).catch(()=>{});
   if (saved && saved.sinceDays) {
     sinceDays = saved.sinceDays;
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.days) === sinceDays)));
@@ -339,6 +346,10 @@ $('start-empty').addEventListener('click', async () => {
 })();
 
 // Caption failures start speech automatically; the popup exposes status and controls.
+function renderVision(state={}) {
+  const message=state.status==='loading'?'Downloading scene model… '+Math.round((state.progress || 0)*100)+'%':state.status==='working'?'Processing scenes on this device…':state.status==='error'?state.error:'';
+  $('scene-status').textContent=message;$('scene-status').hidden=!message;
+}
 function renderSpeech(state = {}) {
   const active = ['preparing', 'recording', 'stopping'].includes(state.status);
   const videoTab = !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');

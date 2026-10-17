@@ -8,7 +8,7 @@
 
   const FROM_MAIN = 'recall-main';
   const FROM_BRIDGE = 'recall-bridge';
-  const DEFAULTS = { enabled: true, dwellSeconds: 20 };
+  const DEFAULTS = { enabled: true, dwellSeconds: 20, scenesEnabled: true };
   const MAX_SEGMENTS = 20000;
 
   let playbackRevision = 0;
@@ -112,6 +112,7 @@
       return;
     }
     const s = await settings();
+    globalThis.__recallScenes?.start(speechClock, s);
     if (!s.enabled) return;
     startDwell(Math.max(0, Number(s.dwellSeconds) || 0), video.videoId);
   }
