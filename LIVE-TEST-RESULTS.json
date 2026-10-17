@@ -1,0 +1,260 @@
+{
+  "baseline": [
+    {
+      "videoId": "aircAruvnKk",
+      "result": {
+        "ok": false,
+        "reason": "No transcript found (player-captions: empty; caption-tracks: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)"
+      },
+      "captionsBefore": "true",
+      "captionsAfter": "true",
+      "network": [
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        }
+      ]
+    }
+  ],
+  "v2Headless": [
+    {
+      "videoId": "aircAruvnKk",
+      "result": {
+        "ok": false,
+        "reason": "No transcript found (player-captions: empty; caption-tracks: empty; player-request: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)"
+      },
+      "captionsBefore": "false",
+      "captionsAfter": "false",
+      "network": [
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        }
+      ]
+    },
+    {
+      "videoId": "dQw4w9WgXcQ",
+      "result": {
+        "ok": false,
+        "reason": "No transcript found (player-captions: empty; caption-tracks: empty; player-request: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)"
+      },
+      "captionsBefore": "false",
+      "captionsAfter": "false",
+      "network": [
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        }
+      ]
+    }
+  ],
+  "v2Visible": [
+    {
+      "videoId": "aircAruvnKk",
+      "result": {
+        "ok": false,
+        "reason": "No transcript found (player-captions: empty; caption-tracks: empty; player-request: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)"
+      },
+      "captionsBefore": "false",
+      "captionsAfter": "false",
+      "network": [
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/api/timedtext",
+          "status": 200,
+          "bytes": 0
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        },
+        {
+          "path": "/youtubei/v1/get_transcript",
+          "status": 400,
+          "bytes": 274
+        }
+      ]
+    }
+  ],
+  "withoutRecall": [
+    {
+      "browser": "Chromium without Recall",
+      "version": "151.0.7922.34",
+      "media": {
+        "time": 9.616308,
+        "paused": false
+      },
+      "captionElements": 0,
+      "network": [
+        {
+          "status": 200,
+          "bytes": 0
+        }
+      ]
+    },
+    {
+      "browser": "Edge without Recall",
+      "version": "155.0.4283.45",
+      "media": {
+        "time": 9.894722,
+        "paused": false
+      },
+      "captionElements": 0,
+      "network": [
+        {
+          "status": 200,
+          "bytes": 0
+        }
+      ]
+    }
+  ],
+  "finalVisible": {
+    "videoId": "aircAruvnKk",
+    "result": {
+      "ok": false,
+      "reason": "No transcript found (player-captions: empty; caption-tracks: empty; player-request: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)"
+    },
+    "captionsBefore": "false",
+    "captionsAfter": "false",
+    "network": [
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/api/timedtext",
+        "status": 200,
+        "bytes": 0
+      },
+      {
+        "path": "/youtubei/v1/get_transcript",
+        "status": 400,
+        "bytes": 274
+      },
+      {
+        "path": "/youtubei/v1/get_transcript",
+        "status": 400,
+        "bytes": 274
+      }
+    ]
+  }
+}
