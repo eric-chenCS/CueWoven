@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.1.0** supports optional history import, automatic transcript fetching, and local semantic search.
+Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.2.0** supports optional history import, automatic transcript fetching, and local semantic search.
 
 ## Team setup
 
@@ -24,6 +24,7 @@ If switching from a different installed folder, export your library first and im
 
 - Watch a captioned YouTube video, or open Recall and choose **Index this video now**.
 - Describe what you remember in the popup. Transcript results link to the matching second. Search compares your saved library and shows up to 12 results, with the configured maximum per video.
+- Searches are independent by default. Click **Refine** beside the search box to add more clues to the current query. Edit those clues to build on the original search. Changing the main query, closing Refine, or reopening the popup clears extra clues.
 - Optionally import the extracted Google Takeout `watch-history.json`, up to 100 MB. Recall saves titles first, then attempts available transcripts in muted background tabs. Uncheck **Fetch transcripts after import** for titles only.
 - Use **Fetch missing transcripts** for already imported titles. Keep Library & settings open. You can pause after the current video and retry missing transcripts later. Large histories can take hours.
 - **Find videos visited in this browser** scans this browser profile's history, rather than a YouTube account export.
@@ -62,6 +63,6 @@ GitHub changes do not automatically update installed extensions. Load your check
 | `tests/` | Unit tests and optional controlled browser test |
 | `licenses/` | Third-party runtime license notices |
 
-Run `pnpm run zip` after setup to make a loadable `recall-v2.1.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
+Run `pnpm run zip` after setup to make a loadable `recall-v2.2.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
 
 Third-party notices are included. Existing native Node dependency audit findings and their browser-bundle reachability limits are documented in [TEST-REPORT.md](TEST-REPORT.md); the dependency graph is not audit-clean. No project-wide open-source license has been selected.

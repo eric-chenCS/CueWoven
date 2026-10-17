@@ -1,4 +1,4 @@
-# Recall v2.1 installation
+# Recall v2.2 installation
 
 ## From this repository
 
@@ -6,13 +6,13 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.1.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.2.0. Keeping the same folder preserves the extension identity and local library.
 
 For history imported earlier, click Fetch missing transcripts; no re-import is needed. New Takeout imports attempt transcripts automatically unless Fetch transcripts after import is unchecked. Keep the settings page open and use Pause after current video whenever needed. See UPDATE-2.1.md for validation and limits.
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v2.1.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v2.2.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 

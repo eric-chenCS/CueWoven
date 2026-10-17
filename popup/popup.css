@@ -7,7 +7,14 @@ body { width: 440px; min-height: 260px; max-height: 590px; display: flex; flex-d
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
 .status { color: var(--ink-3); font-size: 12px; }
 
-.search { position: relative; margin: 0 16px; }
+.search-row { display: flex; gap: 8px; margin: 0 16px; align-items: stretch; }
+.search { position: relative; flex: 1; min-width: 0; }
+#refine-toggle { flex: none; }
+#refine-toggle[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.refine-panel { margin: 8px 16px 0; }
+.refine-panel label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+#details { width: 100%; resize: vertical; min-height: 56px; max-height: 120px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: 13px/1.4 var(--font); background: var(--surface); color: var(--ink); }
+.refine-panel p { margin: 4px 0 0; color: var(--ink-2); font-size: 11px; }
 .search-icon {
   position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%);
   fill: none; stroke: var(--ink-3); stroke-width: 2; stroke-linecap: round;

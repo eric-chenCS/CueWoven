@@ -2,6 +2,9 @@ import { formatTime, deepLink, queryTerms } from '../lib/search.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
+const details = $('details');
+const refineToggle = $('refine-toggle');
+const refinePanel = $('refine-panel');
 const resultsEl = $('results');
 const statusEl = $('status');
 let sinceDays = 0;
@@ -93,9 +96,11 @@ function openResult(url, background) {
 // ---------------------------------------------------------------------------
 async function runSearch() {
   const seq = ++searchSeq;
-  const query = q.value.trim();
-  chrome.storage.session.set({ lastQuery: query, sinceDays }).catch(() => {});
-  if (!query) { showIdle(); return; }
+  const original = q.value.trim();
+  const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
+  // Refinement belongs to this open popup; reopening starts with an independent query.
+  chrome.storage.session.set({ lastQuery: original, sinceDays }).catch(() => {});
+  if (!original) { showIdle(); return; }
   const res = await send({ type: 'search', query, sinceDays });
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
@@ -111,13 +116,48 @@ async function runSearch() {
 }
 
 let debounce;
-q.addEventListener('input', () => {
+function scheduleSearch() {
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
   clearTimeout(debounce);
-  if (!q.value.trim()) { showIdle(); return; }
+  if (!q.value.trim()) {
+    chrome.storage.session.set({ lastQuery: '', sinceDays }).catch(() => {});
+    showIdle();
+    return;
+  }
   debounce = setTimeout(runSearch, 250);
+}
+
+q.addEventListener('input', () => {
+  details.value = '';
+  refinePanel.hidden = true;
+  refineToggle.setAttribute('aria-expanded', 'false');
+  refineToggle.disabled = !q.value.trim();
+  scheduleSearch();
+});
+
+details.addEventListener('input', scheduleSearch);
+details.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    clearTimeout(debounce);
+    runSearch();
+  }
+});
+
+refineToggle.addEventListener('click', () => {
+  clearTimeout(debounce);
+  const open = refinePanel.hidden;
+  refinePanel.hidden = !open;
+  refineToggle.setAttribute('aria-expanded', String(open));
+  if (open) {
+    details.focus();
+  } else {
+    details.value = '';
+    q.focus();
+  }
+  runSearch();
 });
 
 q.addEventListener('keydown', (e) => {
@@ -141,6 +181,7 @@ document.querySelectorAll('.chip').forEach((chip) => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(c === chip)));
     sinceDays = Number(chip.dataset.days) || 0;
+    clearTimeout(debounce);
     runSearch();
     q.focus();
   });
@@ -248,6 +289,7 @@ $('start-empty').addEventListener('click', async () => {
   }
   if (saved && saved.lastQuery) {
     q.value = saved.lastQuery;
+    refineToggle.disabled = !q.value.trim();
     q.select();
     runSearch();
   } else {

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v2.1</title>
+    <title>Recall v2.2</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v2.1</span>
+        <span>Recall v2.2</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -24,11 +24,19 @@
       </div>
     </section>
 
-    <div class="search">
-      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" autocomplete="off" spellcheck="false"
-             placeholder="that video where the guy explains black holes…" aria-label="Search what you've watched" />
+    <div class="search-row">
+      <div class="search">
+        <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" autocomplete="off" spellcheck="false"
+               placeholder="that video where the guy explains black holes…" aria-label="Search what you've watched" />
+      </div>
+      <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add details to your current search" disabled>Refine</button>
     </div>
+    <section id="refine-panel" class="refine-panel" aria-labelledby="refine-label" hidden>
+      <label id="refine-label" for="details">Add details to this search</label>
+      <textarea id="details" rows="2" maxlength="1000" placeholder="e.g. a Minecraft video, explaining how to build a trap" aria-describedby="refine-hint"></textarea>
+      <p id="refine-hint">These clues are combined with the search above. Changing that search or closing Refine clears them.</p>
+    </section>
 
     <div class="filters" role="radiogroup" aria-label="Watched within">
       <button class="chip" role="radio" aria-checked="true" data-days="0">Any time</button>
