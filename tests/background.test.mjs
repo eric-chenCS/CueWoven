@@ -51,7 +51,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {
@@ -145,4 +145,16 @@ test('automatic non-English audio is skipped but manual Start can override metad
  const calls=[];chrome.storage.local.get=async()=>({settings:{enabled:true,speechEnabled:true}});chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);return msg.type==='speech-status'?{status:'idle'}:{...msg,id:'manual-test'}};
  const automatic=await request({type:'speech-auto-start'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.match(automatic.error,/English audio only/);assert.equal(calls.includes('speech-prepare'),false);
  const manual=await request({type:'speech-start',tabId:1},{id:'x',url:'popup/popup.html'});assert.equal(manual.type,'speech-start');assert.ok(calls.includes('speech-prepare'));
+});
+
+test('on-screen text verifies active playback, timing revision and off switches',async()=>{
+ chrome.storage={local:{get:async()=>({settings:{enabled:true,screenTextEnabled:false}})}};
+ assert.deepEqual(await request({type:'screen-frame'}),{disabled:true});
+ chrome.storage={local:{get:async()=>({settings:{enabled:true}})}};
+ assert.match((await request({type:'screen-frame'})).error,/Invalid on-screen text source/);
+ const url='https://www.youtube.com/watch?v=aaaaaaaaaaa',sender={id:'x',tab:{id:1},url},clock={video:{videoId:'aaaaaaaaaaa'},time:42,revision:1,visible:true};
+ chrome.tabs={get:async()=>({active:true,url}),sendMessage:async()=>clock};
+ for(const field of ['paused','seeking','ad']){clock[field]=true;assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:42,revision:1},sender),{inactive:true});clock[field]=false;}
+ assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:42,revision:0},sender),{inactive:true});
+ assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:12,revision:1},sender),{inactive:true});
 });

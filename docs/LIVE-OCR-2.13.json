@@ -1,0 +1,8 @@
+{
+  "version": "2.13.0",
+  "testedAt": "2026-10-17T20:24:20.610Z",
+  "videoId": "FvBBB_PXFIU",
+  "environment": "Isolated Chromium, real public YouTube player, no user data or mocked responses",
+  "saved": false,
+  "error": "page.evaluate: Error: Playback did not start within 5 seconds.\n    at eval (eval at evaluate (:311:30), <anonymous>:1:169)"
+}

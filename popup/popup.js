@@ -80,12 +80,12 @@ function render(results, query) {
     node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
     node.querySelector('.title').textContent = r.title || r.videoId;
     highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : 'Spoken-content match']
+    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : 'Spoken-content match']
       .filter(Boolean)
       .join(' · ');
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
       const indicator=document.createElement('span');indicator.textContent=label;
-      indicator.title=label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':'Video title from saved history';node.querySelector('.match-sources').append(indicator);
+      indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':'Video title from saved history';node.querySelector('.match-sources').append(indicator);
     }
     node.addEventListener('click', (e) => {
       e.preventDefault();
@@ -281,6 +281,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (msg.type === 'speech-state') renderSpeech(msg.state);
   if (msg.type === 'vision-state') renderVision(msg.state);
+  if (msg.type === 'ocr-state') {const state=msg.state,message=state.status==='loading'?'Loading on-screen text reader…':state.status==='working'?'Reading on-screen text on this device…':state.status==='error'?state.error:'';$('ocr-status').textContent=message;$('ocr-status').hidden=!message;}
   if (msg.type === 'embedding-status') renderEmbedding(msg.state);
   if (msg.type === 'model-status') showModel(msg.state);
   if (msg.type === 'index-changed') refreshStatus();

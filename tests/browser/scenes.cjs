@@ -27,7 +27,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   });
   options=await context.newPage();await options.goto(`${base}/options/options.html`);
   const legacy=await options.evaluate(()=>chrome.runtime.sendMessage({type:'export'}));assert.equal(legacy.videos[0].chunks[0].start,77);assert.equal(legacy.videos[0].chunks[0].text,'Preserved existing transcript');
-  await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,dwellSeconds:0,maxAgeDays:0,speechEnabled:false,scenesEnabled:true}}));
+  await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,dwellSeconds:0,maxAgeDays:0,speechEnabled:false,screenTextEnabled:false,scenesEnabled:true}}));
   const wait=async predicate=>{const deadline=Date.now()+180000;do{const value=await predicate();if(value)return value;await new Promise(r=>setTimeout(r,200))}while(Date.now()<deadline);throw Error('Scene browser test timed out')};
   const cat=await context.newPage();await cat.goto('https://www.youtube.com/watch?v=aaaaaaaaaaa');await cat.locator('#play').click();
   await wait(async()=>{const r=await options.evaluate(()=>chrome.runtime.sendMessage({type:'list'}));return r.videos.find(v=>v.videoId==='aaaaaaaaaaa'&&v.sceneCount>0)});
@@ -65,24 +65,24 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const calls=await options.evaluate(()=>restoreCalls);assert.equal(calls.length,backup.videos.length+backup.scenes.length);assert.ok(calls.every(call=>call.videos+call.scenes===1));
   const after=await options.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'two cats sitting on a sofa',singleVideo:true}));assert.equal(after.results[0].videoId,'aaaaaaaaaaa');assert.ok(after.results[0].matchSources.includes('Scene'));
   const limits=await options.evaluate(async image=>{
-   const db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();
-   const request=indexedDB.open('recall',2),database=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+   const db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;canvas.getContext('2d').fillRect(0,0,320,180);image=canvas.toDataURL('image/jpeg',.6);
+   const request=indexedDB.open('recall',3),database=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
    const tx=database.transaction(['videos','scenes'],'readwrite'),vs=tx.objectStore('videos'),ss=tx.objectStore('scenes');
-   for(const [videoId,count] of [['ccccccccccc',130],['ddddddddddd',900]]){vs.put({videoId,title:'Capacity test',method:'history-title',sceneCount:count});for(let i=0;i<count;i++)ss.put({key:videoId+':'+i,videoId,start:i*20,indexedAt:videoId[0]==='c'?10000+i:i,image,vec:new Float32Array(512)})}
+   for(const [videoId,count] of [['ccccccccccc',250],['ddddddddddd',1780]]){vs.put({videoId,title:'Capacity test',method:'history-title',sceneCount:count});for(let i=0;i<count;i++)ss.put({key:videoId+':'+i,videoId,start:i*20,indexedAt:videoId[0]==='c'?10000+i:i,image,vec:new Float32Array(512)})}
    await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});database.close();
-   await db.scenes.put({key:'ccccccccccc:130',videoId:'ccccccccccc',start:2600,indexedAt:20000,image,vec:new Float32Array(512)});
+   await db.scenes.put({key:'ccccccccccc:250',videoId:'ccccccccccc',start:5000,indexedAt:20000,image,vec:new Float32Array(512)});
    const all=await db.scenes.vectors(),own=(await db.getVideo('ccccccccccc')).sceneCount,other=(await db.getVideo('ddddddddddd')).sceneCount;
    const pruned=await db.scenes.prune(30000),remaining=(await db.scenes.all()).length;
    await db.scenes.put({key:'ccccccccccc:1',videoId:'ccccccccccc',start:20,indexedAt:40000,image,vec:new Float32Array(512)});await db.deleteVideo('ccccccccccc');
    return {total:all.length,own,other,pruned,remaining,afterDelete:(await db.scenes.all()).length};
   },image);
-  assert.deepEqual(limits,{total:1000,own:120,other:880,pruned:1000,remaining:0,afterDelete:0});
+  assert.deepEqual(limits,{total:2000,own:240,other:1760,pruned:2000,remaining:0,afterDelete:0});
   const retention=await options.evaluate(async image=>{
    const db=await import(chrome.runtime.getURL('lib/db.js')),old=Date.now()-90*864e5;
    await db.replaceVideo({videoId:'fffffffffff',title:'Watched scene only',method:'history-title',historyImported:false,indexedAt:old,watchedAt:old},[]);
    await db.scenes.put({key:'fffffffffff:1',videoId:'fffffffffff',start:20,indexedAt:old,watchedAt:old,image,vec:new Float32Array(512)});
    await db.replaceVideo({videoId:'ggggggggggg',title:'Imported title',method:'history-title',historyImported:true,indexedAt:old,watchedAt:old},[]);
-   await chrome.storage.local.set({settings:{enabled:false,maxAgeDays:30,speechEnabled:false,scenesEnabled:false}});
+   await chrome.storage.local.set({settings:{enabled:false,maxAgeDays:30,speechEnabled:false,screenTextEnabled:false,scenesEnabled:false}});
    const result=await chrome.runtime.sendMessage({type:'prune'});return {error:result.error,watched:!!await db.getVideo('fffffffffff'),imported:!!await db.getVideo('ggggggggggg'),scenes:(await db.scenes.all()).some(scene=>scene.videoId==='fffffffffff')};
   },image);assert.deepEqual(retention,{error:undefined,watched:false,imported:true,scenes:false});
   assert.deepEqual(errors,[]);

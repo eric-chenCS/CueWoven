@@ -3,6 +3,8 @@
 import { createLiveSpeech, cleanSpeechText } from '../lib/live-speech.js';
 import { createSpeechModel } from './speech-model.js';
 import {createVisionModel} from './vision-model.js';
+import {createOcrModel} from './ocr-model.js';
+import {validateScreenFrame,screenRecord,SCREEN_TOTAL} from '../lib/screen-text.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { rank } from '../lib/search.js';
@@ -104,15 +106,15 @@ const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChan
   broadcast({type:'embedding-status',state});
 }});
 const indexCache=createRevisionCache(async()=>{
-  const [videoList, chunks] = await Promise.all([db.listVideos(), db.allChunks()]);
+  const [videoList, chunks, screenText] = await Promise.all([db.listVideos(), db.allChunks(),db.screenText.all()]);
   migration.start(videoList,chunks).catch(()=>{});
   const videos = new Map(videoList.map((v) => [v.videoId, v]));
-  const usable = chunks.filter((c) => c.vec && c.vec.length === DIM && videos.has(c.videoId));
+  const usable = [...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter((c) => c.vec && c.vec.length === DIM && videos.has(c.videoId));
   const matrix = new Float32Array(usable.length * DIM);
   const meta = new Array(usable.length);
   usable.forEach((c, i) => {
     matrix.set(c.vec, i * DIM);
-    meta[i] = { videoId: c.videoId, start: c.start, text: c.text };
+    meta[i] = { videoId: c.videoId, start: c.start, text: c.text,kind:c.kind };
   });
   return { videos, index: { matrix, dim: DIM, meta } };
 });
@@ -185,7 +187,7 @@ async function search({ query, limit, perVideo, sinceDays, offset }) {
   if (!hasScenes) return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs, offset }) };
   const words = rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs});
   try {
-    const visual = await searchScenes(q,{limit:1000,perVideo,sinceMs});
+    const visual = await searchScenes(q,{limit:2000,perVideo,sinceMs});
     if (!visual.results.length) return {results:rank(qv,index,videos,{query:q,limit,perVideo,sinceMs,offset})};
     const combined=fuseMatches(words,visual.results,{limit,perVideo,offset});
     const results=await Promise.all(combined.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
@@ -198,7 +200,8 @@ async function search({ query, limit, perVideo, sinceDays, offset }) {
 async function status() {
   const videos = await db.listVideos();
   const chunks = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
-  return { videos: videos.length, chunks, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
+  const screenText=videos.reduce((n,v)=>n+(v.screenCount||0),0);
+  return { videos: videos.length, chunks:chunks+screenText, screenText, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
 }
 
 async function exportIndex() {
@@ -209,7 +212,8 @@ async function exportIndex() {
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
   const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt})=>({videoId,start,image,indexedAt}));
-  return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes };
+  const screenText=(await db.screenText.all()).map(({videoId,start,text,indexedAt})=>({videoId,start,text,indexedAt}));
+  return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes,screenText };
 }
 
 // Backups store text/images and re-embed here so vectors survive model changes.
@@ -220,6 +224,7 @@ async function importIndex({ data }) {
 }
 async function restoreIndex(data) {
   if (sceneTask) await sceneTask.catch(()=>{});
+  if (screenTask) await screenTask.catch(()=>{});
   if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Recall export file');
   let imported = 0;
   for (const v of data.videos) {
@@ -233,12 +238,20 @@ async function restoreIndex(data) {
     broadcast({ type: 'import-progress', done: imported, total: data.videos.length });
   }
   if (Array.isArray(data.scenes)) {
-    for (const scene of data.scenes.slice(-1000)) {
+    for (const scene of data.scenes.slice(-2000)) {
       const video = await db.getVideo(scene?.videoId);if (!video) continue;
       const valid = validateScene({...scene,video});
       const vec = await visionModel.image(valid.image);
       await db.scenes.put({...valid,videoId:video.videoId,indexedAt:Number(scene.indexedAt)||Date.now(),watchedAt:video.watchedAt,vec});
     }
+  }
+  if(Array.isArray(data.screenText)){
+    const rows=data.screenText.slice(-SCREEN_TOTAL).map(screenRecord).filter(Boolean);
+    for(let i=0;i<rows.length;i+=BATCH){
+      const batch=rows.slice(i,i+BATCH),vectors=await embed(batch.map(row=>row.text));
+      for(const [j,row] of batch.entries())await db.screenText.put({...row,vec:vectors[j],embeddingVersion:EMBEDDING_VERSION});
+    }
+    invalidate();
   }
   return { imported };
 }
@@ -250,14 +263,43 @@ async function prune({ maxAgeDays }) {
   if (old.length) invalidate();
   const scenesRemoved = await db.scenes.prune(Date.now()-maxAgeDays*864e5);
   if (scenesRemoved) invalidate();
-  return { removed: old.length, scenesRemoved };
+  const screenRemoved=await db.screenText.prune(Date.now()-maxAgeDays*864e5);
+  if(screenRemoved)invalidate();
+  return { removed: old.length, scenesRemoved,screenRemoved };
+}
+
+let screenTask=null,screenEpoch=0;
+const ocrModel=createOcrModel(state=>broadcast({type:'ocr-state',state}));
+async function indexScreen(input){
+  const frame=validateScreenFrame(input);
+  if(screenTask || sceneTask || sceneSearches || indexImportBusy)return {busy:true};
+  const epoch=screenEpoch;
+  screenTask=(async()=>{
+    const blob=new Blob([Uint8Array.from(atob(frame.image.split(',')[1]),c=>c.charCodeAt(0))],{type:'image/jpeg'});
+    const bitmap=await createImageBitmap(blob),width=bitmap.width,height=bitmap.height;bitmap.close();
+    const {text}=await ocrModel.read(frame.image,width,height);
+    if(epoch!==screenEpoch)return {disabled:true};
+    if(!text)return {ok:true,empty:true};
+    const id=frame.video.videoId,now=Date.now();
+    if(!await db.getVideo(id))await importHistory({videos:[{...cleanVideo(frame.video),watchedAt:now}],historyImported:false});
+    if(epoch!==screenEpoch)return {disabled:true};
+    await db.touchWatch(id,now);
+    const previous=await db.screenText.last(id);
+    if(previous?.text===text && Math.abs(frame.start-previous.start)<30)return {ok:true,duplicate:true};
+    const [vec]=await embed([text]);
+    if(epoch!==screenEpoch)return {disabled:true};
+    const row=screenRecord({videoId:id,start:frame.start,text,indexedAt:now});
+    const response=await db.screenText.put({...row,vec,embeddingVersion:EMBEDDING_VERSION});
+    invalidate();broadcast({type:'index-changed'});return response;
+  })();
+  try{return await screenTask;}finally{screenTask=null;}
 }
 
 let visionState = {status:'idle'}, sceneTask = null, sceneSearches = 0;
 const visionModel = createVisionModel(state=>{visionState=state;broadcast({type:'vision-state',state});});
 async function indexScene(input) {
   const scene = validateScene(input);
-  if (sceneTask || sceneSearches || indexImportBusy) return {busy:true};
+  if (sceneTask || screenTask || sceneSearches || indexImportBusy) return {busy:true};
   sceneTask = (async()=>{
     const vec = await visionModel.image(scene.image);
     if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
@@ -313,8 +355,10 @@ const speech = createLiveSpeech({
 });
 
 const handlers = {
+  'screen-index':indexScreen,
+  'ocr-stop':async()=>{screenEpoch++;ocrModel.release();return {ok:true};},
   'scene-index': indexScene,
-  'vision-status': async()=>({...visionState,busy:!!sceneTask || sceneSearches>0 || indexImportBusy}),
+  'vision-status': async()=>({...visionState,busy:!!sceneTask || !!screenTask || sceneSearches>0 || indexImportBusy}),
   'vision-stop': async()=>{visionModel.release();return {ok:true};},
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),

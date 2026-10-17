@@ -23,3 +23,9 @@ test('scene retries are bounded and speech or invalid-data errors fail immediate
  let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{}]},async()=>{calls++;return {error:'Wait for scene processing to finish before changing saved data.'}},()=>{},async()=>{}),/0\/1/);assert.equal(calls,5);
  for(const error of ['Stop speech-to-text before changing saved data.','Invalid image.']){calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{}]},async()=>{calls++;return {error}},()=>{},async()=>{throw Error('must not wait')}),new RegExp(error));assert.equal(calls,1);}
 });
+
+test('on-screen text restore uses bounded batches after its parent videos',async()=>{
+ const calls=[],progress=[];const screenText=Array.from({length:35},(_,i)=>({videoId:'a',start:i*5,text:'subtitle words'}));
+ await restoreBackup({format:'recall-export',videos:[{}],screenText},async message=>{calls.push(message);return {imported:message.data.videos.length}},state=>progress.push(state));
+ assert.equal(calls.length,4);assert.deepEqual(calls.slice(1).map(call=>call.data.screenText.length),[16,16,3]);assert.deepEqual(progress.at(-1),{done:36,total:36,imported:1});
+});

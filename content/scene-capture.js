@@ -17,7 +17,7 @@
       const scale = Math.min(320/video.videoWidth,180/video.videoHeight), w = video.videoWidth*scale, h = video.videoHeight*scale;
       ctx.drawImage(video,(320-w)/2,(180-h)/2,w,h);
       const response = await send({type:'scene-frame',video:context.video,start:context.time,image:canvas.toDataURL('image/jpeg',0.6)});
-      if (active === generation && response?.ok) {seen.add(bucket);if (seen.size > 120) seen.delete(seen.values().next().value);}
+      if (active === generation && response?.ok) {seen.add(bucket);if (seen.size > 240) seen.delete(seen.values().next().value);}
       if (active === generation && response?.error) send({type:'scene-capture-error',reason:'Scene snapshots could not be saved: '+response.error});
     } catch (error) {
       if (active === generation) {

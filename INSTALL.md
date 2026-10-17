@@ -1,4 +1,4 @@
-# Recall v2.12 installation
+# Recall v2.13 installation
 
 ## From this repository
 
@@ -6,15 +6,15 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.12.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.13.0. Keeping the same folder preserves the extension identity and local library.
 
-Updating from v2.9–v2.11 needs no runtime rebuild. Version 2.12 contains the import/speech fixes described in [the release notes](docs/UPDATE-2.12.md). Coming from an older release, run `pnpm run vendor` to include the visual-model components. The packaged ZIP already includes the required runtime. Version 2.10 automatically improves existing text vectors in background batches; the popup shows progress and search remains available. No re-import is needed. Text, dates, audio coverage and scenes are preserved. **Save scene snapshots** remains on by default and can be switched off in settings. Search shows Scene/Transcript/Audio/Title evidence indicators, with Audio meaning AI transcription of player audio. No search mode needs selecting. See docs/UPDATE-2.10.md for accuracy changes and docs/UPDATE-2.9.md for scene sampling limits.
+Version 2.13 adds a bundled local OCR runtime and English data. **Rebuild the runtime after pulling this update**: run `pnpm run setup`, reload Recall and refresh YouTube tabs. The packaged ZIP already includes it. The same search now shows On-screen text alongside Scene/Transcript/Audio/Title indicators. Both Read on-screen text and Save scene snapshots have off switches in settings. Existing text, dates, audio ranges and scene JPEGs survive the database upgrade; no re-import is needed. See [UPDATE-2.13.md](docs/UPDATE-2.13.md).
 
 For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching uses one separate minimized window with six muted player tabs at a time by default; choose three in Settings → Parallel videos to reduce load. Your main tab bar stays clear. Return to settings for progress or Pause after active videos. The window closes after completion or pause; closing it manually pauses new work. It is minimized, not fully hidden or closed, and may appear in the taskbar. An extension/browser restart can interrupt the job; retry missing transcripts afterward. See docs/UPDATE-2.7.md.
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v2.12.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v2.13.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -30,7 +30,7 @@ Alternatively, click Find YouTube history to scan this browser profile's saved v
 
 ## Transcript limitation
 
-The user confirmed live caption capture and timestamp links work in their regular Edge session. Caption retrieval can still fail for particular videos or sessions. In v2.12, a normal video you are playing automatically falls back to English speech-to-text after captions fail. Reload the extension and refresh existing YouTube tabs to load the new audio script. No recording button, microphone or tab-capture permission is required. The first speech use downloads a local model; model loading and recognition use extra CPU. Watch the popup's Speech-to-text status or use Stop. The automatic fallback has an off switch in settings. Mixed/non-English uploaded subtitle tracks without original-audio/ASR evidence do not trigger it. Manual Start English transcription bypasses the language guard when you know the label is wrong; the model remains English-only.
+The user confirmed live caption capture and timestamp links work in their regular Edge session. Caption retrieval can still fail for particular videos or sessions. In v2.13, a normal video you are playing automatically falls back to English speech-to-text after captions fail. Reload the extension and refresh existing YouTube tabs to load the new audio script. No recording button, microphone or tab-capture permission is required. The first speech use downloads a local model; model loading and recognition use extra CPU. Watch the popup's Speech-to-text status or use Stop. The automatic fallback has an off switch in settings. Mixed/non-English uploaded subtitle tracks without original-audio/ASR evidence do not trigger it. Manual Start English transcription bypasses the language guard when you know the label is wrong; the model remains English-only.
 
 Speech-to-text captures only portions played after it starts, one video at a time. It skips detected ads and paused playback, splits at seeks/rate changes, labels results as partial AI speech, and can make recognition/timing errors. Unavailable or protected player audio can still fail. The background imported-history queue continues fetching captions; it does not silently play entire histories through speech recognition. Audio stays in memory on this device; saved speech text follows the same retention as other transcripts. See docs/UPDATE-2.8.md.
 

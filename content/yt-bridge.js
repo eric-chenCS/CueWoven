@@ -8,7 +8,7 @@
 
   const FROM_MAIN = 'recall-main';
   const FROM_BRIDGE = 'recall-bridge';
-  const DEFAULTS = { enabled: true, dwellSeconds: 20, scenesEnabled: true };
+  const DEFAULTS = { enabled: true, dwellSeconds: 20, scenesEnabled: true,screenTextEnabled:true };
   const MAX_SEGMENTS = 20000;
 
   let playbackRevision = 0;
@@ -113,6 +113,7 @@
     }
     const s = await settings();
     globalThis.__recallScenes?.start(speechClock, s);
+    globalThis.__recallScreen?.start(speechClock, s);
     if (!s.enabled) return;
     startDwell(Math.max(0, Number(s.dwellSeconds) || 0), video.videoId);
   }
@@ -167,7 +168,7 @@
     if (event.source !== window || event.origin !== location.origin) return;
     const d = event.data;
     if (!d || d.source !== FROM_MAIN) return;
-    if (d.type === 'video-reset') {current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();}
+    if (d.type === 'video-reset') {current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();}
     else if (d.type === 'video') onVideo(d.video);
     else if (d.type === 'transcript' && pending.has(d.reqId)) {
       const resolve = pending.get(d.reqId);

@@ -4,7 +4,7 @@ import {restoreBackup} from '../lib/backup.js';
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true };
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -42,7 +42,7 @@ async function loadLibrary() {
   const moments = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
   const stats = $('stats');
   stats.textContent = '';
-  for (const [n, label] of [[videos.length, videos.length === 1 ? 'video' : 'videos'], [moments, 'spoken/title moments'],[videos.reduce((n,v)=>n+(v.sceneCount || 0),0),'saved scenes']]) {
+  for (const [n, label] of [[videos.length, videos.length === 1 ? 'video' : 'videos'], [moments, 'spoken/title moments'],[videos.reduce((n,v)=>n+(v.sceneCount || 0),0),'saved scenes'],[videos.reduce((n,v)=>n+(v.screenCount||0),0),'on-screen text moments']]) {
     const s = document.createElement('span');
     s.className = 'stat';
     const b = document.createElement('b');
@@ -88,7 +88,7 @@ function renderLibrary() {
     t.textContent = v.title || v.videoId;
     const m = document.createElement('div');
     m.className = 'm';
-    m.textContent = [v.channel, v.method === 'history-title' ? 'Title saved · no transcript' : v.method === 'speech-local' ? `${v.chunkCount} moments · AI speech, played portions only` : `${v.chunkCount} moments`, v.sceneCount ? `${v.sceneCount} scenes` : '', 'indexed ' + new Date(v.indexedAt).toLocaleString()].filter(Boolean).join(' · ');
+    m.textContent = [v.channel, v.method === 'history-title' ? 'Title saved · no transcript' : v.method === 'speech-local' ? `${v.chunkCount} moments · AI speech, played portions only` : `${v.chunkCount} moments`, v.sceneCount ? `${v.sceneCount} scenes` : '',v.screenCount?`${v.screenCount} on-screen text moments`:'', 'indexed ' + new Date(v.indexedAt).toLocaleString()].filter(Boolean).join(' · ');
     info.append(t, m);
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -407,6 +407,7 @@ async function loadSettings() {
   $('enabled').checked = !!s.enabled;
   $('speechEnabled').checked = s.speechEnabled !== false;
   $('scenesEnabled').checked = s.scenesEnabled !== false;
+  $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   $('maxAgeDays').value = String(s.maxAgeDays);
   $('perVideo').value = String(s.perVideo);
@@ -419,6 +420,7 @@ async function saveSettings() {
     enabled: $('enabled').checked,
     speechEnabled: $('speechEnabled').checked,
     scenesEnabled: $('scenesEnabled').checked,
+    screenTextEnabled:$('screenTextEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
     perVideo: Number($('perVideo').value),
@@ -430,7 +432,7 @@ async function saveSettings() {
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
   if (settings.maxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
