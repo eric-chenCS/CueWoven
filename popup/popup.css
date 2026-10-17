@@ -32,6 +32,8 @@ body { width: 440px; min-height: 260px; max-height: 590px; display: flex; flex-d
 .view-option { display: flex; align-items: center; gap: 6px; margin: 6px 16px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
 .view-option input { margin: 0; accent-color: var(--accent); }
 .result-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px 12px; }
+.result-pages button { width: 36px; height: 32px; padding: 0; display: grid; place-items: center; }
+.result-pages svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #page-label { color: var(--ink-2); font-size: 12px; text-align: center; }
 .chip {
   border: 1px solid var(--line); background: transparent; color: var(--ink-2);

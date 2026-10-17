@@ -6,7 +6,7 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.3.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.3.1. Keeping the same folder preserves the extension identity and local library.
 
 For history imported earlier, click Fetch missing transcripts; no re-import is needed. New Takeout imports attempt transcripts automatically unless Fetch transcripts after import is unchecked. Keep the settings page open and use Pause after current video whenever needed. See UPDATE-2.1.md for validation and limits.
 
