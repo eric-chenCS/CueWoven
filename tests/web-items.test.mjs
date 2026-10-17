@@ -33,6 +33,14 @@ test("private addresses, credentials, local networks and sensitive paths are exc
   assert.equal(policy.allowed("https://www.example.com/article", { enabled: true, domains: ["example.com"] }), true);
   assert.equal(policy.allowed("https://www.example.com/article", { enabled: true, allSites: true, blocked: ["example.com"] }), false);
 });
+test('public topics and deep code paths survive while private entry routes stay excluded',()=>{
+  for(const url of ['https://en.wikipedia.org/wiki/Email','https://en.wikipedia.org/wiki/Bank','https://en.wikipedia.org/wiki/Health','https://docs.python.org/3/library/email.html','https://github.com/team/repo/blob/main/global_settings.py','https://www.nytimes.com/section/health','https://stackoverflow.com/questions/123/how-to-login-with-oauth','https://example.com/health'])assert.ok(policy.safeUrl(url),url);
+  for(const url of ['https://example.com/account/details','https://example.com/login','https://example.com/%61ccount/details','https://example.com/#/account/details','https://example.com/#/%2Faccount/details','https://example.com/mail/','https://mail.example.com/','https://mail.google.com/','https://example.com/?token=secret'])assert.equal(policy.safeUrl(url),null,url);
+});
+test('Google clicked-result redirects merge with Chrome URLs and still validate the final target',()=>{
+  const rows=[{title:'Visited Older title',titleUrl:'https://www.google.com/url?q=https%3A%2F%2Fexample.com%2Farticle%3Futm_source%3Dgoogle&usg=tracker',time:'2020-01-01'},{title:'Newer title',url:'https://example.com/article',time_usec:1700000000000000},{title:'Visited Python email',titleUrl:'https://www.google.com/url?url=https%3A%2F%2Fdocs.python.org%2F3%2Flibrary%2Femail.html',time:'2020-01-01'},{title:'Visited Secret',titleUrl:'https://www.google.com/url?q=https%3A%2F%2Fmail.google.com%2F',time:'2020-01-01'},{title:'Visited Unsafe',titleUrl:'https://www.google.com/url?q=javascript%3Aalert(1)',time:'2020-01-01'}];
+  const result=parseWebHistory(rows);assert.equal(result.items.length,2);assert.equal(result.items[0].title,'Newer title');assert.equal(result.items[1].title,'Python email');assert.equal(result.items[1].url,'https://docs.python.org/3/library/email.html');assert.equal(result.skipped,2);
+});
 test("web identities are deterministic, namespaced and reject forged backup owners", async () => {
   const a = await itemIdentity("https://example.com/a?utm_source=test"), b = await itemIdentity("https://example.com/a");
   assert.equal(a.videoId, b.videoId);

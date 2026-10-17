@@ -5,7 +5,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
   try {
     await context.route("https://*.example.com/**", (route) => {
       const url = new URL(route.request().url()), privatePage2 = url.pathname === "/password";
-      return route.fulfill({ contentType: "text/html", body: `<!doctype html><title>${privatePage2 ? "Private sample" : "Coral reef science"}</title><main><h1>Coral reefs</h1><p>Coral bleaching occurs when warm ocean water drives away symbiotic algae. The loss of these algae turns the coral white and deprives it of food. Restoring cooler water helps the reef recover.</p><p style="display:none">HIDDEN_SECRET_BODY</p><form><p>FORM_SECRET_BODY</p><input value="FORM_SECRET_VALUE" />${privatePage2 ? '<input type="password" value="PASSWORD_SECRET" />' : ""}</form></main>` });
+      return route.fulfill({ contentType: "text/html", body: `<!doctype html><title>${privatePage2 ? "Private sample" : "Coral reef science"}</title><article>Short unrelated teaser.</article><article><h1>Coral reefs</h1><p id="body">Coral bleaching occurs when warm ocean water drives away symbiotic algae. The loss of these algae turns the coral white and deprives it of food. Restoring cooler water helps the reef recover.</p><p style="display:none">HIDDEN_SECRET_BODY</p><form><p>FORM_SECRET_BODY</p><input value="FORM_SECRET_VALUE" />${privatePage2 ? '<input type="password" value="PASSWORD_SECRET" />' : '<div style="display:none"><input type="password" value="HIDDEN_PASSWORD_SECRET" /></div>'}</form><div contenteditable="true" style="width:200px;height:40px">COMMENT_SECRET_BODY</div></article>` });
     });
     const chromeHistory = { "Browser History": [{ url: "https://articles.example.com/reef", title: "Coral reef science", time_usec: 17e14 }, { url: "https://bank.example.com/account", title: "PRIVATE_BANK_TITLE", time_usec: 17e14 }, { url: "https://www.youtube.com/watch?v=aaaaaaaaaaa", title: "A YouTube video", time_usec: 17e14 }] };
     await options.locator("#web-history-file").setInputFiles({ name: "BrowserHistory.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(chromeHistory)) });
@@ -31,6 +31,14 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     assert.ok(backup.items.find((item) => item.kind === "page").passages.length);
     assert.ok(!JSON.stringify(backup).includes("SECRET"));
     assert.ok(!JSON.stringify(backup).includes("PRIVATE_BANK"));
+    assert.ok(!JSON.stringify(backup).includes("unrelated teaser"), 'largest article is captured');
+    await page.locator('#body').evaluate(node=>node.textContent+=' A newly added observation about coral recovery.');
+    await page.waitForTimeout(11500);
+    assert.ok(!JSON.stringify(await send({type:'export'})).includes('newly added observation'), 'small DOM changes do not save before the sixty-second cooldown');
+    await page.evaluate(()=>{const editor=document.querySelector('[contenteditable]');editor.style.cssText='position:fixed;inset:0;width:100vw;height:100vh';});
+    const editorContext=await options.evaluate(async()=>{const tabs=await chrome.tabs.query({});const tab=tabs.find(tab=>tab.url==='https://articles.example.com/reef');return chrome.tabs.sendMessage(tab.id,{type:'web-context'});});
+    assert.equal(editorContext.private,true,'dominant editor still prevents page capture');
+    await page.locator('[contenteditable]').evaluate(node=>node.style.cssText='width:200px;height:40px');
     const privatePage = await context.newPage();
     await privatePage.goto("https://articles.example.com/password");
     await privatePage.waitForTimeout(6500);

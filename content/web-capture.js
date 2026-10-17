@@ -4,7 +4,24 @@
   globalThis.__recallWebCapture = true;
   const P = globalThis.__recallWebPolicy, send = (msg) => chrome.runtime.sendMessage(msg).catch((error) => ({ error: error.message }));
   let config = {}, settings = {}, selected = null, selectedSrc = "", videoInfo = null, revision = 0, busy = false, pageUrl = "", eligibleAt = Date.now(), lastText = "", lastSaved = 0, lastChecked = 0, mediaSince = 0, speechAttempted = false, cuesSeen = new Set();
-  const privatePage = () => !!document.querySelector('input[type="password"],input[autocomplete="current-password"],input[autocomplete="new-password"],[contenteditable="true"],[data-recall-private]');
+  function rendered(element) {
+    if (!element.getClientRects().length) return false;
+    if (element.checkVisibility) return element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
+    for (let node = element; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.visibility === "hidden" || style.display === "none" || Number(style.opacity) === 0) return false;
+    }
+    return true;
+  }
+  function privatePage() {
+    if (document.querySelector("[data-recall-private]")) return true;
+    if ([...document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[autocomplete="new-password"]')].some(rendered)) return true;
+    return [...document.querySelectorAll('[contenteditable]:not([contenteditable="false"]),textarea')].slice(0, 100).some((editor) => {
+      if (!rendered(editor)) return false;
+      const rect = editor.getBoundingClientRect(), width = Math.max(0, Math.min(innerWidth, rect.right) - Math.max(0, rect.left)), height = Math.max(0, Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top));
+      return width * height >= innerWidth * innerHeight * 0.5;
+    });
+  }
   const eligible = () => settings.enabled !== false && P.allowed(location.href, config) && !privatePage();
   function visible(video) {
     const rect = video.getBoundingClientRect();
@@ -54,13 +71,14 @@
     return { url: url.href, sourceHint, title: (video.getAttribute("aria-label") || post?.querySelector("h1,h2,h3")?.textContent || document.querySelector('meta[property="og:title"]')?.content || document.title || location.hostname).trim().slice(0, 300) };
   }
   function pageText() {
-    const root = document.querySelector('article,main,[role="main"]') || document.body;
+    const candidates = [...document.querySelectorAll('article,main,[role="main"]')].slice(0, 16).filter(rendered);
+    const root = candidates.sort((a, b) => (b.innerText?.length || 0) - (a.innerText?.length || 0))[0] || document.body;
     if (!root) return "";
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), parts = [];
     let count = 0, words = 0, node;
     while ((node = walker.nextNode()) && count++ < 8e3 && words < 2e3) {
       const parent = node.parentElement;
-      if (!parent || parent.closest('script,style,noscript,nav,header,footer,aside,form,input,textarea,button,[hidden],[aria-hidden="true"],[contenteditable]') || !parent.getClientRects().length) continue;
+      if (!parent || parent.closest('script,style,noscript,nav,header,footer,aside,form,input,textarea,button,[hidden],[aria-hidden="true"],[contenteditable]:not([contenteditable="false"])') || !rendered(parent)) continue;
       const style = getComputedStyle(parent);
       if (style.display === "none" || style.visibility === "hidden") continue;
       const text = node.textContent.replace(/\s+/g, " ").trim();
@@ -132,7 +150,7 @@
           await send({ type: "speech-auto-start" });
         }
       }
-      if (force || Date.now() - eligibleAt >= 5e3 && Date.now() - lastChecked >= 1e4) {
+      if (force || Date.now() - eligibleAt >= 5e3 && Date.now() - lastChecked >= 1e4 && (!lastSaved || Date.now() - lastSaved >= 6e4)) {
         lastChecked = Date.now();
         const google = /^(?:www\.)?google\.[a-z.]+$/i.test(location.hostname) && location.pathname === "/search", text = google ? "" : pageText(), title = google ? new URL(location.href).searchParams.get("q") || document.title : document.title;
         if ((text !== lastText || Date.now() - lastSaved >= 6e4 || force) && (text.length >= 40 || google || force)) {

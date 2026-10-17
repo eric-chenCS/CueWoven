@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.1.0 update
+
+All 194 Node tests pass. Public URL/redirect regressions, batched title embedding, canceled imports, exact passage reuse and cached lexical matching supplement isolated browser tests for schema-5 normalization/budgets, hidden login forms, comment exclusions, dominant editors, larger article selection, recapture cooldown, dynamic-worklet speech and full-page storage/search. The 30,000-full-passage rank benchmark improved from 1,399 ms to 142 ms on the test machine with the same result order; 600 full 2,000-word pages took 107–161 ms per warm database-backed search. These are synthetic fixtures, not user history or general performance guarantees. See [UPDATE-3.1.md](UPDATE-3.1.md) for the measured scope, upgrade storage tradeoff and unchanged dependency findings.
+
 ## Version 3.0.0 update
 
 All 188 Node tests pass. General-history file imports, actual semantic page capture/search, optional-access and private-page gates, video caption/scene/OCR/audio integration, backup restore, bounded storage, source filters and responsive light/dark UI pass in isolated Chromium. Existing YouTube scene/storage, mutation holds, import integrity, automatic speech and six-player background transcript regressions also pass. Inverting the website-enabled guard deliberately fails the regression suite. A real Wikipedia article saved successfully; production TikTok was connection-reset and Instagram exposed no playing video. Controlled social-origin players pass; production social compatibility and the browser's native optional-permission dialog remain unverified. See [UPDATE-3.0.md](UPDATE-3.0.md) for coverage, privacy/storage limits and unchanged dependency findings. Historical results below describe their original versions.
