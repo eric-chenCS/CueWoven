@@ -8,7 +8,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
  try {
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),base=`chrome-extension://${new URL(worker.url()).hostname}`;
   const options=await context.newPage();await options.goto(`${base}/options/options.html`);
-  await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,dwellSeconds:0,maxAgeDays:0,speechEnabled:true,scenesEnabled:true}}));
+  await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,dwellSeconds:0,maxAgeDays:0,speechEnabled:true,screenTextEnabled:false,scenesEnabled:true}}));
   const page=await context.newPage();await page.goto(`https://www.youtube.com/watch?v=${report.videoId}`,{waitUntil:'domcontentloaded',timeout:60000});
   await page.locator('video').waitFor({state:'attached'});await page.locator('video').click({force:true});
   await page.evaluate(()=>{const video=document.querySelector('video');video.currentTime=9;video.loop=true;return video.play()});

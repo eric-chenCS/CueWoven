@@ -6,7 +6,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
  try{
   await captureOptionsMessages(context);
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),page=await context.newPage();await page.goto(`chrome-extension://${new URL(worker.url()).hostname}/options/options.html`);
-  await page.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,speechEnabled:false,scenesEnabled:false}}));
+  await page.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,speechEnabled:false,screenTextEnabled:false,scenesEnabled:false}}));
   const results=await page.evaluate(async()=>{
    const send=msg=>chrome.runtime.sendMessage(msg),db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();
    const original=Date.parse('2020-01-01'),video={videoId:'aaaaaaaaaaa',title:'Battery chemistry',channel:'Fixture',watchedAt:original};
@@ -14,7 +14,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
    const indexed=await send({type:'index-video',video:{videoId:video.videoId,title:video.title},method:'controlled-captions',segments:[{start:42,text:'Repeated charging traps active lithium and reduces battery capacity.'}]});if(indexed.error)throw Error(indexed.error);
    const after=await db.getVideo(video.videoId),chunks=await db.chunksOf(video.videoId),old=Date.now()-31*864e5;
    await db.replaceVideo({...after,indexedAt:old},chunks.map(({id,...chunk})=>chunk));
-   await chrome.storage.local.set({settings:{enabled:false,maxAgeDays:30,speechEnabled:false,scenesEnabled:false}});await send({type:'prune'});
+   await chrome.storage.local.set({settings:{enabled:false,maxAgeDays:30,speechEnabled:false,screenTextEnabled:false,scenesEnabled:false}});await send({type:'prune'});
    const survived=!!await db.getVideo(video.videoId);
    const {historyImported,...legacy}=after;await db.replaceVideo(legacy,chunks.map(({id,...chunk})=>chunk));
    const repaired=await send({type:'import-history',videos:[video]});const repairedVideo=await db.getVideo(video.videoId);

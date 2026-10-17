@@ -7,7 +7,7 @@ import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -180,6 +180,17 @@ async function startSpeech(tabId, manual=false) {
 }
 
 const handlers = {
+  async 'screen-frame'(input,sender){
+    const settings=await getSettings();if(!settings.enabled || settings.screenTextEnabled===false)return {disabled:true};
+    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?'))throw Error('Invalid on-screen text source.');
+    const {tab,clock}=await speechContext(sender.tab.id);
+    if(!tab.active || !clock.visible || clock.paused || clock.seeking || clock.ad || clock.video.videoId!==input.video?.videoId || clock.revision!==input.revision || !Number.isFinite(input.start) || Math.abs(clock.time-input.start)>3)return {inactive:true};
+    return engine('screen-index',{video:clock.video,start:input.start,image:input.image});
+  },
+  async 'screen-capture-error'({reason},sender){
+    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?'))throw Error('Invalid on-screen text source.');
+    chrome.runtime.sendMessage({type:'ocr-state',state:{status:'error',error:String(reason).slice(0,300)}}).catch(()=>{});return {ok:true};
+  },
   async 'scene-frame'(input,sender) {
     const settings=await getSettings();if (!settings.enabled || settings.scenesEnabled === false) return {disabled:true};
     if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
@@ -390,4 +401,5 @@ chrome.storage?.onChanged?.addListener((changes, area) => {
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
+  if (area === 'local' && settings && (settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});
 });

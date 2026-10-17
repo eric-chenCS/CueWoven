@@ -35,7 +35,7 @@ test('scene input rejects external images, oversized data, decompression bombs a
   const good={...scene,image:'data:image/jpeg;base64,'+jpeg.toString('base64')};
   assert.equal(validateScene(good).key,'aaaaaaaaaaa:1');
   jpeg[9]=255;assert.throws(()=>validateScene({...good,image:'data:image/jpeg;base64,'+jpeg.toString('base64')}),/320/);
-  assert.equal(SCENES_TOTAL,1000);assert.equal(SCENES_PER_VIDEO,120);
+  assert.equal(SCENES_TOTAL,2000);assert.equal(SCENES_PER_VIDEO,240);
 });
 
 test('noise-floor scene hits cannot displace eligible transcripts',()=>{

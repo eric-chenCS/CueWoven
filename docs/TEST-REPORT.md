@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.13.0 update
+
+See [UPDATE-2.13.md](UPDATE-2.13.md) for the 145-test result, real OCR/video/search and storage-budget checks, measured timings, existing browser regressions, dependency review and the unsuccessful public-player attempt. OCR reads sampled English video pixels and stores words with a timestamp; it does not establish exact subtitle onset/end or complete coverage. Existing results below describe their original versions.
+
 ## Version 2.12.0 update
 
 All 131 Node tests pass. New checks cover imported-transcript retention beyond 31 days, mixed uploaded-caption language ordering, original/ASR precedence, automatic guard versus manual speech override, all supplied Whisper-noise examples, bounded scene-busy restore retries, no duplicate progress and immediate handling of speech/invalid-data/transport failures. Reinstating the title-only import exemption deliberately failed its regression and was restored. The failure bridge now has a title assertion.

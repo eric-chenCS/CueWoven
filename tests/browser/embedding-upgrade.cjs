@@ -5,7 +5,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
  const errors=[];context.on('page',page=>page.on('pageerror',error=>errors.push(error.message)));
  try {
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),base=`chrome-extension://${new URL(worker.url()).hostname}`;
-  const options=await context.newPage();await options.goto(`${base}/options/options.html`);await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,scenesEnabled:false,speechEnabled:false}}));
+  const options=await context.newPage();await options.goto(`${base}/options/options.html`);await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,screenTextEnabled:false,scenesEnabled:false,speechEnabled:false}}));
   const before=await options.evaluate(async()=>{
    const db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();
    await db.replaceVideo({videoId:'aaaaaaaaaaa',title:'Legacy audio',channel:'Fixture',method:'speech-local',partial:true,watchedAt:100,indexedAt:200,chunkCount:1},[{videoId:'aaaaaaaaaaa',start:42,text:'Chemical reactions inside electrodes trap active lithium. An aging phone stores less charge after repeated cycles.',speechStart:40,speechEnd:55,vec:new Float32Array(384)}]);
