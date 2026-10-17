@@ -71,3 +71,9 @@ test('speech noise tags and standalone filler never become saved moments',async(
  assert.equal(speechSegments({text:'I study (music theory) every day.'},0,1,5)[0].text,'I study (music theory) every day.');
  const f=fixture({transcribe:async()=>({text:'[Music] Thank you.'})});await f.start();await f.feed(15);await f.controller.stop();assert.equal(f.saved.length,0);
 });
+
+test('common Whisper music, blank and language tags never create searchable segments',()=>{
+ for(const text of ['♪ ♪','[BLANK_AUDIO]','( Music )','*music*','(speaking in foreign language)','[ applause ]','12345 !!!','Thank you. Thank you.'])assert.deepEqual(speechSegments({text},0,1,10),[],text);
+ assert.equal(speechSegments({text:'♪ [BLANK_AUDIO] *music* A battery loses capacity.'},0,1,10)[0].text,'A battery loses capacity.');
+ assert.equal(speechSegments({text:'The lesson is (music theory) and [a minor scale].'},0,1,10)[0].text,'The lesson is (music theory) and [a minor scale].');
+});

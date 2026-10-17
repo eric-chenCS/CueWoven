@@ -373,7 +373,7 @@ function renderSpeech(state = {}) {
   const label = state.video?.title ? '“' + state.video.title + '”' : 'this video';
   $('speech-status').textContent = state.status === 'preparing' ? 'Loading speech model… ' + Math.round((state.progress || 0) * 100) + '%' :
     state.status === 'recording' ? 'Listening to ' + label + ' · ' + (state.saved || 0) + ' speech segments saved. Only played portions are captured.' :
-    state.status === 'stopping' ? 'Finishing captured audio…' : state.reason || (state.saved ? 'Saved ' + state.saved + ' speech segments from ' + label + '.' : 'Starts automatically when captions cannot be captured. You can retry here; transcripts may contain recognition errors.');
+    state.status === 'stopping' ? 'Finishing captured audio…' : state.reason || (state.saved ? 'Saved ' + state.saved + ' speech segments from ' + label + '.' : 'Starts automatically when captions cannot be captured. Start retries with the English model even if language metadata is uncertain or wrong; recognition errors are possible.');
 }
 async function refreshSpeech() {
   const state = await send({type: 'speech-status'}).catch(error => ({reason: error.message}));renderSpeech(state);

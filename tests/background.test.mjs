@@ -140,7 +140,9 @@ test('interrupted-job cleanup closes only tracked tabs still showing their captu
   assert.deepEqual(response.job.active, []);
 });
 
-test('known non-English audio is rejected before the English model is prepared',async()=>{
- chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),sendMessage:async()=>({video:{videoId:'aaaaaaaaaaa',audioLanguage:'es'},paused:false})};
- const response=await request({type:'speech-start',tabId:1},{id:'x',url:'popup/popup.html'});assert.match(response.error,/English audio only/);
+test('automatic non-English audio is skipped but manual Start can override metadata',async()=>{
+ chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),sendMessage:async()=>({video:{videoId:'aaaaaaaaaaa',audioLanguage:'es'},paused:false,visible:true})};
+ const calls=[];chrome.storage.local.get=async()=>({settings:{enabled:true,speechEnabled:true}});chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);return msg.type==='speech-status'?{status:'idle'}:{...msg,id:'manual-test'}};
+ const automatic=await request({type:'speech-auto-start'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.match(automatic.error,/English audio only/);assert.equal(calls.includes('speech-prepare'),false);
+ const manual=await request({type:'speech-start',tabId:1},{id:'x',url:'popup/popup.html'});assert.equal(manual.type,'speech-start');assert.ok(calls.includes('speech-prepare'));
 });

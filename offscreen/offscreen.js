@@ -139,19 +139,25 @@ async function storeChunks(video, chunks, method, indexedAt) {
   const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), chunkCount: chunks.length, method: method || null });
   if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
-  await db.replaceVideo(
+  if(indexedAt===undefined && video.watchedAt>0)record.historyImported=false;
+  const saved=await db.replaceVideo(
     record,
-    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION }))
+    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION })),
+    {backgroundCapture:indexedAt===undefined && !(video.watchedAt>0)}
   );
   invalidate();
-  return { chunkCount: chunks.length, video: record };
+  return { chunkCount: chunks.length, video: saved };
 }
 
 async function importHistory({ videos, historyImported=true }) {
   const batch = validateHistoryBatch(videos);
-  const pending = [];
-  for (const video of batch) if (!await db.getVideo(video.videoId)) pending.push(video);
-  if (!pending.length) return { imported: 0, skipped: batch.length };
+  const pending = [];let repaired=0;
+  for (const video of batch) {
+    if (!await db.getVideo(video.videoId)) pending.push(video);
+    else if(historyImported && await db.repairImportOrigin(video.videoId,video.watchedAt))repaired++;
+  }
+  if(repaired)invalidate();
+  if (!pending.length) return { imported: 0, skipped: batch.length,repaired };
   const vecs = await embed(pending.map(v => `${v.title}. ${v.channel}`));
   let imported = 0;
   for (const [i, v] of pending.entries()) {
@@ -159,7 +165,7 @@ async function importHistory({ videos, historyImported=true }) {
     const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}]);
     if (added) { imported++; invalidate(); }
   }
-  return { imported, skipped: batch.length - imported };
+  return { imported, skipped: batch.length - imported,repaired };
 }
 
 async function indexVideo({ video, segments, method }) {
@@ -330,7 +336,7 @@ const handlers = {
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
-    return { has: !!video && !['history-title', 'speech-local'].includes(video.method) };
+    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),title:video?.title };
   },
   'import-history': importHistory,
   'touch-watch': async ({ videoId, watchedAt }) => {

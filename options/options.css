@@ -29,12 +29,15 @@ textarea { width: 100%; resize: vertical; margin-bottom: 10px; font-family: ui-m
 #filter { width: 240px; }
 
 .log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12.5px; }
-.log li { display: flex; gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
-.log .st { width: 70px; flex: none; font-weight: 600; }
+.log li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px; padding: 7px 0; border-top: 1px solid var(--line); opacity: 1; transition: opacity 300ms ease; }
+.log li.fading { opacity: 0; }
+.log .what { font-weight: 600; overflow-wrap: anywhere; }
+.log .st { font-weight: 600; }
 .log .done { color: var(--good); }
 .log .failed { color: var(--bad); }
 .log .working, .log .skipped { color: var(--ink-3); }
-.log .why { color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log .why { grid-column: 1 / -1; color: var(--ink-3); overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .log li { transition: none; } }
 
 .library { margin-top: 8px; }
 .vid { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }

@@ -22,7 +22,7 @@ async function fixture({forced=false,paused=false,captions=false,language=null}=
   return {messages,media,async play(){media.paused=false;events.get('playing').forEach(fn=>fn());await tick()}};
 }
 test('caption failure automatically starts speech for a normal playing video',async()=>{
-  const f=await fixture();assert.equal(f.messages.filter(m=>m.type==='speech-auto-start').length,1);
+  const f=await fixture();assert.equal(f.messages.filter(m=>m.type==='speech-auto-start').length,1);assert.equal(f.messages.find(msg=>msg.type==='index-failed').title,'Test');
 });
 test('successful captions avoid loading the speech model',async()=>{
   const f=await fixture({captions:true});assert.equal(f.messages.some(m=>m.type==='speech-auto-start'),false);

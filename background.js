@@ -77,7 +77,8 @@ const captureWindow = createCaptureWindow(chrome);
 const captureTabs = new Map();
 
 async function fetchVideoTranscript(id, onTab = () => {}) {
-  if ((await engine('has', {videoId: id})).has) return {videoId: id, status: 'skipped', reason: 'Already indexed'};
+  const existing=await engine('has',{videoId:id});
+  if (existing.has) return {videoId:id,title:existing.title,status:'skipped',reason:'Already indexed'};
   const windowId = await captureWindow.get();
   const tab = await chrome.tabs.create({windowId, url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
   captureTabs.set(tab.id, windowId);
@@ -91,7 +92,7 @@ async function fetchVideoTranscript(id, onTab = () => {}) {
     await chrome.tabs.update(tab.id, {muted: true});
     await captureWindow.minimize(windowId);
     const result = await outcome;
-    return {...result, videoId: id, status: result.ok ? 'done' : 'failed'};
+    return {...result,title:result.title || existing.title,videoId: id, status: result.ok ? 'done' : 'failed'};
   } finally {
     captureTabs.delete(tab.id);
     settleWaiter(tab.id, {ok: false, reason: 'Transcript tab closed'});
@@ -162,10 +163,10 @@ async function speechContext(tabId) {
 }
 
 
-async function startSpeech(tabId) {
+async function startSpeech(tabId, manual=false) {
   if (!Number.isInteger(tabId)) throw new Error('Invalid video tab.');
   const {tab, clock} = await speechContext(tabId);
-  if (clock.video.audioLanguage && !/^en(?:-|$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
+  if (!manual && clock.video.audioLanguage && !/^en(?:-|$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
   if (!tab.active || clock.paused) throw new Error('Play a video in the active YouTube tab first.');
   const ready = await engine('speech-prepare', {tabId, video: clock.video});
   try {
@@ -191,7 +192,7 @@ const handlers = {
     chrome.runtime.sendMessage({type:'vision-state',state:{status:'error',error:String(reason).slice(0,300)}}).catch(()=>{});return {ok:true};
   },
   'vision-status':()=>engine('vision-status'),
-  async 'speech-start'({tabId}, sender) {requirePopup(sender);return startSpeech(tabId);},
+  async 'speech-start'({tabId}, sender) {requirePopup(sender);return startSpeech(tabId,true);},
   async 'speech-auto-start'(_msg, sender) {
     const settings = await getSettings();
     if (!settings.enabled || settings.speechEnabled === false) return {disabled: true};
@@ -284,13 +285,13 @@ const handlers = {
       chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
       return { chunkCount: res.chunkCount };
     } catch (e) {
-      settleWaiter(sender.tab && sender.tab.id, { ok: false, reason: String(e.message || e) });
+      settleWaiter(sender.tab && sender.tab.id, { ok: false, title:String(video?.title||'').slice(0,300),reason: String(e.message || e) });
       throw e;
     }
   },
-  async 'index-failed'({ reason }, sender) {
+  async 'index-failed'({ reason,title }, sender) {
     flashBadge(sender.tab && sender.tab.id, '!', '#b3261e');
-    settleWaiter(sender.tab && sender.tab.id, { ok: false, reason });
+    settleWaiter(sender.tab && sender.tab.id, { ok: false,title:String(title||'').slice(0,300), reason });
     return { ok: true };
   },
 

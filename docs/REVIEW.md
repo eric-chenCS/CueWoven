@@ -1,4 +1,14 @@
-# Review — Recall v2.11.0
+# Review — Recall v2.12.0
+
+Reviewed data lifetime, concurrency, language policy, speech filtering and transient progress across correctness, readability, module boundaries, security and resource limits. Background capture preserves provenance from the current record transactionally and merges watch recency. Normal watches/local speech clear the exemption. Takeout repair requires absent provenance and an exact original watch-date match; it only changes metadata, and a later live watch wins. This avoids inferring imported status from potentially ambiguous transcript text.
+
+Restore retries only the scene preflight error that occurs before writes. Five total attempts are bounded; unrelated errors retain honest durable progress. Manual language override is reachable only through the trusted popup handler; content-script automatic requests cannot supply it. Mixed manual subtitle tracks no longer imply English audio. Noise filtering handles the supplied markers without deleting arbitrary bracketed sentences. Recognition/filter tradeoffs remain explicit.
+
+Titles and reasons render through textContent, with bounded strings from the capture pipeline. Notice timers are stable across repeated results, cleared on job changes/row caps, and leave overall counts visible. Working rows do not fade. Motion preferences are respected and the log is announced politely. Library title lookup uses a Map rather than repeated whole-library scans.
+
+All 131 Node checks and eight focused browser regressions pass. The import-retention mutation was caught. Actual scene contention, UI-file restore, title expiry and manual override are exercised; evidence and limits are in TEST-REPORT.md. No new permission, dependency or data destination is introduced. Existing native-only audit findings remain deferred as documented. The extracted ZIP passed import integrity, notice timing and legacy-library checks before installation. No confirmed release-blocking finding remains in this tested scope.
+
+# Historical review — Recall v2.11.0
 
 Reviewed all supplied findings against current callers, data writes, rank eligibility and UI state. Required fixes are implemented with regressions, including the newly exposed text-fallback source-label issue. No branch/model replacement or new dependency is needed. The 0.26 visual threshold remains an explicitly documented heuristic, and partial audio/scenes retain their labels and timestamps. Speech filtering is narrowly limited to recognized tags/standalone filler; language guards use metadata without claiming acoustic detection.
 

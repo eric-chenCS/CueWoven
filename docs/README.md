@@ -2,7 +2,7 @@
 
 Start with [installation](../INSTALL.md) and [team workflow](../CONTRIBUTING.md).
 
-- [Current release: v2.11 demo fixes](UPDATE-2.11.md)
+- [Current release: v2.12 import and speech fixes](UPDATE-2.12.md)
 - [Test report, newest results first](TEST-REPORT.md)
 - [Code review, newest release first](REVIEW.md)
 - [Performance measurements and limits](PERF.md)
