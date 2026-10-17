@@ -1,0 +1,20 @@
+{
+  "name": "recall-extension",
+  "version": "2.1.0",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "description": "Recall: semantic search over the YouTube videos you've watched, with exact-second deep links. Runs on-device.",
+  "type": "module",
+  "scripts": {
+    "setup": "pnpm install --frozen-lockfile --ignore-scripts && pnpm run vendor",
+    "vendor": "node scripts/vendor.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "zip": "node scripts/zip.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

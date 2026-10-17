@@ -1,0 +1,14 @@
+node_modules/
+vendor/
+*.zip
+build-meta.json
+.env
+.env.*
+!.env.example
+*watch-history*.json
+recall-index-*.json
+playwright-report/
+test-results/
+*-profile*/
+.DS_Store
+Thumbs.db
