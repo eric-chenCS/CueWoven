@@ -4,6 +4,7 @@
 import { build } from 'esbuild';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import {createRequire} from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,4 +60,21 @@ for (const f of readdirSync(vendor)) {
 }
 const copied = needed.length;
 console.log(`✓ copied ${copied} ONNX Runtime file(s) into vendor/`);
+
+// OCR code and English LSTM data are bundled too; no CDN worker or remote code.
+const ocr=join(vendor,'ocr'),require=createRequire(import.meta.url);
+mkdirSync(ocr,{recursive:true});
+await build({entryPoints:[join(root,'scripts/ocr-entry.js')],outfile:join(ocr,'ocr.bundle.js'),bundle:true,format:'esm',platform:'browser',target:'chrome116',minify:true,legalComments:'linked'});
+copyFileSync(join(nm,'tesseract.js/dist/worker.min.js'),join(ocr,'worker.min.js'));
+copyFileSync(join(nm,'tesseract.js/dist/worker.min.js.LICENSE.txt'),join(ocr,'worker.min.js.LICENSE.txt'));
+copyFileSync(join(nm,'tesseract.js/dist/worker.min.js.LICENSE.txt'),join(root,'licenses/tesseract-worker-notices.txt'));
+const core=dirname(createRequire(require.resolve('tesseract.js/package.json')).resolve('tesseract.js-core/package.json'));
+const ocrRequire=createRequire(require.resolve('tesseract.js/package.json'));
+const notices=[['is-url','LICENSE-MIT'],['regenerator-runtime','LICENSE'],['wasm-feature-detect','LICENSE'],['zlibjs','LICENSE']].map(([name,file])=>name+'\n'+readFileSync(join(dirname(ocrRequire.resolve(name+'/package.json')),file),'utf8'));
+writeFileSync(join(root,'licenses/tesseract-dependencies.txt'),notices.join('\n\n'));
+for(const name of ['tesseract-core-lstm.wasm.js','tesseract-core-simd-lstm.wasm.js','tesseract-core-relaxedsimd-lstm.wasm.js'])copyFileSync(join(core,name),join(ocr,name));
+copyFileSync(join(nm,'@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz'),join(ocr,'eng.traineddata.gz'));
+copyFileSync(join(nm,'tesseract.js/LICENSE.md'),join(root,'licenses/tesseract-LICENSE.txt'));
+copyFileSync(join(core,'LICENSE'),join(root,'licenses/tesseract-core-LICENSE.txt'));
+console.log('✓ bundled local OCR worker, LSTM cores and English data');
 console.log('\nDone. Load this folder in chrome://extensions with "Load unpacked".');
