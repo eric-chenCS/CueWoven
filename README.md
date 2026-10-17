@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find a YouTube video from a vague memory and jump to the matching moment. Version **2.15.0** saves extra scene snapshots around noticeable visual changes and fewer routine snapshots during quiet footage. Titles, captions, audio, scenes and **On-screen text** share one search. See [the update](docs/UPDATE-2.15.md) and [the ma-copy review](docs/MA-COPY-REVIEW.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.0.0** adds optional website/article capture, Chrome and Google Search history imports, and the existing caption, audio, scene and on-screen-text techniques for compatible browser video players. Everything shares one search. YouTube keeps its existing exact-second links; articles use passage highlights. See [the update and compatibility limits](docs/UPDATE-3.0.md) and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 
@@ -22,6 +22,10 @@ If switching from a different installed folder, export your library first and im
 
 ## Use
 
+- Open **Library & settings → Websites & articles** to enable live website capture. Enter a specific domain and click **Allow this site**, or explicitly choose **Allow public websites** for broader access. Website capture starts off; site permission is optional. Refresh existing tabs after granting access. Recall saves visible text from allowed pages, up to the first 2,000 words. Use the popup's site pause button or **Forget this site** in settings to stop capture and remove that site's saved entries.
+- Import extracted Takeout **Chrome/BrowserHistory.json** or **My Activity/Search** JSON through the general-history card, or scan this browser's saved history. Imported pages save titles and visits, Google searches save query text, and YouTube links save video titles. Imports do not retrieve old page bodies or video audio. Use the existing YouTube transcript tools for imported YouTube videos. Files stay local; keep settings open during import. A visit does not establish that you read or watched something.
+- On allowed sites, compatible visible HTML video players can contribute played native captions, sampled scenes and burned-in text. Enable **Transcribe website video audio** separately to try local English speech recognition when usable captions are unavailable. It starts off to limit CPU use and runs on one player at a time. Instagram/TikTok browser pages may work when they expose a usable player; login walls, protected or cross-origin media, embedded frames and native mobile apps are not covered. Feed links may reopen the feed rather than the exact clip. These are sampled played portions, not complete downloads.
+- Use **Everything / Videos / Pages / Searches** above the results to narrow the shared search. Page matches open a text-fragment link where supported and where the passage still exists. Website video timestamps require the allowed Recall page script and a matching usable player.
 - Watch a YouTube video. Recall tries captions after the configured watch delay; if that fails, it automatically starts English speech-to-text on the playing video's audio. Known non-English audio and mixed uploaded subtitle languages skip the English-only automatic fallback. The popup’s Start English transcription button can override incorrect language metadata. No recording button or microphone permission is needed. First use downloads another model and uses extra CPU. The popup shows progress, **Stop**, and an optional retry. Disable automatic speech-to-text in settings.
 - Describe what you remember in the popup. By default, Recall shows the strongest matching video and its matching moment. Use **→** and **←** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered. Press Enter in the search box to open the shown match; if the query changed, Recall searches it first and opens the fresh match. Ctrl/Cmd+Enter opens it in the background.
 - The same search also checks sampled video images, even if nobody describes the scene aloud. Result indicators show **Scene**, **Transcript**, **Audio**, **On-screen text**, or **Title**; nearby scene/transcript evidence can appear together. Audio means AI transcription of player audio. Scene matches show the saved image and link to its timestamp. There is no separate scene-search mode.
@@ -58,7 +62,7 @@ git commit -m "Describe the change"
 git push -u origin your-change
 ```
 
-Open a pull request on GitHub. After it is merged, teammates pull the latest code and reload Recall. Refresh YouTube tabs after content-script changes. Run `pnpm run setup` again after dependency or runtime-build changes.
+Open a pull request on GitHub. After it is merged, teammates pull the latest code and reload Recall. Refresh YouTube and allowed website tabs after content-script changes. Run `pnpm run setup` again after dependency or runtime-build changes.
 
 GitHub changes do not automatically update installed extensions. Load your checkout directly for development, keep its folder path stable, and reload after editing. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -67,7 +71,7 @@ GitHub changes do not automatically update installed extensions. Load your check
 | Path | Purpose |
 | --- | --- |
 | `manifest.json`, `background.js` | Extension configuration and service worker |
-| `content/` | YouTube captions, playback timing, player audio and sampled frames |
+| `content/` | YouTube and optional website text, video captions, playback timing, audio and sampled frames |
 | `offscreen/`, `lib/` | Local search/speech/vision models, bounded queues, IndexedDB and evidence ranking |
 | `popup/`, `options/`, `styles/` | Search popup and library/settings interface |
 | `scripts/` | Runtime build and ZIP packaging |
@@ -75,6 +79,8 @@ GitHub changes do not automatically update installed extensions. Load your check
 | `docs/` | Release notes, reviews, evaluations and live-test reports |
 | `licenses/` | Third-party runtime license notices |
 
-Run `pnpm run zip` after setup to make a loadable `recall-v2.15.zip` including the generated runtime. ZIP files, dependencies, downloaded Hugging Face model caches, history exports, browser profiles and build metadata should not be committed.
+Run `pnpm run zip` after setup to make a loadable `recall-v3.0.zip` including the generated runtime. ZIP files, dependencies, downloaded Hugging Face model caches, history exports, browser profiles and build metadata should not be committed.
+
+Website capture skips incognito, password/editor pages, known sensitive sites and paths, and blocked domains. This is a conservative filter, not universal detection of signed-in or private content; prefer specific allowed domains. Website audio remains off until enabled. Old pages are never fetched to fill history. New web passage vectors use 8-bit storage and searches scan bounded batches. Full web content is capped at 2,000 items or 64 MiB of accounted text/vector payload; older content falls back to its searchable title. Imported metadata is preserved until explicitly removed or read live, after which normal retention applies. These budgets do not include all browser database overhead or model memory.
 
 Third-party notices are included. Existing native Node dependency audit findings and their browser-bundle reachability limits are documented in [TEST-REPORT.md](docs/TEST-REPORT.md); the dependency graph is not audit-clean. No project-wide open-source license has been selected.

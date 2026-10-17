@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.0.0 update
+
+All 188 Node tests pass. General-history file imports, actual semantic page capture/search, optional-access and private-page gates, video caption/scene/OCR/audio integration, backup restore, bounded storage, source filters and responsive light/dark UI pass in isolated Chromium. Existing YouTube scene/storage, mutation holds, import integrity, automatic speech and six-player background transcript regressions also pass. Inverting the website-enabled guard deliberately fails the regression suite. A real Wikipedia article saved successfully; production TikTok was connection-reset and Instagram exposed no playing video. Controlled social-origin players pass; production social compatibility and the browser's native optional-permission dialog remain unverified. See [UPDATE-3.0.md](UPDATE-3.0.md) for coverage, privacy/storage limits and unchanged dependency findings. Historical results below describe their original versions.
+
 ## Version 2.15.0 update
 
 All 168 Node tests pass. The adaptive scene browser test verifies a brief real video-frame event between routine snapshots, scene search at its timestamp, quiet checkpoint suppression, the shared six-extra budget, independent frame keys and backup restore. Existing scene, capture-hold, OCR and import-integrity browser regressions are included. See [UPDATE-2.15.md](UPDATE-2.15.md) for the measured probe cost, mutation check, storage/processing limits and controlled-video test scope. Historical results below describe their original versions.
