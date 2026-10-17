@@ -1,5 +1,17 @@
 # Recall test report
 
+## Version 2.10.0 update
+
+All 113 Node tests pass. New checks cover semantic-versus-weak-literal ranking, exact quoted speech, word boundaries, accents/Unicode, title eligibility, unified Audio/Scene evidence, embedding recipes, batch progress/retry, and revision-safe cache invalidation. Disabling phrase matching deliberately failed the regression; it was restored. No dependency, lockfile or permission changed.
+
+The fixed 15-video, 31-query synthetic benchmark uses real q8 models. Previous main returned the correct first video in 30/31 and exact first moment in 29/31; unmodified ma-copy scored 29/31 for both; v2.10 scored 31/31 for both. Body-only embedding alone also scored 31/31, so this fixture does not isolate the impact of every ranking change. MiniLM and BGE-small tied. Whisper tiny.en and base.en each had zero normalized word errors on one generated English passage in clean, noisy and faster variants. Bigger models are not shipped. These limited, development-visible fixtures are regression checks, not general accuracy estimates. See RETRIEVAL-EVAL-2.10.json, SPEECH-EVAL-2.10.json and MA-COPY-REVIEW.md.
+
+The real-model legacy upgrade browser test passed 65 old chunks, including partial audio with ranges and a saved scene. It checks unchanged chunk IDs/text/times, video dates/metadata, correct Audio rendering at 0:42 without percentages, a later watch date, concurrent full-caption replacement and deletion without resurrection. The scene regression, automatic speech regression, both 53-video imports, single-video arrows and refinement passed. A background-window regression timed out once waiting 10 seconds for the manual-close Paused UI; it then passed alone with diagnostic output enabled. The first timeout's cause remains unconfirmed, so that run is not reported as an uninterrupted full-suite pass. The extracted v2.10 package also passed the legacy-upgrade and background-window regressions; the manual-close path completed on that packaged run.
+
+A live public YouTube check with no user profile/cookies/history saved a real scene and speech-local transcript from jNQXAC9IVRw. A visual description returned a Scene result around 0:11.6, with a saved JPEG data URL of 11,335 characters. Video/image/model responses were not mocked; the short video looped from 0:09. See LIVE-SCENES-2.10.json. One public video does not certify all players or visual/audio descriptions.
+
+The native pnpm audit was rerun and still reports 3 high sharp advisories and 1 moderate sprintf-js advisory in the existing Node graph. Those native paths and node_modules are excluded from the browser bundle/package; the source dependency graph is not audit-clean. Model weights, synthetic vector caches, test audio, private data and browser profiles are not packaged. Review deferral and compatibility limits remain documented below. Sustained playback load and a broad real-user accuracy corpus were not tested.
+
 ## Version 2.9.0 update
 
 All 101 Node tests pass. New checks cover sampled capture, pauses/visibility/seeks/ads, forced-history exclusion, off switches, source validation, JPEG dimensions/size, bounded visual inference, latest-query replacement, cancel/retry, independent visual ranking, evidence fusion, strong transcript timestamps and 50-video mixed pagination. Removing the scene ad guard failed its test and was restored. No dependency or browser permission was added; the runtime build now exposes CLIP classes from the existing dependency.

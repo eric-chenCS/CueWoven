@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find a YouTube video from a vague memory and jump to the matching moment. Version **2.9.0** adds local scene snapshots to the same search as titles, captions and automatic speech-to-text.
+Recall helps you find a YouTube video from a vague memory and jump to the matching moment. Version **2.10.0** improves passage and phrase matching while keeping titles, captions, automatic speech-to-text and scene images in one search. See [the update](UPDATE-2.10.md) and [the ma-copy review](MA-COPY-REVIEW.md).
 
 ## Team setup
 
@@ -24,7 +24,7 @@ If switching from a different installed folder, export your library first and im
 
 - Watch a YouTube video. Recall tries captions after the configured watch delay; if that fails, it automatically starts English speech-to-text on the playing video's audio. No recording button or microphone permission is needed. First use downloads another model and uses extra CPU. The popup shows progress, **Stop**, and an optional retry. Disable automatic speech-to-text in settings.
 - Describe what you remember in the popup. By default, Recall shows the strongest matching video and its matching moment. Use **→** and **←** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered.
-- The same search also checks sampled video images, even if nobody describes the scene aloud. Result indicators show **Scene**, **Transcript**, **AI speech**, or **Title**; nearby scene/transcript evidence can appear together. Scene matches show the saved image and link to its timestamp. There is no separate scene-search mode.
+- The same search also checks sampled video images, even if nobody describes the scene aloud. Result indicators show **Scene**, **Transcript**, **Audio**, or **Title**; nearby scene/transcript evidence can appear together. Audio means AI transcription of player audio. Scene matches show the saved image and link to its timestamp. There is no separate scene-search mode.
 - Searches are independent by default. Click **Refine** beside the search box to add more clues to the current query. Edit those clues to build on the original search. Changing the main query, closing Refine, or reopening the popup clears extra clues.
 - Optionally import the extracted Google Takeout `watch-history.json`, up to 100 MB. Recall saves titles first, then attempts available transcripts in a separate minimized Recall window. Uncheck **Fetch transcripts after import** for titles only.
 - Use **Fetch missing transcripts** for already imported titles. Fetching runs in the background with six muted videos at once in that separate minimized window (choose three in Settings → Parallel videos to reduce load). Once the titles are saved and fetching starts, you can close settings; keep the browser open. Return to settings for progress or **Pause after active videos**. Large or blocked histories can still take time.
@@ -39,6 +39,8 @@ Scene capture is on by default and can be switched off with **Save scene snapsho
 Transcript fetching uses YouTube's normal player/session in one separate minimized window, keeping its capture tabs out of your main tab bar. The window must stay open while fetching; it closes after completion or pause. Closing it yourself pauses new work. It remains visible in the taskbar and can be restored; browsers do not support a closed window that keeps running. Existing YouTube restrictions still apply. Reloading the extension or restarting the browser can interrupt a job; retry **Fetch missing transcripts** afterward. See [UPDATE-2.7.md](UPDATE-2.7.md).
 
 ## Edit and share changes
+
+On the first use after updating from an older release, Recall improves existing text embeddings in background batches. The popup shows progress and search stays available. It preserves transcripts, dates, audio ranges and scene images; no re-import is needed. Passage vectors now describe the actual spoken text, with title/channel context ranked separately. Exact phrases and Unicode word matching supplement semantic similarity. Result scores are ranking signals, not probabilities, so the popup shows evidence indicators instead of percentages. The fixed 31-query synthetic comparison improved correct first moments from 29 to 31; this is a regression check, not a general accuracy guarantee. Larger BGE and Whisper base models tied the existing models on the narrow fixtures, so MiniLM, Whisper tiny.en and CLIP remain the shipped models.
 
 Use a branch and pull request for team changes:
 
@@ -68,6 +70,6 @@ GitHub changes do not automatically update installed extensions. Load your check
 | `tests/` | Unit tests and optional controlled browser test |
 | `licenses/` | Third-party runtime license notices |
 
-Run `pnpm run zip` after setup to make a loadable `recall-v2.9.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
+Run `pnpm run zip` after setup to make a loadable `recall-v2.10.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
 
 Third-party notices are included. Existing native Node dependency audit findings and their browser-bundle reachability limits are documented in [TEST-REPORT.md](TEST-REPORT.md); the dependency graph is not audit-clean. No project-wide open-source license has been selected.

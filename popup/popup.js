@@ -79,11 +79,12 @@ function render(results, query) {
     node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
     node.querySelector('.title').textContent = r.title || r.videoId;
     highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.scene ? 'Visual match' : Math.round(r.score * 100) + (r.titleOnly ? '% title match' : '% match')]
+    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : 'Spoken-content match']
       .filter(Boolean)
       .join(' · ');
-    for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'AI speech':'Transcript']) {
-      const indicator=document.createElement('span');indicator.textContent=label;node.querySelector('.match-sources').append(indicator);
+    for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
+      const indicator=document.createElement('span');indicator.textContent=label;
+      indicator.title=label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':'Video title from saved history';node.querySelector('.match-sources').append(indicator);
     }
     node.addEventListener('click', (e) => {
       e.preventDefault();
@@ -263,6 +264,7 @@ async function refreshStatus() {
   const s = await send({ type: 'status' });
   if (!s || s.error) { statusEl.textContent = ''; return; }
   stats = s;
+  renderEmbedding(s.embeddingMigration);
   if (s.videos) $('start-choice').hidden = true;
   statusEl.textContent = `${s.videos} video${s.videos === 1 ? '' : 's'} · ${s.chunks} moments` + (s.scenes ? ` · ${s.scenes} scenes` : '');
   showModel(s.model);
@@ -272,6 +274,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (msg.type === 'speech-state') renderSpeech(msg.state);
   if (msg.type === 'vision-state') renderVision(msg.state);
+  if (msg.type === 'embedding-status') renderEmbedding(msg.state);
   if (msg.type === 'model-status') showModel(msg.state);
   if (msg.type === 'index-changed') refreshStatus();
   return false;
@@ -349,6 +352,10 @@ $('start-empty').addEventListener('click', async () => {
 function renderVision(state={}) {
   const message=state.status==='loading'?'Downloading scene model… '+Math.round((state.progress || 0)*100)+'%':state.status==='working'?'Processing scenes on this device…':state.status==='error'?state.error:'';
   $('scene-status').textContent=message;$('scene-status').hidden=!message;
+}
+function renderEmbedding(state={}) {
+  const message=state.status==='running'?`Improving saved text matches… ${state.done}/${state.total}. Search remains available.`:state.status==='error'?'Saved-match update paused: '+state.error:'';
+  $('embedding-status').textContent=message;$('embedding-status').hidden=!message;
 }
 function renderSpeech(state = {}) {
   const active = ['preparing', 'recording', 'stopping'].includes(state.status);

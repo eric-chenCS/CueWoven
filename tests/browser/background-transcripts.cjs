@@ -101,5 +101,9 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.waitForTimeout(800);assert.equal(await page.evaluate(()=>listReads),1);
   await page.locator('section').filter({has:page.locator('#transcriptConcurrency')}).screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR || os.tmpdir(),'recall-v2.7-settings.png')});
   console.log('BACKGROUND_TRANSCRIPTS_PASS: real service worker, six concurrent muted tabs in one separate minimized/unfocused window, settings closed while eight videos finish, restored progress, original dates, real-model search at 0:42, pause, manual window close without recreation, already-indexed skip, main-window isolation and cleanup. YouTube responses controlled.');
+ } catch(error) {
+  const worker=context.serviceWorkers()[0];
+  if(worker)console.error('BACKGROUND_DIAGNOSTICS',JSON.stringify(await worker.evaluate(async()=>({state:await chrome.storage.session.get(['transcriptJob','captureWindow']),tabs:await chrome.tabs.query({url:'https://www.youtube.com/watch*'})})).catch(()=>({worker:'unavailable'}))));
+  throw error;
  } finally {release();await context.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
