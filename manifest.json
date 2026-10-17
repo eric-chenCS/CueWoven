@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v2.13 – Search What You've Watched",
-  "short_name": "Recall v2.13",
-  "version": "2.13.0",
+  "name": "Recall v2.14 – Search What You've Watched",
+  "short_name": "Recall v2.14",
+  "version": "2.14.0",
   "description": "Semantic search over the YouTube videos you've watched. Type a vague memory, jump to the exact second. 100% on-device.",
   "minimum_chrome_version": "116",
   "icons": {

@@ -1,4 +1,4 @@
-import { formatTime, deepLink, queryTerms } from '../lib/search.js';
+import { formatTime, deepLink, queryTerms,playbackStart } from '../lib/search.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -73,11 +73,12 @@ function render(results, query) {
   const tpl = $('result-tpl');
   for (const r of results) {
     const node = tpl.content.firstElementChild.cloneNode(true);
-    const url = r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, r.start);
+    const url = r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, playbackStart(r));
     node.href = url;
     node.querySelector('img').src = r.image || `https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`;
     if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
+    if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
     node.querySelector('.title').textContent = r.title || r.videoId;
     highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
     node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : 'Spoken-content match']

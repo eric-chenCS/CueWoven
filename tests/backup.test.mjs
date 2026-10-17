@@ -15,13 +15,8 @@ test('restore reports saved progress even when the message transport rejects',as
  let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{},{}]},async()=>{if(++calls===2)throw Error('Channel closed');return {imported:1}}),/1\/2.*Channel closed.*remain saved/);
 });
 
-test('restore retries temporary scene contention without duplicating durable progress',async()=>{
- let calls=0;const waits=[],progress=[];const result=await restoreBackup({format:'recall-export',videos:[{}]},async()=>++calls<3?{error:'Wait for scene processing to finish before changing saved data.'}:{imported:1},state=>progress.push(state),async ms=>waits.push(ms));
- assert.equal(result.imported,1);assert.deepEqual(waits,[500,1000]);assert.equal(progress.length,1);assert.equal(calls,3);
-});
-test('scene retries are bounded and speech or invalid-data errors fail immediately',async()=>{
- let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{}]},async()=>{calls++;return {error:'Wait for scene processing to finish before changing saved data.'}},()=>{},async()=>{}),/0\/1/);assert.equal(calls,5);
- for(const error of ['Stop speech-to-text before changing saved data.','Invalid image.']){calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{}]},async()=>{calls++;return {error}},()=>{},async()=>{throw Error('must not wait')}),new RegExp(error));assert.equal(calls,1);}
+test('restore errors stop immediately without replaying partially written requests',async()=>{
+ for(const error of ['Wait for the backup restore to finish before changing saved data.','Stop speech-to-text before changing saved data.','Invalid image.']){let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{}]},async()=>{calls++;return {error};}),/0\/1.*remain saved/);assert.equal(calls,1);}
 });
 
 test('on-screen text restore uses bounded batches after its parent videos',async()=>{

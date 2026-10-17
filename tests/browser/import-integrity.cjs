@@ -36,7 +36,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   const backup={format:'recall-export',videos:[{videoId:'bbbbbbbbbbb',title:'Restored while scene was busy',method:'history-title',historyImported:true,watchedAt:10,chunks:[{start:0,text:'Restored video title'}]}]};
   await page.locator('#import').setInputFiles({name:'recall-test-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(backup))});
   await page.waitForFunction(()=>document.querySelector('#data-msg').textContent==='Imported 1 videos.',null,{timeout:120000});
-  assert.ok(await page.evaluate(()=>restoreAttempts>=2),'actual busy scene should trigger a retry');
+  assert.equal(await page.evaluate(()=>restoreAttempts),1,'capture hold drains the scene without a busy retry');
   await page.evaluate(async()=>{const result=await pendingScene;if(result.error)throw Error(result.error)});
   // Real rendering/timers, controlled queue events: old notices must not reappear.
   const job={id:'notice-test',revision:1,status:'done',total:2,completed:2,done:1,failed:1,skipped:0,active:[],results:[{videoId:'aaaaaaaaaaa',title:'Battery chemistry — why phones lose charge',status:'done',chunkCount:4},{videoId:'bbbbbbbbbbb',title:'Minecraft: building the gold-floor trap',status:'failed',reason:'Captions unavailable'}]};
@@ -46,6 +46,6 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   await page.waitForTimeout(3100);await page.evaluate(job=>window.recallMessage({type:'transcript-job',job:{...job,revision:2}}),job);
   await page.waitForFunction(()=>document.querySelectorAll('#bulk-log li').length===0,null,{timeout:3000});
   await page.evaluate(job=>window.recallMessage({type:'transcript-job',job:{...job,revision:3}}),job);assert.equal(await page.locator('#bulk-log li').count(),0);assert.match(await page.locator('#bulk-summary').textContent(),/1 failed/);
-  console.log('IMPORT_INTEGRITY_PASS: imported captions survive 31-day retention, Takeout repairs missing origin safely, concurrent watch wins, actual scene-busy restore retries, title notices fade after five seconds without resetting/reappearing.');
+  console.log('IMPORT_INTEGRITY_PASS: imported captions survive 31-day retention, Takeout repairs missing origin safely, concurrent watch wins, scene capture hold during restore, title notices fade after five seconds without resetting/reappearing.');
  }finally{await context.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});
