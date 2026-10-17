@@ -4,7 +4,8 @@ import { createLiveSpeech, cleanSpeechText } from '../lib/live-speech.js';
 import { createSpeechModel } from './speech-model.js';
 import {createVisionModel} from './vision-model.js';
 import {createOcrModel} from './ocr-model.js';
-import {validateScreenFrame,screenRecord,SCREEN_TOTAL} from '../lib/screen-text.js';
+import {createCaptureHold} from '../lib/capture-hold.js';
+import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { rank } from '../lib/search.js';
@@ -212,7 +213,7 @@ async function exportIndex() {
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
   const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt})=>({videoId,start,image,indexedAt}));
-  const screenText=(await db.screenText.all()).map(({videoId,start,text,indexedAt})=>({videoId,start,text,indexedAt}));
+  const screenText=(await db.screenText.all()).map(({videoId,start,text,indexedAt,observedLines})=>({videoId,start,text,indexedAt,...(observedLines?{observedLines}:{})}));
   return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes,screenText };
 }
 
@@ -223,8 +224,6 @@ async function importIndex({ data }) {
   try {return await restoreIndex(data);} finally {indexImportBusy = false;}
 }
 async function restoreIndex(data) {
-  if (sceneTask) await sceneTask.catch(()=>{});
-  if (screenTask) await screenTask.catch(()=>{});
   if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Recall export file');
   let imported = 0;
   for (const v of data.videos) {
@@ -244,6 +243,7 @@ async function restoreIndex(data) {
       const vec = await visionModel.image(valid.image);
       await db.scenes.put({...valid,videoId:video.videoId,indexedAt:Number(scene.indexedAt)||Date.now(),watchedAt:video.watchedAt,vec});
     }
+    invalidate();
   }
   if(Array.isArray(data.screenText)){
     const rows=data.screenText.slice(-SCREEN_TOTAL).map(screenRecord).filter(Boolean);
@@ -268,51 +268,60 @@ async function prune({ maxAgeDays }) {
   return { removed: old.length, scenesRemoved,screenRemoved };
 }
 
-let screenTask=null,screenEpoch=0;
+let screenTask=null,screenEpoch=0,sceneEpoch=0;
+const visualQueries=new Set();
 const ocrModel=createOcrModel(state=>broadcast({type:'ocr-state',state}));
+const captureHold=createCaptureHold({pending:()=>[screenTask,sceneTask,...visualQueries],cancel:()=>{screenEpoch++;sceneEpoch++;ocrModel.release();}});
+function visualQuery(work){
+  if(captureHold.held() || indexImportBusy)return Promise.reject(Error('Wait for the library change to finish before searching scenes.'));
+  const task=Promise.resolve().then(work);visualQueries.add(task);
+  return task.finally(()=>visualQueries.delete(task));
+}
 async function indexScreen(input){
   const frame=validateScreenFrame(input);
-  if(screenTask || sceneTask || sceneSearches || indexImportBusy)return {busy:true};
+  if(captureHold.held() || screenTask || sceneTask || visualQueries.size || indexImportBusy)return {busy:true};
   const epoch=screenEpoch;
   screenTask=(async()=>{
     const blob=new Blob([Uint8Array.from(atob(frame.image.split(',')[1]),c=>c.charCodeAt(0))],{type:'image/jpeg'});
     const bitmap=await createImageBitmap(blob),width=bitmap.width,height=bitmap.height;bitmap.close();
-    const {text}=await ocrModel.read(frame.image,width,height);
+    const {text,lines}=await ocrModel.read(frame.image,width,height);
     if(epoch!==screenEpoch)return {disabled:true};
     if(!text)return {ok:true,empty:true};
     const id=frame.video.videoId,now=Date.now();
     if(!await db.getVideo(id))await importHistory({videos:[{...cleanVideo(frame.video),watchedAt:now}],historyImported:false});
     if(epoch!==screenEpoch)return {disabled:true};
     await db.touchWatch(id,now);
-    const previous=await db.screenText.last(id);
-    if(previous?.text===text && Math.abs(frame.start-previous.start)<30)return {ok:true,duplicate:true};
-    const [vec]=await embed([text]);
+    const recent=await db.screenText.recent(id),observedLines=lines?.length?lines:[text];
+    const fresh=cleanScreenText(novelScreenLines(observedLines,recent,frame.start).join(' '));
+    if(!fresh)return {ok:true,duplicate:true};
+    const [vec]=await embed([fresh]);
     if(epoch!==screenEpoch)return {disabled:true};
-    const row=screenRecord({videoId:id,start:frame.start,text,indexedAt:now});
+    const row=screenRecord({videoId:id,start:frame.start,text:fresh,observedLines,indexedAt:now});
     const response=await db.screenText.put({...row,vec,embeddingVersion:EMBEDDING_VERSION});
     invalidate();broadcast({type:'index-changed'});return response;
   })();
-  try{return await screenTask;}finally{screenTask=null;}
+  try{return await screenTask;}catch(error){if(epoch!==screenEpoch)return {disabled:true};throw error;}finally{screenTask=null;}
 }
 
-let visionState = {status:'idle'}, sceneTask = null, sceneSearches = 0;
+let visionState = {status:'idle'}, sceneTask = null;
 const visionModel = createVisionModel(state=>{visionState=state;broadcast({type:'vision-state',state});});
 async function indexScene(input) {
   const scene = validateScene(input);
-  if (sceneTask || screenTask || sceneSearches || indexImportBusy) return {busy:true};
+  if (captureHold.held() || sceneTask || screenTask || visualQueries.size || indexImportBusy) return {busy:true};
+  const epoch=sceneEpoch;
   sceneTask = (async()=>{
     const vec = await visionModel.image(scene.image);
+    if(epoch!==sceneEpoch)return {disabled:true};
     if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
+    if(epoch!==sceneEpoch)return {disabled:true};
     await db.touchWatch(scene.video.videoId,Date.now());
     const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,vec,indexedAt:Date.now(),watchedAt:Date.now()});
     invalidate();broadcast({type:'index-changed'});return response;
   })();
   try {return await sceneTask;} finally {sceneTask = null;}
 }
-async function searchScenes(query,options) {
-  if (indexImportBusy) throw new Error('Wait for the index import to finish before searching scenes.');
-  sceneSearches++;
-  try {
+function searchScenes(query,options) {
+  return visualQuery(async()=>{
     if (sceneTask) await sceneTask.catch(()=>{});
     const scenes = await db.scenes.vectors();
     if (!scenes.length) return {results:[],empty:true};
@@ -320,7 +329,7 @@ async function searchScenes(query,options) {
     const videos = new Map((await db.listVideos()).map(video=>[video.videoId,video]));
     const hits = rankScenes(vector,scenes,videos,options);
     return {results:hits};
-  } finally {sceneSearches--;}
+  });
 }
 
 
@@ -358,7 +367,7 @@ const handlers = {
   'screen-index':indexScreen,
   'ocr-stop':async()=>{screenEpoch++;ocrModel.release();return {ok:true};},
   'scene-index': indexScene,
-  'vision-status': async()=>({...visionState,busy:!!sceneTask || !!screenTask || sceneSearches>0 || indexImportBusy}),
+  'vision-status': async()=>({...visionState,busy:captureHold.held() || !!sceneTask || !!screenTask || visualQueries.size>0 || indexImportBusy}),
   'vision-stop': async()=>{visionModel.release();return {ok:true};},
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),
@@ -375,7 +384,7 @@ const handlers = {
   },
   ping: async () => ({ ok: true }),
   warmup: async ({scenes=false}) => {
-    const visual=scenes?db.listVideos().then(videos=>videos.some(video=>video.sceneCount>0)?visionModel.warmup():null).catch(()=>null):null;
+    const visual=scenes?visualQuery(async()=>{const videos=await db.listVideos();return videos.some(video=>video.sceneCount>0)?visionModel.warmup():null;}).catch(()=>null):null;
     await Promise.all([getExtractor(),getIndex(),visual]);return {ok:true};
   },
   has: async ({ videoId }) => {
@@ -393,11 +402,11 @@ const handlers = {
   search,
   status,
   list: async () => ({ videos: await db.listVideos() }),
-  delete: async ({ videoId }) => { await db.deleteVideo(videoId); invalidate(); return { ok: true }; },
-  clear: async () => { await db.clearAll(); invalidate(); return { ok: true }; },
+  delete: ({ videoId }) => captureHold.run(async()=>{await db.deleteVideo(videoId);invalidate();return {ok:true};}),
+  clear: () => captureHold.run(async()=>{await db.clearAll();invalidate();return {ok:true};}),
   export: exportIndex,
-  import: importIndex,
-  prune,
+  import: data=>captureHold.run(()=>importIndex(data),{restore:true}),
+  prune: data=>captureHold.run(()=>prune(data)),
 };
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

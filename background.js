@@ -136,7 +136,6 @@ function requireLibrary(sender) {
 }
 
 async function requireTranscriptJobIdle() {
-  if ((await engine('vision-status')).busy) throw new Error('Wait for scene processing to finish before changing saved data.');
   if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
   if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
 }

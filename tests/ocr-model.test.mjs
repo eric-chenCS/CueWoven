@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import {createOcrModel} from '../offscreen/ocr-model.js';
 const output=text=>({data:{blocks:[{paragraphs:[{lines:[{confidence:95,words:[{text,confidence:95}]}]}]}]}});
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
+test('OCR preserves separate subtitle lines for conservative watermark deduplication',async()=>{
+  const words=['NEWS LIVE','The dose is 10 mg.'];
+  const data={blocks:[{paragraphs:[{lines:words.map(text=>({confidence:95,words:[{text,confidence:95}]}))}]}]};
+  const model=createOcrModel(()=>{},async()=>({worker:{setParameters:async()=>{},recognize:async()=>({data}),terminate(){}},PSM:{SINGLE_BLOCK:6,SPARSE_TEXT:11}}));
+  try{const result=await model.read('image',1280,720);assert.deepEqual(result.lines,words);assert.equal(result.text,words.join(' '));}finally{model.release();}
+});
 test('OCR serializes inference, merges subtitle fragments, reuses and releases the worker',async()=>{
   let reads=0,loads=0,terminated=0,finish;const worker={setParameters:async()=>{},recognize:async()=>{reads++;if(reads===1)await new Promise(resolve=>finish=resolve);return output(reads%2?'Chemical reactions trap lithium.':'Chemical reactions');},terminate(){terminated++}};
   const model=createOcrModel(()=>{},async()=>{loads++;return {worker,PSM:{SINGLE_BLOCK:6,SPARSE_TEXT:11}}});

@@ -1,4 +1,4 @@
-import {recognizedScreenText,recognizedScreenLines,cleanScreenText} from '../lib/screen-text.js';
+import {recognizedScreenLines,cleanScreenText,cleanScreenLines} from '../lib/screen-text.js';
 
 // One worker, no frame queue. Idle workers release their WASM memory.
 export function createOcrModel(onState=()=>{},load=async()=>{
@@ -34,10 +34,11 @@ export function createOcrModel(onState=()=>{},load=async()=>{
       if(epoch!==generation)throw Error('On-screen text processing stopped.');
       await worker.setParameters({tessedit_pageseg_mode:PSM.SPARSE_TEXT});
       const full=await worker.recognize(image,{},{text:true,blocks:true});
-      const subtitle=recognizedScreenText(bottom.data);
+      const bottomLines=recognizedScreenLines(bottom.data),subtitle=cleanScreenText(bottomLines.join(' '));
       // Sparse layout can split a subtitle into fragments; do not append duplicates.
-      const extra=recognizedScreenLines(full.data).filter(line=>!subtitle.toLowerCase().includes(line.toLowerCase())).join(' ');
-      return {text:cleanScreenText([subtitle,extra].filter(Boolean).join(' '))};
+      const extra=recognizedScreenLines(full.data).filter(line=>!subtitle.toLowerCase().includes(line.toLowerCase()));
+      const lines=cleanScreenLines([...bottomLines,...extra]);
+      return {text:cleanScreenText(lines.join(' ')),lines};
     };
     try{const result=await Promise.race([work(),canceled]);if(epoch!==generation)throw Error('On-screen text processing stopped.');onState({status:'ready'});return result;}
     catch(error){if(epoch===generation){model?.worker.terminate();model=null;onState({status:'error',error:error.message});}throw error;}

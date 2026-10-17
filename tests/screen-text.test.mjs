@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {recognizedScreenText,screenRecord,validateScreenFrame} from '../lib/screen-text.js';
-import {rank} from '../lib/search.js';
+import {recognizedScreenText,screenRecord,validateScreenFrame,novelScreenLines,cleanScreenLines} from '../lib/screen-text.js';
+import {rank,playbackStart} from '../lib/search.js';
 import {hasImportExemption} from '../lib/retention.js';
 import {compressedScene} from '../lib/scene-db.js';
 const line=(text,confidence=90)=>({confidence,words:[{text,confidence}]});
@@ -11,6 +11,28 @@ test('screen recognition drops low-confidence scenery fragments and empty punctu
   assert.equal(recognizedScreenText({text:'untrusted fallback',confidence:99}),'');
   assert.equal(screenRecord({videoId:'aaaaaaaaaaa',start:42,text:' hello\nworld '}).key,'aaaaaaaaaaa:8');
   assert.throws(()=>screenRecord({videoId:'bad',start:42,text:'hello'}),/Invalid/);
+});
+
+test('line deduplication preserves digits, negation, word order and new subtitles',()=>{
+  for(const [before,after] of [['The dose is 10 mg','The dose is 90 mg'],['The battery is safe to use','The battery is not safe to use'],['Alice defeated Bob in the final','Bob defeated Alice in the final'],['The north door is locked','The south door is locked']]){
+    assert.deepEqual(novelScreenLines([after],[{start:40,text:before,observedLines:[before]}],45),[after]);
+  }
+  const recent=[{start:40,text:'Old caption',observedLines:['NEWS LIVE','Old caption']}];
+  assert.deepEqual(novelScreenLines(['NEWS LIVE','New caption','New caption'],recent,45),['New caption']);
+  assert.deepEqual(novelScreenLines(['news   live'],recent,45),[]);
+  assert.deepEqual(novelScreenLines(['NEWS LIVE'],recent,90),['NEWS LIVE'],'later occurrences keep their own timestamp');
+  assert.deepEqual(novelScreenLines(['NEWS LIVE'],recent,0),['NEWS LIVE'],'seeking back beyond the time window keeps evidence');
+});
+test('OCR observation metadata is bounded and survives backup record validation',()=>{
+  const row=screenRecord({videoId:'aaaaaaaaaaa',start:42,text:'New caption',observedLines:['NEWS LIVE','New caption']});
+  assert.deepEqual(row.observedLines,['NEWS LIVE','New caption']);assert.equal(row.text,'New caption');
+  const lines=cleanScreenLines(Array.from({length:100},()=> 'a'.repeat(500)));
+  assert.ok(lines.length<=40);assert.ok(lines.join('').length<=2000);
+});
+test('OCR playback starts early without changing observed timestamps or caption links',()=>{
+  assert.equal(playbackStart({start:42,screenText:true}),39);assert.equal(playbackStart({start:2,screenText:true}),0);assert.equal(playbackStart({start:42}),42);
+  const results=rank([1],{matrix:[1],dim:1,meta:[{videoId:'a',start:42,text:'caption',kind:'screen-text'}]},new Map([['a',{method:'history-title'}]]));
+  assert.equal(results[0].start,42);assert.equal(playbackStart(results[0]),39);
 });
 test('sharp frames are bounded before OCR decoding and reject external inputs',()=>{
   const header=Buffer.from([255,216,255,192,0,17,8,2,208,5,0,3,1,17,0,2,17,0,3,17,0]);

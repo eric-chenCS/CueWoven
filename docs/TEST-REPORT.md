@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.14.0 update
+
+All 156 Node tests and the real-model browser regressions listed in [UPDATE-2.14.md](UPDATE-2.14.md) pass. The update covers exclusive capture holds, restore during scene search, OCR cancellation during Delete/Clear, conservative exact-line deduplication, changing numbers/negation, watermark filtering, bounded observation metadata and playback-only lead-in. The release notes document the frame microbenchmark, mutation check, unchanged dependencies and sampled-English/live-test limitations. Historical results below describe their original versions.
+
 ## Version 2.13.0 update
 
 See [UPDATE-2.13.md](UPDATE-2.13.md) for the 145-test result, real OCR/video/search and storage-budget checks, measured timings, existing browser regressions, dependency review and the unsuccessful public-player attempt. OCR reads sampled English video pixels and stores words with a timestamp; it does not establish exact subtitle onset/end or complete coverage. Existing results below describe their original versions.
