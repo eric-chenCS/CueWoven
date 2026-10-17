@@ -66,7 +66,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const after=await options.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'two cats sitting on a sofa',singleVideo:true}));assert.equal(after.results[0].videoId,'aaaaaaaaaaa');assert.ok(after.results[0].matchSources.includes('Scene'));
   const limits=await options.evaluate(async image=>{
    const db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;canvas.getContext('2d').fillRect(0,0,320,180);image=canvas.toDataURL('image/jpeg',.6);
-   const request=indexedDB.open('recall',3),database=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+   const request=indexedDB.open('recall',4),database=await new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
    const tx=database.transaction(['videos','scenes'],'readwrite'),vs=tx.objectStore('videos'),ss=tx.objectStore('scenes');
    for(const [videoId,count] of [['ccccccccccc',250],['ddddddddddd',1780]]){vs.put({videoId,title:'Capacity test',method:'history-title',sceneCount:count});for(let i=0;i<count;i++)ss.put({key:videoId+':'+i,videoId,start:i*20,indexedAt:videoId[0]==='c'?10000+i:i,image,vec:new Float32Array(512)})}
    await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});database.close();

@@ -15,6 +15,8 @@
   for (const event of ['seeking', 'ratechange', 'pause', 'play']) document.addEventListener(event, () => {playbackRevision++;}, true);
 
   let current = null;       // { videoId, title, channel, lengthSeconds }
+  let excluded=false;
+  const excludedSite=config=>(config?.blocked||[]).some(site=>['www.youtube.com','youtu.be'].some(host=>host===site||host.endsWith('.'+site)));
   let speechPending = null;
   let dwellTimer = null;
   let reqCounter = 0;
@@ -51,8 +53,9 @@
 
   async function settings() {
     try {
-      const { settings } = await chrome.storage.local.get('settings');
-      return Object.assign({}, DEFAULTS, settings);
+      const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
+      excluded=excludedSite(webCapture);
+      const value=Object.assign({}, DEFAULTS, settings);return {...value,enabled:value.enabled&&!excluded};
     } catch (_) {
       return DEFAULTS;
     }
@@ -120,7 +123,7 @@
 
   function speechClock() {
     const media = document.querySelector('video');
-    return {video: current, time: media?.currentTime, paused: !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!document.querySelector('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !document.hidden};
+    return {video: current, time: media?.currentTime, paused: excluded || !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!document.querySelector('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !excluded && !document.hidden};
   }
 
   async function trySpeech() {
@@ -200,6 +203,12 @@
     return false;
   });
 
+  chrome.storage.onChanged?.addListener((changes,area)=>{
+    if(area!=='local'||!changes.webCapture)return;
+    const previous=excluded;excluded=excludedSite(changes.webCapture.newValue);
+    if(excluded){clearDwell();speechPending=null;globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();globalThis.__recallPageAudio?.stop(undefined,true).catch(()=>{});}
+    else if(previous&&current)settings().then(s=>{globalThis.__recallScenes?.start(speechClock,s);globalThis.__recallScreen?.start(speechClock,s);if(s.enabled)startDwell(s.dwellSeconds,current.videoId);});
+  });
   // yt-main.js may have announced the video before this script loaded.
   toMain({ type: 'hello' });
 })();

@@ -167,3 +167,9 @@ test('on-screen text verifies active playback, timing revision and off switches'
  assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:42,revision:0},sender),{inactive:true});
  assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:12,revision:1},sender),{inactive:true});
 });
+test('excluding YouTube blocks its imports, manual indexing, new jobs and live scene saves',async()=>{
+ chrome.storage.local.get=async()=>({settings:{enabled:true},webCapture:{blocked:['youtube.com']}});
+ assert.deepEqual(await request({type:'should-index',videoId:'aaaaaaaaaaa',manual:true}),{index:false,reason:'YouTube is excluded.'});
+ for(const message of [{type:'import-history',videos:[]},{type:'transcript-job-start',urls:['aaaaaaaaaaa']},{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
+ assert.deepEqual(await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
+});

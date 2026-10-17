@@ -12,10 +12,11 @@
     return ctx.getImageData(0,0,P.WIDTH,P.HEIGHT).data;
   }
   function snapshot(video){
-    if(!frameCanvas){frameCanvas=document.createElement('canvas');frameCanvas.width=320;frameCanvas.height=180;}
-    const ctx=frameCanvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,320,180);
-    const scale=Math.min(320/video.videoWidth,180/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;
-    ctx.drawImage(video,(320-w)/2,(180-h)/2,w,h);return frameCanvas.toDataURL('image/jpeg',.6);
+    const aspect=video.videoWidth/video.videoHeight,width=aspect<.85?180:aspect>1.2?320:240,height=aspect<.85?320:aspect>1.2?180:240;
+    frameCanvas??=document.createElement('canvas');if(frameCanvas.width!==width||frameCanvas.height!==height){frameCanvas.width=width;frameCanvas.height=height;}
+    const ctx=frameCanvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+    const scale=Math.min(width/video.videoWidth,height/video.videoHeight),w=video.videoWidth*scale,h=video.videoHeight*scale;
+    ctx.drawImage(video,(width-w)/2,(height-h)/2,w,h);return frameCanvas.toDataURL('image/jpeg',.6);
   }
   async function pump(){
     if(inFlight||!pending||Date.now()-lastAttempt<P.MIN_GAP_MS)return;
@@ -33,7 +34,7 @@
     }finally{inFlight=null;}
   }
   function tick(){
-    const state=clock?.(),video=document.querySelector('video');
+    const state=clock?.(),video=globalThis.__recallMediaElement?.()||document.querySelector('video');
     if(!state?.video||state.forced)return;
     if(!state.visible||state.paused||state.seeking||state.ad||!video||video.readyState<2||!video.videoWidth||!video.videoHeight||!Number.isFinite(state.time)||state.time<0){previous=null;pending=null;schedule();return;}
     const now=Date.now();

@@ -14,7 +14,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   const results=await page.evaluate(async image=>{
    const db=await import(chrome.runtime.getURL('lib/db.js')),{compressedScene}=await import(chrome.runtime.getURL('lib/scene-db.js')),{rankScenes,SCENE_BYTES_TOTAL}=await import(chrome.runtime.getURL('lib/scenes.js'));
    const first=await db.scenes.get('aaaaaaaaaaa:1'),legacy=await db.getVideo('aaaaaaaaaaa');
-   const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('recall',3);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
+   const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('recall',4);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)});
    const req=request=>new Promise((resolve,reject)=>{request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}),done=tx=>new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
    const raw=await req(database.transaction('scenes').objectStore('scenes').get(first.key));
    await db.clearAll();const videos=new Map(),vec=new Float32Array(512);vec[0]=.4;vec[1]=Math.sqrt(1-.4*.4);
@@ -34,7 +34,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   console.log('SCENE_STORAGE_RESULT',JSON.stringify(results));assert.deepEqual(results.migration,{sameImage:true,blob:true,start:20,watch:12345,count:1});assert.equal(results.metadataCount,2000);assert.ok(results.imagesExcluded);assert.ok(results.budgetBytes<=results.budget);assert.ok(results.budgetCount<2000);assert.ok(results.ranking.frames2000Ms<100);assert.ok(results.metadataReadMs<500);
   const textLimits=await page.evaluate(async()=>{
    const db=await import(chrome.runtime.getURL('lib/db.js'));await db.clearAll();
-   const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('recall',3);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}),done=tx=>new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
+   const database=await new Promise((resolve,reject)=>{const request=indexedDB.open('recall',4);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)}),done=tx=>new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});
    const vec=new Float32Array(384),tx=database.transaction(['videos','screenText'],'readwrite'),complete=done(tx);
    tx.objectStore('videos').put({videoId:'aaaaaaaaaaa',title:'OCR cap',screenCount:730});for(let i=0;i<730;i++)tx.objectStore('screenText').put({key:'aaaaaaaaaaa:'+i,videoId:'aaaaaaaaaaa',start:i*5,text:'sample words',vec,indexedAt:i+1});await complete;
    await db.screenText.put({key:'aaaaaaaaaaa:730',videoId:'aaaaaaaaaaa',start:3650,text:'sample words',vec,indexedAt:1000});const own=(await db.getVideo('aaaaaaaaaaa')).screenCount;

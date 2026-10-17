@@ -5,6 +5,8 @@ import { videoIdFromUrl } from './lib/video.js';
 import { createCaptureWindow } from './lib/capture-window.js';
 import { createTranscriptQueue } from './lib/transcript-queue.js';
 import './lib/scene-policy.js';
+import {createWebAccess} from './lib/web-access.js';
+import {policy} from './lib/web-items.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
@@ -53,8 +55,8 @@ async function engine(type, payload = {}) {
 }
 
 async function getSettings() {
-  const { settings } = await chrome.storage.local.get('settings');
-  return Object.assign({}, DEFAULT_SETTINGS, settings);
+  const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
+  return Object.assign({}, DEFAULT_SETTINGS, settings,{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
 }
 
 // ---------------------------------------------------------------------------
@@ -155,6 +157,8 @@ function requirePopup(sender) {
 }
 async function speechContext(tabId) {
   const tab = await chrome.tabs.get(tabId);
+  if(!tab.url?.startsWith('https://www.youtube.com/watch?'))return webAccess.context(tabId);
+  if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded in website settings. Allow youtube.com to resume.');
   const id = videoIdFromUrl(tab.url);
   if (!id || !tab.url.startsWith('https://www.youtube.com/watch?') || new URL(tab.url).searchParams.get('recall_index') === '1') throw new Error('Open a normal YouTube video first.');
   const clock = await chrome.tabs.sendMessage(tabId, {type: 'speech-context'});
@@ -167,7 +171,7 @@ async function startSpeech(tabId, manual=false) {
   if (!Number.isInteger(tabId)) throw new Error('Invalid video tab.');
   const {tab, clock} = await speechContext(tabId);
   if (!manual && clock.video.audioLanguage && !/^en(?:-|$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
-  if (!tab.active || clock.paused) throw new Error('Play a video in the active YouTube tab first.');
+  if (!tab.active || clock.paused || !clock.visible) throw new Error('Play a video in the active tab first.');
   const ready = await engine('speech-prepare', {tabId, video: clock.video});
   try {
     const latest = await speechContext(tabId);
@@ -182,25 +186,27 @@ async function startSpeech(tabId, manual=false) {
 const handlers = {
   async 'screen-frame'(input,sender){
     const settings=await getSettings();if(!settings.enabled || settings.screenTextEnabled===false)return {disabled:true};
-    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?'))throw Error('Invalid on-screen text source.');
+    if(settings.youtubeBlocked&&sender.url?.startsWith('https://www.youtube.com/'))return {disabled:true};
+    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url))throw Error('Invalid on-screen text source.');
     const {tab,clock}=await speechContext(sender.tab.id);
     if(!tab.active || !clock.visible || clock.paused || clock.seeking || clock.ad || clock.video.videoId!==input.video?.videoId || clock.revision!==input.revision || !Number.isFinite(input.start) || Math.abs(clock.time-input.start)>3)return {inactive:true};
     return engine('screen-index',{video:clock.video,start:input.start,image:input.image});
   },
   async 'screen-capture-error'({reason},sender){
-    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?'))throw Error('Invalid on-screen text source.');
+    if(!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url))throw Error('Invalid on-screen text source.');
     chrome.runtime.sendMessage({type:'ocr-state',state:{status:'error',error:String(reason).slice(0,300)}}).catch(()=>{});return {ok:true};
   },
   async 'scene-frame'(input,sender) {
     const settings=await getSettings();if (!settings.enabled || settings.scenesEnabled === false) return {disabled:true};
-    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
+    if(settings.youtubeBlocked&&sender.url?.startsWith('https://www.youtube.com/'))return {disabled:true};
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url)) throw new Error('Invalid scene source.');
     const {tab,clock}=await speechContext(sender.tab.id);
     const age=Date.now()-input.capturedAt;
     if (!tab.active || !clock.visible || clock.paused || clock.seeking || clock.ad || clock.video.videoId!==input.video?.videoId || clock.revision!==input.revision || !Number.isFinite(input.start) || !Number.isFinite(input.capturedAt) || age< -1000 || age>=globalThis.__recallScenePolicy.MAX_AGE_MS)return {inactive:true};
     return engine('scene-index',{video:clock.video,start:input.start,image:input.image,adaptive:input.adaptive===true});
   },
   async 'scene-capture-error'({reason},sender) {
-    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url)) throw new Error('Invalid scene source.');
     chrome.runtime.sendMessage({type:'vision-state',state:{status:'error',error:String(reason).slice(0,300)}}).catch(()=>{});return {ok:true};
   },
   'vision-status':()=>engine('vision-status'),
@@ -208,7 +214,8 @@ const handlers = {
   async 'speech-auto-start'(_msg, sender) {
     const settings = await getSettings();
     if (!settings.enabled || settings.speechEnabled === false) return {disabled: true};
-    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid automatic speech request.');
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url)) throw new Error('Invalid automatic speech request.');
+    if(!sender.url.startsWith('https://www.youtube.com/watch?')&&!(await webAccess.config()).audio)return {disabled:true};
     const {clock} = await speechContext(sender.tab.id);
     if (!clock.visible || clock.paused || clock.ad) return {inactive: true};
     const state = await engine('speech-status');
@@ -219,7 +226,8 @@ const handlers = {
     return startSpeech(sender.tab.id);
   },
   async 'speech-pcm'({id, pcm, clock}, sender) {
-    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid speech audio source.');
+    if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url)) throw new Error('Invalid speech audio source.');
+    if(!sender.url.startsWith('https://www.youtube.com/watch?')){const {clock:current}=await webAccess.context(sender.tab.id);if(current.video.videoId!==clock?.video?.videoId)return {ignored:true};}
     return engine('speech-pcm', {id, tabId: sender.tab.id, pcm, clock});
   },
   async 'speech-page-ended'({id}, sender) {
@@ -243,6 +251,7 @@ const handlers = {
   },
   async 'transcript-job-start'({urls}, sender) {
     requireLibrary(sender);
+    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded. Allow youtube.com before fetching captions.');
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
@@ -259,6 +268,7 @@ const handlers = {
   },
   async 'import-history'({ videos }, sender) {
     if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to import history.');
+    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded. Allow youtube.com before importing its history.');
     const result = await engine('import-history', { videos });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return result;
@@ -279,8 +289,9 @@ const handlers = {
     return { videos: candidates, limited: candidates.length === 500 || groups.some(g => g.length === 10000) };
   },
   // From YouTube tabs
-  async 'should-index'({ videoId, manual, watchedAt }) {
+  async 'should-index'({ videoId, manual, watchedAt },sender) {
     const s = await getSettings();
+    if(s.youtubeBlocked){settleWaiter(sender?.tab?.id,{ok:false,reason:'YouTube is excluded.'});return {index:false,reason:'YouTube is excluded.'};}
     if (!manual && !s.enabled) return { index: false, reason: 'Indexing is paused' };
     if (Number.isFinite(watchedAt) && watchedAt > 0 && watchedAt <= Date.now() + 60000) {
       await engine('touch-watch', { videoId, watchedAt });
@@ -291,6 +302,7 @@ const handlers = {
   },
   async 'index-video'({ video, segments, method }, sender) {
     try {
+      if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded.');
       const res = await engine('index', { video, segments, method });
       flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
       settleWaiter(sender.tab && sender.tab.id, { ok: true, chunkCount: res.chunkCount, title: res.video.title });
@@ -308,13 +320,13 @@ const handlers = {
   },
 
   // From the popup / library page
-  async search({ query, sinceDays, singleVideo, offset = 0 }) {
+  async search({ query, sinceDays, singleVideo, offset = 0,kind }) {
     const s = await getSettings();
     if (singleVideo === true) {
       if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid search position.');
-      return engine('search', { query, sinceDays, perVideo: 1, limit: 2, offset });
+      return engine('search', { query, sinceDays, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
     }
-    return engine('search', { query, sinceDays, perVideo: s.perVideo, limit: 12 });
+    return engine('search', { query, sinceDays, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
   },
   status: () => engine('status'),
   warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),
@@ -342,11 +354,16 @@ const handlers = {
     try {
       return await chrome.tabs.sendMessage(tabId, { type: 'index-now' });
     } catch (_) {
-      return { ok: false, reason: 'Reload the YouTube tab once so Recall can attach to it, then try again.' };
+      return { ok: false, reason: 'Refresh this tab after enabling its site in Library & settings, then try again.' };
     }
   },
   prune: async () => engine('prune', { maxAgeDays: (await getSettings()).maxAgeDays }),
 };
+const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
+Object.assign(handlers,webAccess.handlers);
+chrome.permissions?.onAdded?.addListener(()=>webAccess.sync().catch(()=>{}));
+chrome.permissions?.onRemoved?.addListener(async removed=>{if(removed.origins?.length||removed.permissions?.includes('scripting')){const settings=await webAccess.config();await chrome.storage.local.set({webCapture:{...settings,paused:true}});}webAccess.sync().catch(()=>{});});
+chrome.runtime.onStartup?.addListener(()=>webAccess.sync().catch(()=>{}));
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.target === 'offscreen') return false;
@@ -374,6 +391,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Housekeeping: daily auto-delete of old entries
 // ---------------------------------------------------------------------------
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  await webAccess.sync().catch(()=>{});
   const { settings } = await chrome.storage.local.get('settings');
   await chrome.storage.local.set({ settings: Object.assign({}, DEFAULT_SETTINGS, settings) });
   chrome.alarms.create('recall-prune', { periodInMinutes: 24 * 60, delayInMinutes: 1 });
@@ -399,6 +417,7 @@ chrome.tabs?.onRemoved?.addListener((tabId, info) => {
 
 
 chrome.storage?.onChanged?.addListener((changes, area) => {
+  if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
