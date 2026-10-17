@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.2.0 update
+
+All 205 Node tests pass. Query-window caching, pending invalidation, metadata reset races, imported-history retention, diagnostics redaction/caps and incognito denial are covered. The 50,000-title plus 600-full-page Chromium test measured 531 ms median/796 ms p95 for new queries and 8 ms p95 for cached arrow requests, compared with 717/1,035/752 ms for v3.1 on the same synthetic fixture. The proposed 300 ms new-query goal is not achieved; enforced calibrated budgets are 1,000 ms new-query p95 and 50 ms arrow p95. The separate 30,000-passage rank check passes its 400 ms budget at about 142 ms. Diagnostics/storage/popup controls and original-date retention pass a browser test, as do article, native-caption/CLIP/OCR/Whisper, backup and capture-hold regressions. Removing query-cache revision invalidation deliberately fails the stale-snapshot test. See [UPDATE-3.2.md](UPDATE-3.2.md) for benchmark scope, review decisions, unchanged dependency findings and live-profile limitations.
+
 ## Version 3.1.0 update
 
 All 194 Node tests pass. Public URL/redirect regressions, batched title embedding, canceled imports, exact passage reuse and cached lexical matching supplement isolated browser tests for schema-5 normalization/budgets, hidden login forms, comment exclusions, dominant editors, larger article selection, recapture cooldown, dynamic-worklet speech and full-page storage/search. The 30,000-full-passage rank benchmark improved from 1,399 ms to 142 ms on the test machine with the same result order; 600 full 2,000-word pages took 107–161 ms per warm database-backed search. These are synthetic fixtures, not user history or general performance guarantees. See [UPDATE-3.1.md](UPDATE-3.1.md) for the measured scope, upgrade storage tradeoff and unchanged dependency findings.

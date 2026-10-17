@@ -2,11 +2,18 @@ import { cleanItem, pagePassages, quantize, webHit, policy, WEB_PASSAGES } from 
 import { prepareQuery, normalizedPassage } from "../lib/search.js";
 export function createWebEngine({ db, embed, onChange = () => {
 } }) {
-  let metadata = null, loading = null, epoch = 0;
+  let metadata = null, loading = null, epoch = 0, metadataRevision = 0;
   const cache = async () => {
-    if (metadata) return metadata;
-    if (!loading) loading = db.listVideos().then((rows) => metadata = new Map(rows.filter((row) => policy.webId(row.videoId)).map((row) => [row.videoId, row]))).finally(() => loading = null);
-    return loading;
+    while (!metadata) {
+      if (!loading) {
+        const started = metadataRevision;
+        loading = db.listVideos().then((rows) => {
+          if (started === metadataRevision) metadata = new Map(rows.filter((row) => policy.webId(row.videoId)).map((row) => [row.videoId, row]));
+        }).finally(() => loading = null);
+      }
+      await loading;
+    }
+    return metadata;
   };
   async function pack(rows, existing = []) {
     const reusable = new Map(existing.filter((row) => row.vec?.length === 384).map((row) => [row.text, row]));
@@ -23,7 +30,7 @@ export function createWebEngine({ db, embed, onChange = () => {
     const packed = await pack([title, ...rows].slice(0, WEB_PASSAGES), previous?.passages);
     if (started !== epoch) return { disabled: true };
     const result = await db.items.put({ ...video, ...indexedAt ? { indexedAt } : {} }, packed, { replaceSource, replaceRange, imported, restore, pageFingerprint });
-    if (metadata) metadata.set(video.videoId, result.video);
+    if (metadata || loading) (await cache()).set(video.videoId, result.video);
     onChange();
     return result;
   }
@@ -33,7 +40,8 @@ export function createWebEngine({ db, embed, onChange = () => {
     },
     metadata: cache,
     async refresh(id) {
-      if (metadata) {
+      if (metadata || loading) {
+        await cache();
         const row = await db.getVideo(id);
         if (row) metadata.set(id, row);
         else metadata.delete(id);
@@ -41,6 +49,7 @@ export function createWebEngine({ db, embed, onChange = () => {
     },
     reset() {
       metadata = null;
+      metadataRevision++;
       epoch++;
     },
     async ensure(video) {
@@ -68,7 +77,7 @@ export function createWebEngine({ db, embed, onChange = () => {
         for (const [i, video] of pending.entries()) {
           if (started !== epoch) throw Error("History import stopped for a library change. Re-import to continue.");
           const result = await db.items.put(video, [titles[i]], { imported: true });
-          if (metadata) metadata.set(video.videoId, result.video);
+          if (metadata || loading) (await cache()).set(video.videoId, result.video);
           imported++;
         }
       } finally {
@@ -81,7 +90,8 @@ export function createWebEngine({ db, embed, onChange = () => {
       if (started !== epoch) return { disabled: true };
       if (old?.pageFingerprint === pageFingerprint && (!input.text || old.passages.some((row) => row.source === "Page text"))) {
         await db.touchWatch(video.videoId, Date.now());
-        if (metadata) metadata.set(video.videoId, await db.getVideo(video.videoId));
+        if (metadata || loading) (await cache()).set(video.videoId, await db.getVideo(video.videoId));
+        onChange();
         return { ok: true, unchanged: true };
       }
       return save(video, pagePassages(input.text), { replaceSource: "Page text", pageFingerprint });
