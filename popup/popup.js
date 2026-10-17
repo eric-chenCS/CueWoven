@@ -1,4 +1,5 @@
 import { formatTime, deepLink, queryTerms,playbackStart } from '../lib/search.js';
+import {itemLink,policy} from '../lib/web-items.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -13,6 +14,7 @@ let searchSeq = 0;
 let activeIndex = -1;
 let renderedSeq = -1;
 let currentTab = null;
+let currentMedia = null;
 let resultOffset = 0;
 
 const send = (msg) => chrome.runtime.sendMessage(msg);
@@ -73,20 +75,20 @@ function render(results, query) {
   const tpl = $('result-tpl');
   for (const r of results) {
     const node = tpl.content.firstElementChild.cloneNode(true);
-    const url = r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, playbackStart(r));
+    const url = itemLink(r)||(r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, playbackStart(r)));
     node.href = url;
-    node.querySelector('img').src = r.image || `https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`;
+    node.querySelector('img').src = r.image || (r.kind?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`);
     if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
-    node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
+    node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
     node.querySelector('.title').textContent = r.title || r.videoId;
-    highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : 'Spoken-content match']
+    highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? r.kind?'From your history · title match. Read this page with website capture enabled to save its text.':'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
+    node.querySelector('.meta').textContent = [r.channel, r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : r.pageText?'Saved page text':r.kind==='search'?'Saved search query':'Spoken-content match']
       .filter(Boolean)
       .join(' · ');
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
       const indicator=document.createElement('span');indicator.textContent=label;
-      indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':'Video title from saved history';node.querySelector('.match-sources').append(indicator);
+      indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':label==='Page text'?'Text saved from a page you read':label==='Search'?'A saved search query':'A title from saved history';node.querySelector('.match-sources').append(indicator);
     }
     node.addEventListener('click', (e) => {
       e.preventDefault();
@@ -116,7 +118,7 @@ async function runSearch() {
   $('next-video').disabled = true;
   $('page-label').textContent = 'Searching…';
   $('result-pages').hidden = !singleVideo.checked;
-  const res = await send({ type: 'search', query, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset })
+  const res = await send({ type: 'search', query, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value })
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
@@ -229,6 +231,9 @@ singleVideo.addEventListener('change', () => {
   chrome.storage.local.set({ singleVideoView: singleVideo.checked }).catch(() => {});
   runSearch();
 });
+$('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
+$('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
+async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;$('web-pause-popup').textContent=webCapture.paused?'Resume sites':'Pause sites';}
 $('previous-video').addEventListener('click', () => {
   resultOffset = Math.max(0, resultOffset - 1);
   runSearch();
@@ -244,13 +249,13 @@ $('next-video').addEventListener('click', () => {
 let stats = { videos: 0, chunks: 0 };
 
 function showIdle() {
-  if (!stats.videos) {
-    empty('Your watch history is empty so far', [
-      'Watch any YouTube video with captions for about 20 seconds and Recall indexes it automatically.',
-    ], 'Pre-load demo videos from Library & settings.');
+  if (!(stats.total||stats.videos)) {
+    empty('Your Recall library is empty so far', [
+      'Watch YouTube, import browser/search history, or enable website capture in Library & settings.',
+    ], 'Website capture is optional and starts off.');
   } else {
     empty('Describe what you remember', [
-      `Searching titles and indexed transcripts from ${stats.videos} saved video${stats.videos === 1 ? '' : 's'}.`,
+      `Searching ${stats.total||stats.videos} saved items: video moments, pages and search queries.`,
     ], 'Try: “the part about why batteries wear out”');
   }
 }
@@ -273,8 +278,8 @@ async function refreshStatus() {
   if (!s || s.error) { statusEl.textContent = ''; return; }
   stats = s;
   renderEmbedding(s.embeddingMigration);
-  if (s.videos) $('start-choice').hidden = true;
-  statusEl.textContent = `${s.videos} video${s.videos === 1 ? '' : 's'} · ${s.chunks} moments` + (s.scenes ? ` · ${s.scenes} scenes` : '');
+  if (s.total||s.videos) $('start-choice').hidden = true;
+  statusEl.textContent = `${s.videos} videos`+(s.pages?` · ${s.pages} pages`:'')+(s.searches?` · ${s.searches} searches`:'')+` · ${s.chunks} moments` + (s.scenes ? ` · ${s.scenes} scenes` : '');
   showModel(s.model);
 }
 
@@ -294,10 +299,11 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------------------------------------------------------------------------
 async function setupIndexNow() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)) return;
+  if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
   $('index-now').hidden = false;
   try {
     const { video } = await chrome.tabs.sendMessage(currentTab.id, { type: 'get-video' });
+    currentMedia=video;
     if (video && video.title) $('index-now-text').textContent = `Index “${video.title}”`;
   } catch (_) { /* tab needs a reload; handled on click */ }
 }
@@ -336,9 +342,10 @@ $('start-empty').addEventListener('click', async () => {
   q.focus();
   const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays']).catch(() => ({}));
   await refreshStatus();
+  refreshWebPause();
   const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
   singleVideo.checked = singleVideoView !== false;
-  $('start-choice').hidden = !!onboardingComplete || stats.videos > 0;
+  $('start-choice').hidden = !!onboardingComplete || (stats.total||stats.videos) > 0;
   await setupIndexNow();
   refreshSpeech();
   send({type:'vision-status'}).then(renderVision).catch(()=>{});
@@ -354,7 +361,7 @@ $('start-empty').addEventListener('click', async () => {
   } else {
     showIdle();
   }
-  if (stats.videos) send({ type: 'warmup',scenes:stats.scenes>0 }).catch(()=>{}); // no model download is needed for an empty library
+  if (stats.total||stats.videos) send({ type: 'warmup',scenes:stats.scenes>0 }).catch(()=>{}); // no model download is needed for an empty library
 })();
 
 // Caption failures start speech automatically; the popup exposes status and controls.
@@ -368,7 +375,7 @@ function renderEmbedding(state={}) {
 }
 function renderSpeech(state = {}) {
   const active = ['preparing', 'recording', 'stopping'].includes(state.status);
-  const videoTab = !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');
+  const videoTab = !!currentMedia || !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');
   $('speech').hidden = !active && !videoTab;
   $('speech-start').disabled = active || !videoTab;
   $('speech-stop').hidden = !active;$('speech-stop').disabled = state.status === 'stopping';

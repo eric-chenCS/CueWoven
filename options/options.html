@@ -3,28 +3,46 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v2.15 · Library &amp; settings</title>
+    <title>Recall v3.0 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="wrap">
       <header class="head">
-        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v2.15</h1></div>
-        <p class="lede">Search your saved video titles and indexed transcripts. Your index lives only in this browser.</p>
+        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.0</h1></div>
+        <p class="lede">Search videos, pages, articles and past queries. Your index lives only in this browser.</p>
         <div class="stats" id="stats"></div>
       </header>
 
       <section id="welcome" class="card welcome" hidden>
         <h2>How would you like to start?</h2>
-        <p>Import your past YouTube history, or start with an empty library. Importing is optional.</p>
+        <p>Import your past video, browser or search history, or start with an empty library. Importing is optional.</p>
         <div class="row">
           <button id="welcome-import" class="btn">Import YouTube history</button>
+          <button id="welcome-web" class="btn ghost">Import browser/search history</button>
           <button id="welcome-empty" class="btn ghost">Start empty</button>
         </div>
-        <p class="note">If you start empty, Recall builds your library from new videos you watch. You can import history later in settings.</p>
+        <p class="note">Start with YouTube, or enable optional website capture below. You can import history later.</p>
       </section>
       <p id="startup-msg" class="note" role="status" aria-live="polite"></p>
+      <section class="card" aria-labelledby="web-history-heading">
+        <h2 id="web-history-heading">Import websites and Google searches</h2>
+        <p class="note">Choose extracted Google Takeout Chrome <strong>BrowserHistory.json</strong> or Google Search My Activity JSON. Titles, addresses, queries and dates become searchable locally. This does not download old pages, videos or private account content. Sensitive addresses are skipped. Use the YouTube importer below for YouTube history.</p>
+        <label class="btn file">Import browser or search JSON<input id="web-history-file" type="file" accept="application/json,.json" hidden /></label>
+        <div class="row"><label for="web-history-days">Browser history</label><select id="web-history-days"><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="0" selected>All available</option></select><button id="web-history-scan" class="btn ghost">Import this browser's history</button><button id="web-history-stop" class="btn ghost" hidden>Pause after this batch</button></div>
+        <p id="web-import-msg" class="note" role="status" aria-live="polite"></p>
+      </section>
+      <section class="card" aria-labelledby="web-capture-heading">
+        <h2 id="web-capture-heading">Websites &amp; articles</h2>
+        <p class="note">Optional: save text from articles and pages you read, plus available captions, sampled scenes and on-screen text from visible playing videos on websites such as Instagram and TikTok. This works in the browser, not native apps. Some protected or cross-origin players cannot expose images, captions or audio. Only grant sites you trust Recall to remember.</p>
+        <div class="row"><label for="web-domain">Site domain</label><input id="web-domain" type="text" autocomplete="off" placeholder="wikipedia.org" /><button id="web-allow" class="btn">Allow this site</button><button id="web-all" class="btn ghost">Allow public websites</button></div>
+        <p class="note">Allow public websites requests access to HTTP/HTTPS sites. Email, known financial/health/government sites, private paths, password/editor pages and incognito are excluded. These checks cannot recognize every private or signed-in page; use specific sites for tighter control. Form values are never read. No past pages are fetched.</p>
+        <label class="setting"><span><strong>Transcribe website video audio</strong><br /><span class="note">When captions are unavailable, try the local English speech model on the audio you play. Off by default; no microphone. Non-English language labels skip automatic transcription. Unknown audio may be misrecognized; the popup has Stop and manual Start.</span></span><input id="web-audio" type="checkbox" /></label>
+        <div class="row"><button id="web-pause" class="btn ghost">Pause website capture</button><button id="web-off" class="btn ghost">Turn off website capture</button><button id="web-forget" class="btn danger">Forget and block this site</button></div>
+        <p id="web-state" class="note" role="status" aria-live="polite"></p><p id="web-exclusions" class="note"></p><p id="web-msg" class="note" role="status" aria-live="polite"></p>
+        <p class="note">Text and media stay in this browser. First use downloads local model weights. Text capture keeps up to 2,000 words per page; full page/video-text storage is limited to 2,000 items or 64 MiB, then older items keep their titles. Scene/OCR limits below also apply across video sites.</p>
+      </section>
 
       <section class="card" aria-labelledby="takeout-heading">
         <h2 id="takeout-heading">Import from your YouTube account</h2>
@@ -74,8 +92,8 @@
 
       <section class="card">
         <div class="row between">
-          <h2>Indexed videos</h2>
-          <input id="filter" type="search" placeholder="Filter by title or channel" aria-label="Filter indexed videos" />
+          <h2>Your Recall library</h2>
+          <input id="filter" type="search" placeholder="Filter by title, channel or site" aria-label="Filter saved items" />
         </div>
         <div id="library" class="library"></div>
       </section>
@@ -84,7 +102,7 @@
         <h2>Settings</h2>
         <label class="setting">
           <input type="checkbox" id="enabled" />
-          <span><strong>Index videos automatically</strong><br /><span class="note">Turn off to pause. You can still index a video from the popup.</span></span>
+          <span><strong>Index automatically</strong><br /><span class="note">Turn off to pause automatic YouTube and website capture. You can still manually index YouTube from the popup.</span></span>
         </label>
         <label class="setting">
           <span><strong>Watch time before indexing</strong><br /><span class="note">Skips videos you only clicked past.</span></span>
@@ -130,7 +148,7 @@
 
       <section class="card">
         <h2>Your data</h2>
-        <p class="note">Export saves transcripts and timestamps as a JSON file (no browsing history beyond the indexed videos). Import re-creates the index on this device, which is handy for moving a demo set to another laptop.</p>
+        <p class="note">Export saves your Recall library: video evidence, saved page text, imported addresses and search queries. Treat the JSON backup as private. Import recreates the index on this device.</p>
         <div class="row">
           <button id="export" class="btn ghost">Export index</button>
           <label class="btn ghost file">Import index<input id="import" type="file" accept="application/json,.json" hidden /></label>
@@ -143,5 +161,6 @@
       <footer class="foot note">Recall runs <code>all-MiniLM-L6-v2</code> on your device with Transformers.js. No servers, no accounts.</footer>
     </div>
     <script type="module" src="options.js"></script>
+    <script type="module" src="web-options.js"></script>
   </body>
 </html>
