@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.4.0 update
+
+Browser-history Add all now attempts transcripts by default. Transcript work moved into a background queue with up to three concurrent muted inactive tabs and one model warmup. Settings can be closed after the job starts. All 49 Node tests, both 53-video import browser tests (production queue with controlled caption outcomes), and the real service-worker background browser test passed. Six videos finished with every settings page closed; progress, original dates, search at 0:42, pause and tab cleanup were verified. Destructive data operations are blocked during an active job. Polling uses wall-clock deadlines to avoid repeated throttled timer cycles. See UPDATE-2.4.md for browser/worker interruption behavior and limits. No live account-wide speedup was measured; temporary YouTube tabs are still required.
+
 ## Version 2.3.0 update
 
 One video at a time is now the default popup view. All 40 Node tests pass, including 25-video pagination, best-timestamp selection, uniqueness, date/score eligibility and validated background routing. A deliberate ignored-offset regression was caught and restored. The new single-video browser regression uses the real model/ranker with 13 controlled transcripts and one imported title: all 14 distinct videos can be browsed, including beyond result 12. It checks correct timestamp/title-only links, next/previous boundaries, query/refinement/date resets, delayed-page rejection, list opt-out persistence and empty-query navigation. Light/dark screenshots were inspected. The existing refinement browser regression also passes. Live YouTube capture was not changed or retested for this search-view update.

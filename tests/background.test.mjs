@@ -81,3 +81,32 @@ test('single-video searches use unique video pages while list searches retain th
     assert.match((await request({type: 'search', singleVideo: true, offset})).error, /position/);
   }
 });
+
+test('background transcript jobs are controlled only from Library & settings', async () => {
+  for (const type of ['transcript-job-start', 'transcript-job-status', 'transcript-job-pause']) {
+    assert.match((await request({type, urls: ['aaaaaaaaaaa']}, {id: 'x', url: 'popup/popup.html'})).error, /Library/);
+    assert.match((await request({type}, {id: 'x', url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa'})).error, /Library/);
+  }
+  assert.match((await request({type: 'transcript-job-start', urls: 'not a list'})).error, /video links/);
+});
+
+test('interrupted-job cleanup closes only tracked tabs still showing their capture URL', async () => {
+  const closed = [];
+  chrome.storage.session = {get: async () => ({transcriptJob: {
+    id: 'interrupted', revision: 2, status: 'running', total: 5, completed: 1, done: 1, failed: 0, skipped: 0, results: [],
+    active: [{videoId: 'aaaaaaaaaaa', tabId: 10}, {videoId: 'bbbbbbbbbbb', tabId: 11}, {videoId: 'ccccccccccc', tabId: 12}],
+  }})};
+  chrome.tabs = {
+    get: async id => ({id, url: {
+      10: 'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1',
+      11: 'https://www.youtube.com/watch?v=ddddddddddd&recall_index=1',
+      12: 'https://www.youtube.com/watch?v=ccccccccccc',
+    }[id]}),
+    remove: async id => {closed.push(id);},
+  };
+  const response = await request({type: 'transcript-job-status'});
+  assert.deepEqual(closed, [10]);
+  assert.equal(response.job.status, 'interrupted');
+  assert.equal(response.job.completed, 1);
+  assert.deepEqual(response.job.active, []);
+});

@@ -12,8 +12,10 @@ For the optional browser regression, install Playwright separately from the proj
 node tests/browser/import-transcripts.cjs
 node tests/browser/refine-search.cjs
 node tests/browser/single-video.cjs
+node tests/browser/browser-history-transcripts.cjs
+node tests/browser/background-transcripts.cjs
 ```
 
-This uses controlled transcript outcomes with the real local embedding/search engine. It can download model weights, creates an isolated temporary browser profile, and does not use your normal browser history or cookies.
+These use controlled YouTube/transcript outcomes with the real local embedding/search engine. They can download model weights, create isolated temporary browser profiles, and do not use your normal browser history or cookies. The browser-history test pregrants history permission in a copied test-only manifest; it does not verify the optional permission prompt. The background test uses the real service worker and temporary tabs to verify processing continues after settings closes.
 
 After pulling merged changes, run `pnpm run setup` if dependencies or the runtime build changed. Reload the extension, reopen its settings page, and refresh YouTube tabs. Keeping the checkout folder path stable preserves its extension identity. Export your index before switching to another folder or removing an installation.
