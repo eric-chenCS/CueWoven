@@ -1,4 +1,4 @@
-# Recall v3.2 installation
+# Recall v3.2.1 installation
 
 ## From this repository
 
@@ -6,7 +6,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.2.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.2.1. Keeping the same folder preserves the extension identity and local library.
+
+Version 3.2.1 improves OCR merging, boxed-overlay recognition and worker cleanup. Updating from v3.2 needs no runtime rebuild, schema migration or history re-import. See [UPDATE-3.2.1.md](docs/UPDATE-3.2.1.md) for the tests and limitations.
 
 Version 3.2 adds cached result paging, larger bounded database reads, protected storage, capture status/logs and optional imported-history retention. Updating from v2.13–v3.1 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Database schema remains 5; updating from v3.1 requires no migration or re-import. Earlier versions receive the normalized-text upgrade documented in UPDATE-3.1.md. See [UPDATE-3.2.md](docs/UPDATE-3.2.md) for measurements and review decisions.
 
@@ -26,7 +28,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.2.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.2.1.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v3.2 – Search Your History",
-  "short_name": "Recall v3.2",
-  "version": "3.2.0",
+  "name": "Recall v3.2.1 – Search Your History",
+  "short_name": "Recall v3.2.1",
+  "version": "3.2.1",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {

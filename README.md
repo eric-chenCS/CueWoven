@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.2.0** speeds repeated searches and result paging, protects local storage and adds imported-history retention and capture diagnostics. Optional website/article capture, Chrome and Google Search history imports, and captions, audio, scenes and on-screen text from compatible browser players share one search. YouTube keeps its existing exact-second links; articles use passage highlights. See [the update and review decisions](docs/UPDATE-3.2.md), [website compatibility limits](docs/UPDATE-3.0.md) and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.2.1** improves on-screen text merging, recognizes boxed overlays more reliably and hardens OCR worker cancellation and cleanup. It retains cached result paging, storage protection, import retention and capture diagnostics from v3.2. Optional website/article capture, Chrome and Google Search history imports, and captions, audio, scenes and on-screen text from compatible browser players share one search. YouTube keeps its existing exact-second links; articles use passage highlights. See [the OCR update and test results](docs/UPDATE-3.2.1.md), [website compatibility limits](docs/UPDATE-3.0.md) and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 
@@ -80,7 +80,7 @@ GitHub changes do not automatically update installed extensions. Load your check
 | `docs/` | Release notes, reviews, evaluations and live-test reports |
 | `licenses/` | Third-party runtime license notices |
 
-Run `pnpm run zip` after setup to make a loadable `recall-v3.2.zip` including the generated runtime. ZIP files, dependencies, downloaded Hugging Face model caches, history exports, browser profiles and build metadata should not be committed.
+Run `pnpm run zip` after setup to make a loadable `recall-v3.2.1.zip` including the generated runtime. ZIP files, dependencies, downloaded Hugging Face model caches, history exports, browser profiles and build metadata should not be committed.
 
 Website capture skips incognito, visible password fields, pages dominated by editors, known sensitive domains, private entry routes, and blocked domains. Ordinary deep article/code paths, hidden login forms and small comment boxes no longer block a public page; form/editor contents are excluded. This is a conservative filter, not universal detection of signed-in or private content; prefer specific allowed domains. Website audio remains off until enabled. Old pages are never fetched to fill history. Web vectors use 8-bit storage and searches scan bounded batches with cached normalized text. Automatic recapture waits at least 60 seconds and reuses unchanged passage vectors. Full web content is capped at 2,000 items or 64 MiB of accounted text, normalized text and vector payload; older content falls back to its searchable title. Imported metadata uses the separate Keep imported history setting until read live, after which normal retention applies. These budgets do not include all browser database overhead or model memory.
 
