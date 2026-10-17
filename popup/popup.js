@@ -1,5 +1,6 @@
 import { formatTime, deepLink, queryTerms,playbackStart } from '../lib/search.js';
 import {itemLink,policy} from '../lib/web-items.js';
+import {captureLabel} from '../lib/capture-reason.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -299,11 +300,13 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------------------------------------------------------------------------
 async function setupIndexNow() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if(currentTab&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
   if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
   $('index-now').hidden = false;
   try {
     const { video } = await chrome.tabs.sendMessage(currentTab.id, { type: 'get-video' });
     currentMedia=video;
+    if(!currentTab.url.startsWith('https://www.youtube.com/'))$('index-now').hidden=!video;
     if (video && video.title) $('index-now-text').textContent = `Index “${video.title}”`;
   } catch (_) { /* tab needs a reload; handled on click */ }
 }
@@ -324,6 +327,15 @@ $('index-now-btn').addEventListener('click', async () => {
   }
 });
 
+async function refreshPageCapture(){
+  if(!currentTab)return;
+  const status=await send({type:'web-page-status',tabId:currentTab.id}).catch(()=>({reason:'refresh-required'}));
+  $('page-capture-status').textContent='This page: '+captureLabel(status.reason);
+  $('page-save-now').disabled=!['saved','duplicate','waiting','too-short'].includes(status.reason);
+  $('page-forget').disabled=!status.host||status.incognito;
+}
+$('page-save-now').addEventListener('click',async()=>{const result=await send({type:'index-tab',tabId:currentTab.id}).catch(error=>({error:error.message}));$('page-capture-status').textContent=result.ok?'Saved on this device':result.reason||result.error||'Page capture is busy.';});
+$('page-forget').addEventListener('click',async()=>{const result=await send({type:'web-forget-current',tabId:currentTab.id}).catch(error=>({error:error.message}));if(result.error)$('page-capture-status').textContent=result.error;else{await refreshPageCapture();refreshStatus();}});
 $('open-library').addEventListener('click', (e) => {
   e.preventDefault();
   chrome.runtime.openOptionsPage();

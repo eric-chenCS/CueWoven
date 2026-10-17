@@ -4,6 +4,17 @@
   globalThis.__recallWebCapture = true;
   const P = globalThis.__recallWebPolicy, send = (msg) => chrome.runtime.sendMessage(msg).catch((error) => ({ error: error.message }));
   let config = {}, settings = {}, selected = null, selectedSrc = "", videoInfo = null, revision = 0, busy = false, pageUrl = "", eligibleAt = Date.now(), lastText = "", lastSaved = 0, lastChecked = 0, mediaSince = 0, speechAttempted = false, cuesSeen = new Set();
+  let lastReason = "waiting", reportedReason = "", reportedAt = 0;
+  function report(reason) {
+    lastReason = reason;
+    if (reason === reportedReason && Date.now() - reportedAt < 3e4) return;
+    reportedReason = reason;
+    reportedAt = Date.now();
+    send({ type: "capture-outcome", reason, kind: videoInfo ? "video" : "page", outcome: reason === "saved" ? "saved" : "skipped" });
+  }
+  function skipReason() {
+    return !P.safeUrl(location.href) || P.matches(location.hostname, config.blocked || []) ? "blocked-domain" : settings.enabled === false || !config.enabled || config.paused ? "paused" : !P.allowed(location.href, config) ? "no-permission" : privatePage() ? "private-form" : document.hidden ? "hidden" : null;
+  }
   function rendered(element) {
     if (!element.getClientRects().length) return false;
     if (element.checkVisibility) return element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
@@ -38,7 +49,7 @@
   }
   function clock() {
     const current = eligible(), same = selected && selected.currentSrc === selectedSrc;
-    return { private: !current, video: current && same ? videoInfo : null, time: selected?.currentTime, paused: !current || !same || !selected || selected.paused, visible: current && !document.hidden && (!selected || visible(selected)), seeking: !!selected?.seeking, rate: selected?.playbackRate || 1, ad: !!selected?.closest('.ad-showing,.ad-interrupting,[data-ad="true"]'), revision, forced: false };
+    return { reason: skipReason() || lastReason, private: !current, video: current && same ? videoInfo : null, time: selected?.currentTime, paused: !current || !same || !selected || selected.paused, visible: current && !document.hidden && (!selected || visible(selected)), seeking: !!selected?.seeking, rate: selected?.playbackRate || 1, ad: !!selected?.closest('.ad-showing,.ad-interrupting,[data-ad="true"]'), revision, forced: false };
   }
   globalThis.__recallMediaElement = () => selected;
   function stopMedia() {
@@ -103,6 +114,7 @@
         lastChecked = 0;
       }
       if (document.hidden || !eligible()) {
+        report(skipReason() || "waiting");
         stopMedia();
         eligibleAt = Date.now();
         return;
@@ -144,8 +156,10 @@
           }
         }
         if (cuesSeen.size > 1e3) cuesSeen = new Set([...cuesSeen].slice(-500));
-        if (segments.length) await send({ type: "web-media", video: videoInfo, segments: segments.slice(0, 16) });
-        else if (config.audio && !speechAttempted && ![...selected.textTracks].some((track) => track.cues?.length)) {
+        if (segments.length) {
+          const result = await send({ type: "web-media", video: videoInfo, segments: segments.slice(0, 16) });
+          report(result.error ? "model-error" : result.ok ? "saved" : "hidden");
+        } else if (config.audio && !speechAttempted && ![...selected.textTracks].some((track) => track.cues?.length)) {
           speechAttempted = true;
           await send({ type: "speech-auto-start" });
         }
@@ -155,12 +169,13 @@
         const google = /^(?:www\.)?google\.[a-z.]+$/i.test(location.hostname) && location.pathname === "/search", text = google ? "" : pageText(), title = google ? new URL(location.href).searchParams.get("q") || document.title : document.title;
         if ((text !== lastText || Date.now() - lastSaved >= 6e4 || force) && (text.length >= 40 || google || force)) {
           const result = await send({ type: "web-capture", kind: google ? "search" : "page", url: pageUrl, title, text });
+          report(result.error ? "model-error" : result.unchanged ? "duplicate" : result.ok ? "saved" : "hidden");
           if (result.ok) {
             lastText = text;
             lastSaved = Date.now();
           }
           if (force) return result;
-        }
+        } else if (text.length < 40 && !google && !videoInfo) report("too-short");
       }
     } finally {
       busy = false;

@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.1 · Library &amp; settings</title>
+    <title>Recall v3.2 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="wrap">
       <header class="head">
-        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.1</h1></div>
+        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.2</h1></div>
         <p class="lede">Search videos, pages, articles and past queries. Your index lives only in this browser.</p>
         <div class="stats" id="stats"></div>
       </header>
@@ -115,7 +115,7 @@
           </select>
         </label>
         <label class="setting">
-          <span><strong>Forget watched videos after</strong><br /><span class="note">Watched titles, transcripts and scenes expire from recent activity. Imported history stays protected after background captions are fetched.</span></span>
+          <span><strong>Forget watched or read items after</strong><br /><span class="note">Live titles, text, transcripts and scenes expire from recent activity. Imported entries use the separate setting below.</span></span>
           <select id="maxAgeDays">
             <option value="7">7 days</option>
             <option value="30">30 days</option>
@@ -124,6 +124,7 @@
             <option value="0">Never</option>
           </select>
         </label>
+        <label class="setting"><span><strong>Keep imported history</strong><br /><span class="note">Uses the original visit date, including imported captions. Choosing a limit removes older imported items immediately and during daily cleanup. Export a backup first if you want a copy.</span></span><select id="importMaxAgeDays"><option value="0">Forever</option><option value="365">1 year</option><option value="90">90 days</option></select></label>
         <label class="setting">
           <span><strong>Results per video</strong><br /><span class="note">How many moments each video can show in list view. One video at a time always shows its best moment.</span></span>
           <select id="perVideo">
@@ -158,8 +159,10 @@
         <p id="data-msg" class="note" aria-live="polite"></p>
       </section>
 
+      <section class="card" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">Storage &amp; capture diagnostics</h2><p id="storage-usage" class="note" role="status"></p><p class="note">The last 100 capture events from this browser session. Domains and reason codes only; no page addresses, titles, queries or content. Incognito events are excluded. Refresh to see recent events.</p><div class="row"><button id="diagnostics-refresh" class="btn ghost">Refresh diagnostics</button><button id="diagnostics-clear" class="btn ghost">Clear event log</button></div><p id="capture-empty" class="note">No capture events in this session.</p><div class="diagnostic-table"><table><thead><tr><th>Time</th><th>Site</th><th>Kind</th><th>Status</th></tr></thead><tbody id="capture-events"></tbody></table></div></section>
       <footer class="foot note">Recall runs <code>all-MiniLM-L6-v2</code> on your device with Transformers.js. No servers, no accounts.</footer>
     </div>
+    <script type="module" src="diagnostics.js"></script>
     <script type="module" src="options.js"></script>
     <script type="module" src="web-options.js"></script>
   </body>
