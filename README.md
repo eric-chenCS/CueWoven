@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.3.0** supports optional history import, automatic transcript fetching, and local semantic search.
+Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.3.1** supports optional history import, automatic transcript fetching, and local semantic search.
 
 ## Team setup
 
@@ -23,7 +23,7 @@ If switching from a different installed folder, export your library first and im
 ## Use
 
 - Watch a captioned YouTube video, or open Recall and choose **Index this video now**.
-- Describe what you remember in the popup. By default, Recall shows the strongest matching video and its best transcript moment. Use **Next closest** and **Previous** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered.
+- Describe what you remember in the popup. By default, Recall shows the strongest matching video and its best transcript moment. Use **→** and **←** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered.
 - Searches are independent by default. Click **Refine** beside the search box to add more clues to the current query. Edit those clues to build on the original search. Changing the main query, closing Refine, or reopening the popup clears extra clues.
 - Optionally import the extracted Google Takeout `watch-history.json`, up to 100 MB. Recall saves titles first, then attempts available transcripts in muted background tabs. Uncheck **Fetch transcripts after import** for titles only.
 - Use **Fetch missing transcripts** for already imported titles. Keep Library & settings open. You can pause after the current video and retry missing transcripts later. Large histories can take hours.

@@ -1,6 +1,6 @@
 # Recall 2.3.0 — one video at a time by default
 
-Recall now opens in **One video at a time** view. Search shows the strongest matching video with its best available transcript moment. **Next closest** moves to the next distinct video; **Previous** goes back. The first match disables Previous and the last eligible match disables Next closest. A title-only entry still opens without a timestamp.
+Recall now opens in **One video at a time** view. Search shows the strongest matching video with its best available transcript moment. **→** moves to the next distinct video; **←** goes back. The first match disables Previous and the last eligible match disables Next closest. A title-only entry still opens without a timestamp.
 
 Navigation ranks the full saved library and is not limited to the list view's first 12 results. Date filters and the existing minimum similarity threshold still apply. Match scores indicate similarity, not a calibrated probability that a video is the intended source.
 
