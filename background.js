@@ -2,6 +2,7 @@
 // and the offscreen document that holds the model and the index.
 import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
+import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
@@ -69,6 +70,62 @@ function flashBadge(tabId, text, color) {
 // ---------------------------------------------------------------------------
 const waiters = new Map(); // tabId -> resolve({ok, reason})
 
+async function fetchVideoTranscript(id, onTab = () => {}) {
+  if ((await engine('has', {videoId: id})).has) return {videoId: id, status: 'skipped', reason: 'Already indexed'};
+  const tab = await chrome.tabs.create({url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
+  // Register immediately, before awaiting storage or mute operations.
+  const outcome = new Promise(resolve => {
+    const timer = setTimeout(() => { waiters.delete(tab.id); resolve({ok: false, reason: 'Timed out'}); }, 75000);
+    waiters.set(tab.id, r => { clearTimeout(timer); waiters.delete(tab.id); resolve(r); });
+  });
+  try {
+    onTab(tab.id);
+    await chrome.tabs.update(tab.id, {muted: true});
+    const result = await outcome;
+    return {...result, videoId: id, status: result.ok ? 'done' : 'failed'};
+  } finally {
+    settleWaiter(tab.id, {ok: false, reason: 'Transcript tab closed'});
+    await chrome.tabs.remove(tab.id).catch(() => {});
+  }
+}
+
+let jobsReady;
+let jobKeepAlive;
+function getTranscriptJobs() {
+  if (!jobsReady) jobsReady = (async () => {
+    const {transcriptJob} = await chrome.storage.session.get('transcriptJob');
+    if (transcriptJob && ['running', 'pausing'].includes(transcriptJob.status)) {
+      for (const active of transcriptJob.active || []) {
+        if (!Number.isInteger(active.tabId)) continue;
+        const tab = await chrome.tabs.get(active.tabId).catch(() => null);
+        if (tab?.url && videoIdFromUrl(tab.url) === active.videoId && new URL(tab.url).searchParams.get('recall_index') === '1') await chrome.tabs.remove(tab.id).catch(() => {});
+      }
+    }
+    const jobs = createTranscriptQueue({
+      initial: transcriptJob,
+      processVideo: fetchVideoTranscript,
+      beforeStart: () => engine('warmup'),
+      onChange(job) {
+        if (['running', 'pausing'].includes(job.status)) {
+          if (!jobKeepAlive) jobKeepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
+        } else { clearInterval(jobKeepAlive); jobKeepAlive = null; }
+        chrome.runtime.sendMessage({type: 'transcript-job', job}).catch(() => {});
+        return chrome.storage.session.set({transcriptJob: job});
+      },
+    });
+    return jobs;
+  })();
+  return jobsReady;
+}
+
+function requireLibrary(sender) {
+  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to manage transcript fetching.');
+}
+
+async function requireTranscriptJobIdle() {
+  if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
+}
+
 let bulkRunning = false;
 async function bulkIndex(urls) {
   if (bulkRunning) throw new Error('A pre-load is already running');
@@ -77,6 +134,7 @@ async function bulkIndex(urls) {
   // Keep this bounded operation alive while a tab is fetching its transcript.
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
   try {
+    await engine('warmup');
     const ids = Array.from(new Set(urls.map(videoIdFromUrl).filter(Boolean)));
     for (const [n, id] of ids.entries()) {
       const report = (status, extra = {}) => {
@@ -84,19 +142,9 @@ async function bulkIndex(urls) {
         chrome.runtime.sendMessage(Object.assign({ type: 'bulk-progress' }, item)).catch(() => {});
         return item;
       };
-      if ((await engine('has', { videoId: id })).has) {
-        results.push(report('skipped', { reason: 'Already indexed' }));
-        continue;
-      }
       report('working');
-      const tab = await chrome.tabs.create({ url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false });
-      chrome.tabs.update(tab.id, { muted: true }).catch(() => {});
-      const outcome = await new Promise((resolve) => {
-        const timer = setTimeout(() => { waiters.delete(tab.id); resolve({ ok: false, reason: 'Timed out' }); }, 90000);
-        waiters.set(tab.id, (r) => { clearTimeout(timer); waiters.delete(tab.id); resolve(r); });
-      });
-      chrome.tabs.remove(tab.id).catch(() => {});
-      results.push(report(outcome.ok ? 'done' : 'failed', outcome));
+      const result = await fetchVideoTranscript(id);
+      results.push(report(result.status, result));
     }
     return { results };
   } finally {
@@ -114,6 +162,21 @@ function settleWaiter(tabId, outcome) {
 // Message router
 // ---------------------------------------------------------------------------
 const handlers = {
+  async 'transcript-job-start'({urls}, sender) {
+    requireLibrary(sender);
+    if (bulkRunning) throw new Error('A pre-load is already running.');
+    if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
+    const ids = urls.map(videoIdFromUrl).filter(Boolean);
+    return {job: (await getTranscriptJobs()).start(ids)};
+  },
+  async 'transcript-job-status'(_msg, sender) {
+    requireLibrary(sender);
+    return {job: (await getTranscriptJobs()).get()};
+  },
+  async 'transcript-job-pause'(_msg, sender) {
+    requireLibrary(sender);
+    return {job: (await getTranscriptJobs()).pause()};
+  },
   async 'import-history'({ videos }, sender) {
     if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to import history.');
     const result = await engine('import-history', { videos });
@@ -177,22 +240,28 @@ const handlers = {
   warmup: () => engine('warmup'),
   list: () => engine('list'),
   async delete({ videoId }) {
+    await requireTranscriptJobIdle();
     const r = await engine('delete', { videoId });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
   },
   async clear() {
+    await requireTranscriptJobIdle();
     const r = await engine('clear');
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
   },
   export: () => engine('export'),
   async import({ data }) {
+    await requireTranscriptJobIdle();
     const r = await engine('import', { data });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
   },
-  'bulk-index': ({ urls }) => bulkIndex(Array.isArray(urls) ? urls.slice(0, 50) : []),
+  async 'bulk-index'({urls}) {
+    if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Transcript fetching is already running.');
+    return bulkIndex(Array.isArray(urls) ? urls.slice(0, 50) : []);
+  },
   async 'index-tab'({ tabId }) {
     try {
       return await chrome.tabs.sendMessage(tabId, { type: 'index-now' });

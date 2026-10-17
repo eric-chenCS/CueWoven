@@ -96,11 +96,12 @@
   }
 
   async function waitForPlayerResponse(videoId, tries = 20) {
-    for (let i = 0; i < tries; i++) {
+    const deadline = Date.now() + tries * 500;
+    do {
       const pr = playerResponseFor(videoId);
       if (pr) return pr;
       await sleep(500);
-    }
+    } while (Date.now() < deadline);
     return null;
   }
 
@@ -174,7 +175,8 @@
     document.addEventListener('keydown', onKey);
     try {
       if (pressed === 'false') button.click();
-      for (let i = 0; i < 15; i++) {
+      const deadline = Date.now() + 4500;
+      while (Date.now() < deadline) {
         if (currentVideoId() !== videoId) return [];
         if (capturedCaptionData.has(videoId)) return capturedCaptionData.get(videoId);
         await sleep(300);
@@ -252,7 +254,8 @@
       Array.from(document.querySelectorAll('button')).find((b) => /show transcript/i.test(b.textContent || '') || /show transcript/i.test(b.getAttribute('aria-label') || ''));
     if (!button) return [];
     button.click();
-    for (let i = 0; i < 20; i++) {
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline) {
       await sleep(400);
       if (currentVideoId() !== videoId) return [];
       segs = readPanel();

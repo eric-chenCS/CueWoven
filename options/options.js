@@ -6,10 +6,9 @@ const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2 
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
-let bulkPosition = 0;
-let bulkTotal = 0;
 let historyImportBusy = false;
-let bulkStop = false;
+let latestJob = null;
+let jobWaiter = null;
 
 function updateTranscriptButton() {
   const count = videos.filter(v => v.method === 'history-title').length;
@@ -99,7 +98,8 @@ function renderLibrary() {
     del.textContent = 'Delete';
     del.addEventListener('click', async () => {
       del.disabled = true;
-      await send({ type: 'delete', videoId: v.videoId });
+      const response = await send({ type: 'delete', videoId: v.videoId });
+      if (response?.error) { $('data-msg').textContent = response.error; del.disabled = false; return; }
       loadLibrary();
     });
     actions.append(open, del);
@@ -123,6 +123,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (msg.type === 'index-changed' && !historyImportBusy) loadLibrary();
   if (msg.type === 'bulk-progress') onBulkProgress(msg);
+  if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
   if (msg.type === 'import-progress') $('data-msg').textContent = `Importing… ${msg.done} of ${msg.total}`;
   if (msg.type === 'model-status' && msg.state.status === 'loading') {
     $('bulk-summary').textContent = `Loading the model… ${Math.round(msg.state.progress * 100)}%`;
@@ -133,7 +134,7 @@ chrome.runtime.onMessage.addListener((msg) => {
 async function saveHistoryTitles(entries) {
   if (historyImportBusy || bulkBusy) return;
   historyImportBusy = true;
-  const controls = ['takeout-import', 'takeout-transcripts', 'history-transcripts', 'welcome-import', 'history-scan', 'history-save', 'history-index', 'bulk-go', 'import', 'clear'];
+  const controls = ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'history-transcripts', 'welcome-import', 'history-scan', 'history-save', 'history-index', 'bulk-go', 'import', 'clear'];
   controls.forEach(id => { $(id).disabled = true; });
   renderLibrary();
   let imported = 0;
@@ -162,6 +163,16 @@ async function saveHistoryTitles(entries) {
   return complete;
 }
 
+async function addHistory(entries, fetchTranscripts) {
+  if (!await saveHistoryTitles(entries)) return false;
+  if (fetchTranscripts) {
+    const importedIds = new Set(entries.map(v => v.videoId));
+    await runBulk(videos.filter(v => v.method === 'history-title' && importedIds.has(v.videoId))
+      .sort((a, b) => b.watchedAt - a.watchedAt).map(v => v.videoId), true);
+  }
+  return true;
+}
+
 $('takeout-import').addEventListener('change', async e => {
   const file = e.target.files[0];
   e.target.value = '';
@@ -170,19 +181,23 @@ $('takeout-import').addEventListener('change', async e => {
   try {
     validateTakeoutFileSize(file.size);
     const entries = parseTakeoutHistory(JSON.parse((await file.text()).replace(/^\uFEFF/, '')));
-    if (await saveHistoryTitles(entries) && fetchTranscripts) {
-      const importedIds = new Set(entries.map(v => v.videoId));
-      await runBulk(videos.filter(v => v.method === 'history-title' && importedIds.has(v.videoId))
-        .sort((a, b) => b.watchedAt - a.watchedAt).map(v => v.videoId), true);
-    }
+    await addHistory(entries, fetchTranscripts);
   } catch (e) {
     $('history-import-msg').textContent = `Could not import history: ${e.message}`;
   }
 });
 
-$('history-save').addEventListener('click', () => saveHistoryTitles(historyCandidates.map(v => ({
-  videoId: v.videoId, title: v.title, channel: '', watchedAt: v.lastVisitTime,
-}))));
+$('history-save').addEventListener('click', async () => {
+  const fetchTranscripts = $('browser-transcripts').checked;
+  try {
+    const complete = await addHistory(historyCandidates.map(v => ({
+      videoId: v.videoId, title: v.title, channel: '', watchedAt: v.lastVisitTime,
+    })), fetchTranscripts);
+    $('history-msg').textContent = complete && fetchTranscripts ? $('bulk-summary').textContent : $('history-import-msg').textContent;
+  } catch (e) {
+    $('history-msg').textContent = `Could not add history: ${e.message}`;
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Existing YouTube visits (optional browser permission)
@@ -295,74 +310,69 @@ function onBulkProgress(p) {
   st.className = 'st ' + p.status;
   li.querySelector('.what').textContent = p.title || p.videoId;
   li.querySelector('.why').textContent = p.status === 'done' ? `· ${p.chunkCount} moments` : p.reason ? '· ' + p.reason : '';
-  $('bulk-summary').textContent = `${bulkBusy ? bulkPosition : p.n} of ${bulkBusy ? bulkTotal : p.total}`;
+}
+
+function setBulkControls(busy) {
+  bulkBusy = busy;
+  for (const id of ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'welcome-import', 'history-save', 'history-scan', 'import', 'clear', 'bulk-go']) $(id).disabled = busy || historyImportBusy;
+  $('bulk-go').textContent = busy ? 'Fetching in background…' : 'Index these videos';
+  $('bulk-stop').hidden = !busy;
+  updateTranscriptButton();
+  renderLibrary();
+  renderHistory();
+}
+
+function applyTranscriptJob(job) {
+  if (!job || latestJob?.id === job.id && job.revision < latestJob.revision) return;
+  const changed = latestJob?.id !== job.id;
+  if (changed) { $('bulk-log').textContent = ''; logRows.clear(); }
+  latestJob = job;
+  const busy = ['running', 'pausing'].includes(job.status);
+  if (changed || bulkBusy !== busy) setBulkControls(busy);
+  for (const result of job.results) onBulkProgress(result);
+  for (const active of job.active) onBulkProgress({...active, status: 'working'});
+  $('bulk-stop').disabled = job.status === 'pausing';
+  $('bulk-stop').textContent = job.status === 'pausing' ? 'Pausing active videos…' : 'Pause after active videos';
+  if (busy) {
+    $('bulk-summary').textContent = `${job.completed} of ${job.total} finished · ${job.active.length} fetching in background. You can close this settings page.`;
+  } else {
+    const label = {done: 'Finished', paused: 'Paused', interrupted: 'Interrupted'}[job.status] || job.status;
+    $('bulk-summary').textContent = `${label}: ${job.done} indexed${job.skipped ? `, ${job.skipped} already there` : ''}, ${job.failed} failed. ${job.total - job.completed} not attempted.${job.reason ? ' ' + job.reason : ''}`;
+    if (jobWaiter?.id === job.id) { jobWaiter.resolve({results: job.results}); jobWaiter = null; }
+    loadLibrary().catch(() => {});
+  }
 }
 
 async function runBulk(urls, all = false) {
   if (bulkBusy || historyImportBusy) return;
   if (!urls.length) { $('bulk-summary').textContent = all ? 'No missing transcripts for these videos.' : 'Paste at least one YouTube link.'; return; }
-  const btn = $('bulk-go');
-  bulkBusy = true;
-  bulkStop = false;
-  $('bulk-stop').hidden = false;
-  $('bulk-stop').disabled = false;
-  $('bulk-stop').textContent = 'Pause after current video';
-  $('takeout-import').disabled = true;
-  $('takeout-transcripts').disabled = true;
-  $('welcome-import').disabled = true;
-  $('history-save').disabled = true;
-  $('history-scan').disabled = true;
-  $('import').disabled = true;
-  $('clear').disabled = true;
-  updateTranscriptButton();
-  renderLibrary();
-  renderHistory();
-  btn.disabled = true;
-  btn.textContent = 'Indexing…';
-  $('bulk-summary').scrollIntoView({ behavior: 'smooth', block: 'center' });
-  $('bulk-log').textContent = '';
-  logRows.clear();
+  setBulkControls(true);
+  $('bulk-summary').scrollIntoView({behavior: 'smooth', block: 'center'});
   try {
-    const res = { results: [] };
     const unique = Array.from(new Set(urls));
-    const batch = all ? unique : unique.slice(0, 50);
-    bulkTotal = batch.length;
-    for (const [i, url] of batch.entries()) {
-      if (bulkStop) break;
-      bulkPosition = i + 1;
-      $('bulk-summary').textContent = `Fetching transcript ${bulkPosition} of ${bulkTotal}…`;
-      // One request per video avoids the service worker's five-minute request limit.
-      const item = await send({ type: 'bulk-index', urls: [url] });
-      if (!item || item.error) throw new Error(item?.error || 'Pre-load did not respond.');
-      res.results.push(...item.results);
-    }
-    if (!res.results.length) { $('bulk-summary').textContent = 'No YouTube video links found.'; return; }
-    const ok = res.results.filter((r) => r.status === 'done').length;
-    const skipped = res.results.filter((r) => r.status === 'skipped').length;
-    $('bulk-summary').textContent = `${bulkStop ? 'Paused' : 'Finished'}: ${ok} indexed${skipped ? `, ${skipped} already there` : ''}, ${res.results.length - ok - skipped} failed. ${batch.length - res.results.length} not attempted.`;
-    return res;
+    const response = await send({type: 'transcript-job-start', urls: all ? unique : unique.slice(0, 50)});
+    if (!response?.job || response.error) throw new Error(response?.error || 'Background fetching did not respond.');
+    return await new Promise(resolve => {
+      jobWaiter = {id: response.job.id, resolve};
+      applyTranscriptJob(latestJob?.id === response.job.id ? latestJob : response.job);
+    });
   } catch (e) {
     $('bulk-summary').textContent = `Indexing failed: ${e.message}`;
-  } finally {
-    bulkBusy = false;
-    $('bulk-stop').hidden = true;
-    $('import').disabled = false;
-    $('clear').disabled = false;
-    $('takeout-import').disabled = false;
-    $('takeout-transcripts').disabled = false;
-    $('welcome-import').disabled = false;
-    $('history-save').disabled = false;
-    btn.disabled = false;
-    btn.textContent = 'Index these videos';
-    $('history-scan').disabled = false;
+    setBulkControls(false);
     await loadLibrary();
   }
 }
 
-$('bulk-stop').addEventListener('click', () => {
-  bulkStop = true;
+$('bulk-stop').addEventListener('click', async () => {
   $('bulk-stop').disabled = true;
-  $('bulk-stop').textContent = 'Pausing after current video…';
+  try {
+    const response = await send({type: 'transcript-job-pause'});
+    if (response?.error) throw new Error(response.error);
+    applyTranscriptJob(response?.job);
+  } catch (e) {
+    $('bulk-stop').disabled = false;
+    $('bulk-summary').textContent = `Could not pause: ${e.message}`;
+  }
 });
 
 $('bulk-go').addEventListener('click', () => {
@@ -432,10 +442,13 @@ $('import').addEventListener('change', async (e) => {
 
 $('clear').addEventListener('click', async () => {
   if (!confirm('Delete every indexed video and transcript from this browser? This can’t be undone.')) return;
-  await send({ type: 'clear' });
+  const response = await send({ type: 'clear' });
+  if (response?.error) { $('data-msg').textContent = response.error; return; }
   $('data-msg').textContent = 'Everything was deleted.';
   loadLibrary();
 });
 
 loadSettings();
 loadLibrary();
+
+send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(response?.job)).catch(() => {});
