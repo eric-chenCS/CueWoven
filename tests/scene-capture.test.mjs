@@ -3,14 +3,17 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 function fixture({blocked=false,reply=()=>({ok:true})}={}){
- let now=100000,serial=0,storageListener,shade=0;const timers=new Map(),messages=[];
+ let now=100000,serial=0,storageListener,shade=0;const timers=new Map(),messages=[],sizes=[];
  const context={video:{videoId:'aaaaaaaaaaa'},time:42,paused:false,visible:true,ad:false,seeking:false,forced:false,revision:1},media={readyState:4,videoWidth:1920,videoHeight:1080};
- const canvas=()=>({getContext:()=>({fillRect(){},drawImage(){},getImageData:()=>({data:new Uint8ClampedArray(96*54*4).fill(shade)})}),toDataURL:()=>{if(blocked)throw Error('Tainted canvas');return 'data:image/jpeg;base64,test'+shade}});
+ const canvas=()=>{const node={getContext:()=>({fillRect(){},drawImage(){},getImageData:()=>({data:new Uint8ClampedArray(96*54*4).fill(shade)})}),toDataURL:()=>{if(blocked)throw Error('Tainted canvas');sizes.push([node.width,node.height]);return 'data:image/jpeg;base64,test'+shade}};return node;};
  const sandbox={Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),window:{addEventListener(){}},document:{addEventListener(){},querySelector:()=>media,createElement:canvas},chrome:{storage:{onChanged:{addListener:fn=>storageListener=fn}},runtime:{sendMessage:async msg=>{messages.push(msg);return reply(msg)}}}};
  vm.createContext(sandbox);for(const file of ['../lib/scene-policy.js','../content/scene-capture.js'])vm.runInContext(readFileSync(new URL(file,import.meta.url),'utf8'),sandbox);
  sandbox.__recallScenes.start(()=>context,{enabled:true,scenesEnabled:true,dwellSeconds:0});
- return {messages,context,timers,shade(value){shade=value;},api:sandbox.__recallScenes,advance(seconds){now+=seconds*1000;context.time+=seconds},async tick(){const entry=timers.entries().next().value;if(entry){timers.delete(entry[0]);await entry[1]();}},disable(){storageListener({settings:{newValue:{scenesEnabled:false}}},'local');}};
+ return {messages,context,timers,media,sizes,shade(value){shade=value;},api:sandbox.__recallScenes,advance(seconds){now+=seconds*1000;context.time+=seconds},async tick(){const entry=timers.entries().next().value;if(entry){timers.delete(entry[0]);await entry[1]();}},disable(){storageListener({settings:{newValue:{scenesEnabled:false}}},'local');}};
 }
+test('portrait and square snapshots preserve useful image area at the same pixel budget',async()=>{
+ for(const [width,height,expected] of [[1080,1920,[180,320]],[1080,1080,[240,240]],[1920,1080,[320,180]]]){const f=fixture();f.media.videoWidth=width;f.media.videoHeight=height;await f.tick();assert.deepEqual(f.sizes[0],expected);assert.equal(expected[0]*expected[1],57600);f.api.stop();}
+});
 test('quiet video stretches routine snapshots to 60 seconds and skips visited buckets',async()=>{
  const f=fixture();await f.tick();await f.tick();assert.equal(f.messages.length,1);f.advance(20);await f.tick();assert.equal(f.messages.length,1);f.advance(40);await f.tick();assert.equal(f.messages.length,2);assert.equal(f.messages[0].start,42);f.advance(60);f.context.time=42;await f.tick();assert.equal(f.messages.length,2);f.api.stop();
 });

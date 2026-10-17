@@ -14,6 +14,8 @@ import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
 import {EMBEDDING_VERSION,embeddingText,createEmbeddingMigration} from '../lib/embedding-migration.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
+import {createWebEngine} from './web-engine.js';
+import {policy} from '../lib/web-items.js';
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const DIM = 384;
@@ -102,6 +104,9 @@ async function embed(texts) {
 // In-memory index (rebuilt lazily from IndexedDB after any change)
 // ---------------------------------------------------------------------------
 let lastMigrationUpdate=0;
+const web=createWebEngine({db,embed,onChange:()=>broadcast({type:'index-changed'})});
+const webTasks=new Set();
+const captionTasks=new Set();
 const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChange:state=>{
   if(state.updated!==undefined&&state.updated!==lastMigrationUpdate){lastMigrationUpdate=state.updated;invalidate();broadcast({type:'index-changed'});}
   broadcast({type:'embedding-status',state});
@@ -109,8 +114,8 @@ const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChan
 const indexCache=createRevisionCache(async()=>{
   const [videoList, chunks, screenText] = await Promise.all([db.listVideos(), db.allChunks(),db.screenText.all()]);
   migration.start(videoList,chunks).catch(()=>{});
-  const videos = new Map(videoList.map((v) => [v.videoId, v]));
-  const usable = [...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter((c) => c.vec && c.vec.length === DIM && videos.has(c.videoId));
+  const videos = new Map(videoList.filter(v=>!policy.webId(v.videoId)).map((v) => [v.videoId, v]));
+  const usable = [...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter((c) => c.vec && c.vec.length === DIM && (videos.has(c.videoId)||policy.webId(c.videoId)));
   const matrix = new Float32Array(usable.length * DIM);
   const meta = new Array(usable.length);
   usable.forEach((c, i) => {
@@ -172,29 +177,34 @@ async function importHistory({ videos, historyImported=true }) {
 }
 
 async function indexVideo({ video, segments, method }) {
+  if(!/^[\w-]{11}$/.test(video?.videoId))throw Error('Invalid YouTube video identity.');
   const chunks = chunkTranscript(segments);
   if (!chunks.length) throw new Error('Transcript was empty');
   return storeChunks(video, chunks, method);
 }
 
-async function search({ query, limit, perVideo, sinceDays, offset }) {
+async function search({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all' }) {
   const q = String(query || '').trim();
   if (!q) return { results: [] };
-  const { videos, index } = await getIndex();
+  if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
+  const { videos:youtube, index } = await getIndex(),metadata=await web.metadata();
+  const videos=new Map([...youtube,...metadata].filter(([,v])=>kind==='all'||(v.kind||'video')===kind));
   const hasScenes = [...videos.values()].some(video=>video.sceneCount>0);
-  if (!index.meta.length && !hasScenes) return { results: [], empty: true };
+  if (!index.meta.length && !hasScenes && !metadata.size) return { results: [], empty: true };
   const [qv] = await embed([q]);
   const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  if (!hasScenes) return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs, offset }) };
-  const words = rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs});
+  const pageHits=await web.search(q,qv,{sinceMs,kind,perVideo,limit:Math.min(10000,offset+limit+2000)});
+  const words=[...rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs}),...pageHits].sort((a,b)=>b.score-a.score);
+  const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
+  if(!hasScenes)return {results:select(words)};
   try {
-    const visual = await searchScenes(q,{limit:2000,perVideo,sinceMs});
-    if (!visual.results.length) return {results:rank(qv,index,videos,{query:q,limit,perVideo,sinceMs,offset})};
+    const visual = await searchScenes(q,{limit:2000,perVideo,sinceMs},videos);
+    if (!visual.results.length) return {results:select(words)};
     const combined=fuseMatches(words,visual.results,{limit,perVideo,offset});
     const results=await Promise.all(combined.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
     return {results:results.filter(hit=>!hit.scene || hit.image)};
   } catch (error) {
-    return {results:rank(qv,index,videos,{query:q,limit,perVideo,sinceMs,offset}),sceneError:'Scene search unavailable: '+error.message};
+    return {results:select(words),sceneError:'Scene search unavailable: '+error.message};
   }
 }
 
@@ -202,19 +212,21 @@ async function status() {
   const videos = await db.listVideos();
   const chunks = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
   const screenText=videos.reduce((n,v)=>n+(v.screenCount||0),0);
-  return { videos: videos.length, chunks:chunks+screenText, screenText, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
+  return { total:videos.length,videos:videos.filter(v=>!v.kind||v.kind==='video').length,pages:videos.filter(v=>v.kind==='page').length,searches:videos.filter(v=>v.kind==='search').length,chunks:chunks+screenText, screenText, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
 }
 
 async function exportIndex() {
   const videos = await db.listVideos();
   const out = [];
+  const items=[];
   for (const v of videos) {
+    if(policy.webId(v.videoId)){items.push({...v,passages:(await db.items.get(v.videoId))?.passages.filter(row=>!['Title','Search'].includes(row.source)).map(({start,text,source,anchor,speechStart,speechEnd})=>({start,text,source,...(anchor?{anchor}:{}),...(Number.isFinite(speechStart)?{speechStart,speechEnd}:{})}))||[]});continue;}
     const chunks = (await db.chunksOf(v.videoId)).sort((a, b) => a.start - b.start);
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
   const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt,adaptive})=>({videoId,start,image,indexedAt,...(adaptive?{adaptive:true}:{})}));
   const screenText=(await db.screenText.all()).map(({videoId,start,text,indexedAt,observedLines})=>({videoId,start,text,indexedAt,...(observedLines?{observedLines}:{})}));
-  return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes,screenText };
+  return { format: 'recall-export', version: 2, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, items,scenes,screenText };
 }
 
 // Backups store text/images and re-embed here so vectors survive model changes.
@@ -226,8 +238,10 @@ async function importIndex({ data }) {
 async function restoreIndex(data) {
   if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Recall export file');
   let imported = 0;
+  if(data.items!==undefined&&!Array.isArray(data.items))throw Error('Invalid web-history backup.');
+  for(const item of data.items||[]){await web.restore(item);imported++;}
   for (const v of data.videos) {
-    if (!v || typeof v.videoId !== 'string' || !Array.isArray(v.chunks)) continue;
+    if (!v || typeof v.videoId !== 'string' || !/^[\w-]{11}$/.test(v.videoId) || !Array.isArray(v.chunks)) continue;
     const chunks = v.chunks
       .filter((c) => c && typeof c.text === 'string' && c.text.trim())
       .map((c) => ({ start: Number(c.start) || 0, text: c.text.slice(0, 2000), ...(Number.isFinite(c.speechStart) && c.speechStart >= 0 && Number.isFinite(c.speechEnd) && c.speechEnd > c.speechStart && c.speechEnd - c.speechStart <= 180 ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) }));
@@ -253,14 +267,14 @@ async function restoreIndex(data) {
     }
     invalidate();
   }
-  return { imported };
+  web.reset();return { imported };
 }
 
 async function prune({ maxAgeDays }) {
   if (!maxAgeDays) return { removed: 0 };
   const old = (await db.listVideos()).filter(v => shouldForgetVideo(v, maxAgeDays));
   for (const v of old) await db.deleteVideo(v.videoId);
-  if (old.length) invalidate();
+  if (old.length) {invalidate();web.reset();}
   const scenesRemoved = await db.scenes.prune(Date.now()-maxAgeDays*864e5);
   if (scenesRemoved) invalidate();
   const screenRemoved=await db.screenText.prune(Date.now()-maxAgeDays*864e5);
@@ -271,7 +285,9 @@ async function prune({ maxAgeDays }) {
 let screenTask=null,screenEpoch=0,sceneEpoch=0;
 const visualQueries=new Set();
 const ocrModel=createOcrModel(state=>broadcast({type:'ocr-state',state}));
-const captureHold=createCaptureHold({pending:()=>[screenTask,sceneTask,...visualQueries],cancel:()=>{screenEpoch++;sceneEpoch++;ocrModel.release();}});
+const captureHold=createCaptureHold({pending:()=>[screenTask,sceneTask,...visualQueries,...webTasks,...captionTasks],cancel:()=>{screenEpoch++;sceneEpoch++;web.cancel();ocrModel.release();}});
+function webCapture(work){if(captureHold.held()||indexImportBusy)return Promise.resolve({busy:true});const task=Promise.resolve().then(work);webTasks.add(task);return task.finally(()=>webTasks.delete(task));}
+async function captionChange(work){if(captureHold.held())throw Error('Wait for the current library change before indexing captions.');const task=Promise.resolve().then(work);captionTasks.add(task);try{return await task;}finally{captionTasks.delete(task);}}
 function visualQuery(work){
   if(captureHold.held() || indexImportBusy)return Promise.reject(Error('Wait for the library change to finish before searching scenes.'));
   const task=Promise.resolve().then(work);visualQueries.add(task);
@@ -288,7 +304,7 @@ async function indexScreen(input){
     if(epoch!==screenEpoch)return {disabled:true};
     if(!text)return {ok:true,empty:true};
     const id=frame.video.videoId,now=Date.now();
-    if(!await db.getVideo(id))await importHistory({videos:[{...cleanVideo(frame.video),watchedAt:now}],historyImported:false});
+    if(policy.webId(id))await web.ensure(frame.video);else if(!await db.getVideo(id))await importHistory({videos:[{...cleanVideo(frame.video),watchedAt:now}],historyImported:false});
     if(epoch!==screenEpoch)return {disabled:true};
     await db.touchWatch(id,now);
     const recent=await db.screenText.recent(id),observedLines=lines?.length?lines:[text];
@@ -298,7 +314,7 @@ async function indexScreen(input){
     if(epoch!==screenEpoch)return {disabled:true};
     const row=screenRecord({videoId:id,start:frame.start,text:fresh,observedLines,indexedAt:now});
     const response=await db.screenText.put({...row,vec,embeddingVersion:EMBEDDING_VERSION});
-    invalidate();broadcast({type:'index-changed'});return response;
+    if(policy.webId(id))await web.refresh(id);invalidate();broadcast({type:'index-changed'});return response;
   })();
   try{return await screenTask;}catch(error){if(epoch!==screenEpoch)return {disabled:true};throw error;}finally{screenTask=null;}
 }
@@ -318,22 +334,22 @@ async function indexScene(input) {
   sceneTask = (async()=>{
     const vec = await visionModel.image(scene.image);
     if(epoch!==sceneEpoch)return {disabled:true};
-    if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
+    if(policy.webId(scene.video.videoId))await web.ensure(scene.video);else if(!await db.getVideo(scene.video.videoId))await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
     if(epoch!==sceneEpoch)return {disabled:true};
     await db.touchWatch(scene.video.videoId,Date.now());
     if(epoch!==sceneEpoch)return {disabled:true};
     const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,vec,indexedAt:Date.now(),watchedAt:Date.now()});
-    invalidate();broadcast({type:'index-changed'});return response;
+    if(policy.webId(scene.video.videoId))await web.refresh(scene.video.videoId);else invalidate();broadcast({type:'index-changed'});return response;
   })();
   try {return await sceneTask;} catch(error){if(epoch!==sceneEpoch)return {disabled:true};throw error;} finally {sceneTask = null;}
 }
-function searchScenes(query,options) {
+function searchScenes(query,options,records) {
   return visualQuery(async()=>{
     if (sceneTask) await sceneTask.catch(()=>{});
     const scenes = await db.scenes.vectors();
     if (!scenes.length) return {results:[],empty:true};
     const vector = await visionModel.text(query);
-    const videos = new Map((await db.listVideos()).map(video=>[video.videoId,video]));
+    const videos = records||new Map((await db.listVideos()).map(video=>[video.videoId,video]));
     const hits = rankScenes(vector,scenes,videos,options);
     return {results:hits};
   });
@@ -341,7 +357,8 @@ function searchScenes(query,options) {
 
 
 async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
-  if (!video || !/^[\w-]{11}$/.test(video.videoId) || !Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd) || rangeStart < 0 || rangeEnd <= rangeStart || rangeEnd - rangeStart > 180 || !Array.isArray(segments) || segments.length > 1000) throw new Error('Invalid speech transcript.');
+  if (!video || !policy.ownerId(video.videoId) || !Number.isFinite(rangeStart) || !Number.isFinite(rangeEnd) || rangeStart < 0 || rangeEnd <= rangeStart || rangeEnd - rangeStart > 180 || !Array.isArray(segments) || segments.length > 1000) throw new Error('Invalid speech transcript.');
+  if(policy.webId(video.videoId))return webCapture(()=>web.media(video,segments.filter(s=>Number.isFinite(s.start)&&s.start>=rangeStart&&s.start<=rangeEnd).map(s=>({...s,text:cleanSpeechText(s.text)})),'Audio',[rangeStart,rangeEnd]));
   const existing = await db.getVideo(video.videoId);
   if (existing && !['history-title', 'speech-local'].includes(existing.method)) return {skipped: true};
   const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: cleanSpeechText(String(s.text || '').slice(0, 2000))})));
@@ -371,6 +388,10 @@ const speech = createLiveSpeech({
 });
 
 const handlers = {
+  'web-import':async({items})=>{const result=await webCapture(()=>web.importItems(items));if(result.busy)throw Error('Wait for the current library change to finish.');return result;},
+  'web-capture':data=>webCapture(()=>web.capture(data)),
+  'web-media':({video,segments})=>webCapture(()=>web.media(video,segments,'Transcript')),
+  'web-forget':({domain})=>captureHold.run(async()=>{const site=policy.domain(domain);if(!site)throw Error('Invalid site.');let removed=0;for(const video of await db.listVideos())if(video.url?policy.matches(new URL(video.url).hostname,[site]):policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site])){await db.deleteVideo(video.videoId);removed++;}web.reset();invalidate();return {removed};}),
   'screen-index':indexScreen,
   'ocr-stop':async()=>{screenEpoch++;ocrModel.release();return {ok:true};},
   'scene-index': indexScene,
@@ -398,19 +419,19 @@ const handlers = {
     const video = await db.getVideo(videoId);
     return { has: !!video && !['history-title', 'speech-local'].includes(video.method),title:video?.title };
   },
-  'import-history': importHistory,
+  'import-history': data=>captionChange(()=>importHistory(data)),
   'touch-watch': async ({ videoId, watchedAt }) => {
     if (typeof videoId !== 'string' || !/^[\w-]{11}$/.test(videoId) || !Number.isFinite(watchedAt) || watchedAt <= 0 || watchedAt > Date.now() + 60000) throw new Error('Invalid watch timestamp.');
     const updated = await db.touchWatch(videoId, watchedAt);
     if (updated) invalidate();
     return { updated };
   },
-  index: indexVideo,
+  index: input=>captionChange(()=>indexVideo(input)),
   search,
   status,
   list: async () => ({ videos: await db.listVideos() }),
-  delete: ({ videoId }) => captureHold.run(async()=>{await db.deleteVideo(videoId);invalidate();return {ok:true};}),
-  clear: () => captureHold.run(async()=>{await db.clearAll();invalidate();return {ok:true};}),
+  delete: ({ videoId }) => captureHold.run(async()=>{await db.deleteVideo(videoId);web.reset();invalidate();return {ok:true};}),
+  clear: () => captureHold.run(async()=>{await db.clearAll();web.reset();invalidate();return {ok:true};}),
   export: exportIndex,
   import: data=>captureHold.run(()=>importIndex(data),{restore:true}),
   prune: data=>captureHold.run(()=>prune(data)),
