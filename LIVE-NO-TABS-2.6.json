@@ -1,0 +1,16 @@
+{
+  "version": "2.6.0",
+  "testedAt": "2026-10-17T17:22:19.553Z",
+  "environment": "Isolated Chromium; no user cookies/history",
+  "videoId": "jNQXAC9IVRw",
+  "mode": "quiet",
+  "youtubePagesOpened": 0,
+  "liveCaptionSuccess": false,
+  "results": [
+    {
+      "reason": "YouTube requires its player for these captions. Open the video normally, or enable fallback tabs in Settings.",
+      "status": "failed",
+      "videoId": "jNQXAC9IVRw"
+    }
+  ]
+}

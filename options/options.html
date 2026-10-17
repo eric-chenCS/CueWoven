@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v2.5 · Library &amp; settings</title>
+    <title>Recall v2.6 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="wrap">
       <header class="head">
-        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v2.5</h1></div>
+        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v2.6</h1></div>
         <p class="lede">Search your saved video titles and indexed transcripts. Your index lives only in this browser.</p>
         <div class="stats" id="stats"></div>
       </header>
@@ -29,7 +29,7 @@
       <section class="card" aria-labelledby="takeout-heading">
         <h2 id="takeout-heading">Import from your YouTube account</h2>
         <p class="note">Import your extracted <strong>watch-history.json</strong> from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>. Choose YouTube history in JSON format when exporting. Recall saves video titles, channels and watch dates locally and makes them searchable without fetching captions. The file is not uploaded.</p>
-        <label class="setting"><span><strong>Fetch transcripts after import</strong><br /><span class="note">Fetches videos at your selected parallel limit in muted background tabs. After titles are saved, you can close settings; keep the browser open. YouTube receives the video requests.</span></span><input id="takeout-transcripts" type="checkbox" checked /></label>
+        <label class="setting"><span><strong>Fetch transcripts after import</strong><br /><span class="note">Fetches available captions without opening tabs by default. After titles are saved, you can close settings; keep the browser open. YouTube receives the video requests.</span></span><input id="takeout-transcripts" type="checkbox" checked /></label>
         <label class="btn file">Import YouTube history<input id="takeout-import" type="file" accept="application/json,.json" hidden /></label>
         <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
         <p id="history-import-msg" class="note" role="status" aria-live="polite"></p>
@@ -52,7 +52,7 @@
         <p id="history-msg" class="note" role="status" aria-live="polite"></p>
         <div id="history-tools" hidden>
           <input id="history-filter" type="search" aria-label="Search history titles" placeholder="Search video titles…" />
-          <label class="setting"><span><strong>Fetch transcripts when adding all videos</strong><br /><span class="note">Save titles first, then fetch videos at your selected parallel limit in muted background tabs. You can close settings after titles are saved; keep the browser open. YouTube receives video requests. Unavailable captions leave the title saved.</span></span><input id="browser-transcripts" type="checkbox" checked /></label>
+          <label class="setting"><span><strong>Fetch transcripts when adding all videos</strong><br /><span class="note">Save titles first, then fetch available captions without opening tabs by default. You can close settings after titles are saved; keep the browser open. YouTube receives video requests. Unavailable captions leave the title saved.</span></span><input id="browser-transcripts" type="checkbox" checked /></label>
           <p class="note">Or select up to 20 videos per batch. Transcript fetching runs in the background. YouTube may block captions; only successful videos become searchable by what was said.</p>
           <button id="history-index" class="btn" disabled>Index selected videos</button>
           <button id="history-save" class="btn ghost">Add all found videos to Recall</button>
@@ -62,7 +62,7 @@
 
       <section class="card">
         <h2>Fetch transcripts</h2>
-        <p class="note">Paste YouTube links, one per line. Recall processes muted background tabs at your selected parallel limit and closes them afterward. Once fetching starts, settings can be closed. Keep the browser open and return here for progress.</p>
+        <p class="note">Paste YouTube links, one per line. Recall fetches available captions without opening tabs by default. Once fetching starts, settings can be closed. Keep the browser open and return here for progress.</p>
         <textarea id="bulk-urls" rows="5" aria-label="YouTube links to index" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
         <div class="row">
           <button id="bulk-go" class="btn">Index these videos</button>
@@ -116,12 +116,19 @@
           </select>
         </label>
         <label class="setting">
-          <span><strong>Parallel videos</strong><br /><span class="note">Transcript fetching: more tabs use more memory. Applies to the next job.</span></span>
+          <span><strong>Parallel videos</strong><br /><span class="note">Concurrent background requests. Fallback mode is capped at two tabs. Applies to the next job.</span></span>
           <select id="transcriptConcurrency">
             <option value="3">3 videos</option>
             <option value="6">6 videos (default)</option>
             <option value="8">8 videos</option>
             <option value="12">12 videos (maximum)</option>
+          </select>
+        </label>
+        <label class="setting">
+          <span><strong>Transcript fetching</strong><br /><span class="note">No tabs uses less memory. Some captions require the YouTube player: open the video normally, or allow up to two muted fallback tabs. Applies to the next job.</span></span>
+          <select id="transcriptMode">
+            <option value="quiet">No tabs (default)</option>
+            <option value="tabs">Allow fallback tabs</option>
           </select>
         </label>
         <p id="saved" class="note saved" aria-live="polite"></p>

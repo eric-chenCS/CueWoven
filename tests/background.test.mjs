@@ -51,7 +51,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' });
 });
 
 test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported schemes', () => {

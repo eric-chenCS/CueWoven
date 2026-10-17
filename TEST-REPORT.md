@@ -1,5 +1,16 @@
 # Recall test report
 
+## Version 2.6.0 update
+
+All 66 Node tests pass, including bounded response parsing, signed URL preservation, XML/JSON captions, transcript API fallback, caption host/video validation, rate limits, and the two-tab mode cap. A reversed-host-validation mutation failed these tests and was restored. Both 53-video Takeout and browser-history regressions passed with the existing queue, original watch dates, title preservation, pause and timestamp search.
+
+The real service-worker no-tab browser test completed 14 controlled videos with 12 concurrent requests and zero YouTube tabs while settings pages were closed. It verified restored progress, pause, real-model search at 0:42, blocked-caption title retention, HTTP 429 automatic pause, and settings persistence. A completion burst produced one library read/refresh; replacing coalescing with the previous immediate behavior produced 30 reads and failed the guard. The separate compatibility browser test forced direct requests to fail and verified opt-in fallback: at most two muted inactive tabs despite selecting parallel limit 12, all four videos indexed, then a five-video job paused after its two active videos. Capture tabs were cleaned up.
+
+A live public-video check in an isolated browser opened zero YouTube tabs but did **not** obtain captions: YouTube returned empty signed captions and the extension reported that its player is needed. The hidden embedded-player experiment also returned a player configuration error and is not shipped. This release does not claim all captions can be fetched invisibly. See [live results](LIVE-NO-TABS-2.6.json), [performance experiments](PERF.md), and UPDATE-2.6.md. The previously user-confirmed live capture path remains unchanged.
+
+No permissions or dependencies changed. Package-manager audit still reports the existing 3 high and 1 moderate native/development dependency findings (sharp and sprintf-js); browser-bundle reachability limits remain documented below. No real-user RAM, CPU, or account-wide throughput benchmark is claimed.
+
+
 ## Version 2.5.0 update
 
 All 55 Node tests pass. Queue tests cover 3, 6, 8, 12 and the default of 6, and reject invalid/unbounded limits. A deliberate inverted-validation mutation failed the tests and was restored. Both 53-video history-import browser regressions passed with the new six-video default, including pause, title-only opt-out, failure preservation and real-model transcript search at 0:42.
