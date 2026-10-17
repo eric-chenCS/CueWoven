@@ -14,6 +14,7 @@ import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
 import {EMBEDDING_VERSION,embeddingText,createEmbeddingMigration} from '../lib/embedding-migration.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
+import {createQueryCache} from '../lib/query-cache.js';
 import {createWebEngine} from './web-engine.js';
 import {policy} from '../lib/web-items.js';
 
@@ -104,7 +105,7 @@ async function embed(texts) {
 // In-memory index (rebuilt lazily from IndexedDB after any change)
 // ---------------------------------------------------------------------------
 let lastMigrationUpdate=0;
-const web=createWebEngine({db,embed,onChange:()=>broadcast({type:'index-changed'})});
+const web=createWebEngine({db,embed,onChange:()=>{queryCache.invalidate();broadcast({type:'index-changed'});}});
 const webTasks=new Set();
 const captionTasks=new Set();
 const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChange:state=>{
@@ -125,7 +126,7 @@ const indexCache=createRevisionCache(async()=>{
   return { videos, index: { matrix, dim: DIM, meta } };
 });
 const getIndex=()=>indexCache.get();
-const invalidate=()=>indexCache.invalidate();
+const invalidate=()=>{indexCache.invalidate();queryCache.invalidate();};
 
 // ---------------------------------------------------------------------------
 // Operations
@@ -183,7 +184,16 @@ async function indexVideo({ video, segments, method }) {
   return storeChunks(video, chunks, method);
 }
 
-async function search({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all' }) {
+const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
+async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all'}){
+  const q=String(query||'').trim();
+  if(!q)return {results:[]};
+  if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
+  const result=await queryCache.get(JSON.stringify({query:q,perVideo,sinceDays:sinceDays||0,kind}),offset,limit);
+  const results=await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
+  return {...result,results:results.filter(hit=>!hit.scene||hit.image)};
+}
+async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all' }) {
   const q = String(query || '').trim();
   if (!q) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
@@ -193,16 +203,14 @@ async function search({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='a
   if (!index.meta.length && !hasScenes && !metadata.size) return { results: [], empty: true };
   const [qv] = await embed([q]);
   const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  const pageHits=await web.search(q,qv,{sinceMs,kind,perVideo,limit:Math.min(10000,offset+limit+2000)});
+  const pageHits=await web.search(q,qv,{sinceMs,kind,perVideo,limit:offset+limit+2000});
   const words=[...rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs}),...pageHits].sort((a,b)=>b.score-a.score);
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   if(!hasScenes)return {results:select(words)};
   try {
     const visual = await searchScenes(q,{limit:2000,perVideo,sinceMs},videos);
     if (!visual.results.length) return {results:select(words)};
-    const combined=fuseMatches(words,visual.results,{limit,perVideo,offset});
-    const results=await Promise.all(combined.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
-    return {results:results.filter(hit=>!hit.scene || hit.image)};
+    return {results:fuseMatches(words,visual.results,{limit,perVideo,offset})};
   } catch (error) {
     return {results:select(words),sceneError:'Scene search unavailable: '+error.message};
   }
@@ -270,14 +278,14 @@ async function restoreIndex(data) {
   web.reset();return { imported };
 }
 
-async function prune({ maxAgeDays }) {
-  if (!maxAgeDays) return { removed: 0 };
-  const old = (await db.listVideos()).filter(v => shouldForgetVideo(v, maxAgeDays));
+async function prune({ maxAgeDays,importMaxAgeDays=0 }) {
+  if (!maxAgeDays&&!importMaxAgeDays) return { removed: 0 };
+  const old = (await db.listVideos()).filter(v => shouldForgetVideo(v,maxAgeDays,Date.now(),importMaxAgeDays));
   for (const v of old) await db.deleteVideo(v.videoId);
   if (old.length) {invalidate();web.reset();}
-  const scenesRemoved = await db.scenes.prune(Date.now()-maxAgeDays*864e5);
+  const scenesRemoved = maxAgeDays?await db.scenes.prune(Date.now()-maxAgeDays*864e5):0;
   if (scenesRemoved) invalidate();
-  const screenRemoved=await db.screenText.prune(Date.now()-maxAgeDays*864e5);
+  const screenRemoved=maxAgeDays?await db.screenText.prune(Date.now()-maxAgeDays*864e5):0;
   if(screenRemoved)invalidate();
   return { removed: old.length, scenesRemoved,screenRemoved };
 }
@@ -339,7 +347,7 @@ async function indexScene(input) {
     await db.touchWatch(scene.video.videoId,Date.now());
     if(epoch!==sceneEpoch)return {disabled:true};
     const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,vec,indexedAt:Date.now(),watchedAt:Date.now()});
-    if(policy.webId(scene.video.videoId))await web.refresh(scene.video.videoId);else invalidate();broadcast({type:'index-changed'});return response;
+    if(policy.webId(scene.video.videoId)){await web.refresh(scene.video.videoId);queryCache.invalidate();}else invalidate();broadcast({type:'index-changed'});return response;
   })();
   try {return await sceneTask;} catch(error){if(epoch!==sceneEpoch)return {disabled:true};throw error;} finally {sceneTask = null;}
 }
@@ -417,7 +425,7 @@ const handlers = {
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
-    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),title:video?.title };
+    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),content:!!video&&(video.chunkCount>0||video.sceneCount>0||video.screenCount>0),title:video?.title,modelStatus:modelState.status };
   },
   'import-history': data=>captionChange(()=>importHistory(data)),
   'touch-watch': async ({ videoId, watchedAt }) => {

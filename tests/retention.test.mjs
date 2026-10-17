@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {shouldForgetVideo} from '../lib/retention.js';
 const now=Date.now();const old=now-60*864e5;
+test('import retention is opt-in and uses the original visit rather than fetch date',()=>{const imported={historyImported:true,method:'captions',watchedAt:now-100*864e5,indexedAt:now};assert.equal(shouldForgetVideo(imported,0,now,90),true);assert.equal(shouldForgetVideo({...imported,watchedAt:now-89*864e5},0,now,90),false);assert.equal(shouldForgetVideo(imported,30,now,0),false);assert.equal(shouldForgetVideo(imported,0,now,365),false);assert.equal(shouldForgetVideo({...imported,watchedAt:undefined},30,now,90),false);});
 test('title-only imported history survives the transcript retention setting',()=>{
   assert.equal(shouldForgetVideo({method:'history-title',indexedAt:old,watchedAt:old},30,now),false);
 });
