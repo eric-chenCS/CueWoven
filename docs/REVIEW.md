@@ -1,4 +1,14 @@
-# Review — Recall v2.10.0
+# Review — Recall v2.11.0
+
+Reviewed all supplied findings against current callers, data writes, rank eligibility and UI state. Required fixes are implemented with regressions, including the newly exposed text-fallback source-label issue. No branch/model replacement or new dependency is needed. The 0.26 visual threshold remains an explicitly documented heuristic, and partial audio/scenes retain their labels and timestamps. Speech filtering is narrowly limited to recognized tags/standalone filler; language guards use metadata without claiming acoustic detection.
+
+Imported-title provenance is explicit for new records and preserved in exports/restores. Live watches clear the exemption. Legacy scene-only records expire while ambiguous legacy imported titles are preserved. Existing transactional deletion removes scenes/chunks. Backup restore requests keep completed items durable and surface item progress; each individual video remains an atomic replacement and is re-embedded. The settings page disables conflicting controls during restore. Per-video pathological duration and between-request interruption remain documented limits.
+
+Visual warmup coalesces and yields to real queued queries; image restore waits for warmup. Current search sequence identity guards Enter against old results, including delayed page/query responses. The unused bulk handler has no callers, and its obsolete listener is removed; active queue progress rendering remains. Documentation moves preserve evidence and package paths. User text/errors render as text, with no new data destination or permission.
+
+All 126 Node checks pass; the scene-threshold mutation was caught. Nine isolated browser regressions (keyboard, scenes/restore, speech, arrows, refinement, background queue, both history imports, legacy vector upgrade) and one live public-video audio/scene check pass. The extracted ZIP also passed the keyboard and full scene regression before installation. No confirmed release-blocking defect remains in this tested scope. The unchanged native audit findings and unmeasured general accuracy/performance limits remain in TEST-REPORT.md.
+
+# Historical review — Recall v2.10.0
 
 Reviewed correctness, readability, module boundaries, security and resource use against the requested ma-copy adaptation and unified recall. Detailed branch findings and measured comparisons are in MA-COPY-REVIEW.md. The release retains current pagination, refinement, audio coverage and CLIP scenes; it does not replace main with the older teammate branch.
 

@@ -1,5 +1,17 @@
 # Recall test report
 
+## Version 2.11.0 update
+
+All 126 Node tests pass. New regressions cover the 0.23-scene decoy versus 0.80/0.40 transcripts, the 0.26 scene cutoff, music/filler filtering without stripping ordinary sentences, original/ASR language precedence and non-English speech guards, watched-title retention, A → home → A announcements, localized Takeout prefixes, bounded backup requests with durable failure progress, coalesced visual warmup and image work waiting for it. Lowering the cutoff back to 0.22 deliberately failed the scene regression and was restored.
+
+The new keyboard browser test passed Enter on the current match, Enter immediately after edits, stale delayed responses, Ctrl+Enter, arrow-page selection, list selection, blank input and popup scene warmup routing. The real-model scene browser regression passed the tightened cutoff (a cat fixture matched about 0.281), unified indicators, transcript timestamp 0:42, repeated same-tab navigation with resumed scenes/recency, scene-only expiry versus imported-title retention, and backup restoration through the actual file input with one video/image per request. It also retains schema upgrade, previews/arrows, backup scenes, caps, pruning and deletion coverage. The initial run exposed missing matchSources in the all-scenes-rejected text fallback; the ranker now always supplies source labels and the regression passes.
+
+The extracted v2.11 ZIP also passed the keyboard and real-model scene/navigation/retention/file-input restore regressions. The automatic speech/player PCM regression, single-video navigation, refinement, minimized six-player background caption queue, both 53-video import regressions and 65-chunk legacy upgrade also passed. Caption pages/outcomes and UI race responses are controlled; model inference, media playback, encoding, storage and application code run for real. The 31-query synthetic text fixture remains 31/31 first moments using the existing cached real-model vectors; this does not measure broad real-user accuracy. Light/dark scene screenshots were inspected for this change.
+
+A fresh live public YouTube check saved scene and speech-local data from jNQXAC9IVRw with no mocked video/image/model responses or personal profile. Its normal visual query returned a Scene result around 0:11.57 at the higher cutoff. See LIVE-SCENES-2.11.json. No universal scene/ASR accuracy, minimum-browser compatibility, sustained hardware-load result or numerical warmup latency gain is claimed. Unknown languages still reach the English fallback, and standalone filler filtering can remove genuine stock phrases. Backup batching limits work to one video/image per request; a pathological single transcript can still take time.
+
+No dependency, lockfile or permission changed. The rerun native pnpm audit remains 3 high sharp advisories and 1 moderate sprintf-js advisory in the native Node graph outside the shipped browser bundle; the source graph is not audit-clean. Release evidence is organized under docs/ with README/INSTALL links updated.
+
 ## Version 2.10.0 update
 
 All 113 Node tests pass. New checks cover semantic-versus-weak-literal ranking, exact quoted speech, word boundaries, accents/Unicode, title eligibility, unified Audio/Scene evidence, embedding recipes, batch progress/retry, and revision-safe cache invalidation. Disabling phrase matching deliberately failed the regression; it was restored. No dependency, lockfile or permission changed.
