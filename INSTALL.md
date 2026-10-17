@@ -1,4 +1,4 @@
-# Recall v2.15 installation
+# Recall v3.0 installation
 
 ## From this repository
 
@@ -6,15 +6,25 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.15.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.0.0. Keeping the same folder preserves the extension identity and local library.
 
-Version 2.15 adds bounded extra snapshots around visual changes and stretches routine snapshots to about 60 seconds for quiet footage. Updating from v2.13 or v2.14 needs no runtime rebuild; reload Recall and refresh YouTube tabs. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Both Read on-screen text and Save scene snapshots have off switches in settings. Existing history, captions, audio, scenes and OCR text stay intact; no re-import is needed. See [UPDATE-2.15.md](docs/UPDATE-2.15.md).
+Version 3.0 adds optional article/website capture, general history imports, and compatible website video capture. Updating from v2.13–v2.15 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Existing YouTube history, captions, audio, scenes and OCR text stay intact; the additive database upgrade needs no re-import. See [UPDATE-3.0.md](docs/UPDATE-3.0.md).
+
+## Enable websites and articles
+
+Website capture starts off. In **Library & settings → Websites & articles**, enter a domain and click **Allow this site**, then approve the browser's optional site permission and refresh that site's tab. **Allow public websites** requests broader HTTP/HTTPS access only when you choose it. Use specific domains where possible: sensitive-page filtering cannot identify every private or signed-in page.
+
+The same settings area imports extracted Takeout **Chrome/BrowserHistory.json** and **My Activity/Search** JSON files (up to 100 MB), or scans this browser's saved visits after optional history permission. Page titles, search queries and YouTube titles become searchable; old page bodies are not fetched. Keep settings open while importing. Pause preserves completed entries; importing again skips completed duplicates.
+
+Live allowed pages save up to the first 2,000 visible words. Compatible visible HTML videos use native captions, sampled scenes and on-screen OCR. **Transcribe website video audio** is a separate off-by-default English-only option. Protected/cross-origin players, iframes, login walls and native social apps may not work. These techniques capture played portions, not an entire historical video. **Forget this site** blocks future capture and removes its saved entries. Use the popup site-pause button to pause website capture quickly.
+
+Search **Everything**, or filter to **Videos**, **Pages** or **Searches**. Articles use text highlights when supported and the passage remains; website video time links need a matching player and the allowed page script. Feed URLs can be approximate. Full web content is capped at 2,000 items or 64 MiB of accounted text/vector payload, with older items retained as titles. Model memory and database overhead are additional.
 
 For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching uses one separate minimized window with six muted player tabs at a time by default; choose three in Settings → Parallel videos to reduce load. Your main tab bar stays clear. Return to settings for progress or Pause after active videos. The window closes after completion or pause; closing it manually pauses new work. It is minimized, not fully hidden or closed, and may appear in the taskbar. An extension/browser restart can interrupt the job; retry missing transcripts afterward. See docs/UPDATE-2.7.md.
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v2.15.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.0.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -30,7 +40,7 @@ Alternatively, click Find YouTube history to scan this browser profile's saved v
 
 ## Transcript limitation
 
-The user confirmed live caption capture and timestamp links work in their regular Edge session. Caption retrieval can still fail for particular videos or sessions. In v2.15, a normal video you are playing automatically falls back to English speech-to-text after captions fail. Reload the extension and refresh existing YouTube tabs to load the new audio script. No recording button, microphone or tab-capture permission is required. The first speech use downloads a local model; model loading and recognition use extra CPU. Watch the popup's Speech-to-text status or use Stop. The automatic fallback has an off switch in settings. Mixed/non-English uploaded subtitle tracks without original-audio/ASR evidence do not trigger it. Manual Start English transcription bypasses the language guard when you know the label is wrong; the model remains English-only.
+The user confirmed live caption capture and timestamp links work in their regular Edge session. Caption retrieval can still fail for particular videos or sessions. A normal YouTube video you are playing automatically falls back to English speech-to-text after captions fail. Reload the extension and refresh existing YouTube tabs to load the audio script. No recording button, microphone or tab-capture permission is required. The first speech use downloads a local model; model loading and recognition use extra CPU. Watch the popup's Speech-to-text status or use Stop. The automatic fallback has an off switch in settings. Mixed/non-English uploaded subtitle tracks without original-audio/ASR evidence do not trigger it. Manual Start English transcription bypasses the language guard when you know the label is wrong; the model remains English-only.
 
 Speech-to-text captures only portions played after it starts, one video at a time. It skips detected ads and paused playback, splits at seeks/rate changes, labels results as partial AI speech, and can make recognition/timing errors. Unavailable or protected player audio can still fail. The background imported-history queue continues fetching captions; it does not silently play entire histories through speech recognition. Audio stays in memory on this device; saved speech text follows the same retention as other transcripts. See docs/UPDATE-2.8.md.
 

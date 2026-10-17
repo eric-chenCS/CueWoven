@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Recall v2.15 – Search What You've Watched",
-  "short_name": "Recall v2.15",
-  "version": "2.15.0",
-  "description": "Semantic search over the YouTube videos you've watched. Type a vague memory, jump to the exact second. 100% on-device.",
+  "name": "Recall v3.0 – Search Your History",
+  "short_name": "Recall v3.0",
+  "version": "3.0.0",
+  "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon16.png",
@@ -30,8 +30,10 @@
     "alarms"
   ],
   "optional_permissions": [
-    "history"
+    "history",
+    "scripting"
   ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "host_permissions": [
     "https://www.youtube.com/*"
   ],
@@ -78,7 +80,7 @@
         "content/speech-worklet.js"
       ],
       "matches": [
-        "https://www.youtube.com/*"
+        "https://*/*", "http://*/*"
       ]
     }
   ]

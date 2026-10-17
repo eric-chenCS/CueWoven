@@ -1,9 +1,9 @@
 {
   "name": "recall-extension",
-  "version": "2.15.0",
+  "version": "3.0.0",
   "private": true,
   "packageManager": "pnpm@11.25.0",
-  "description": "Recall: semantic search over the YouTube videos you've watched, with exact-second deep links. Runs on-device.",
+  "description": "Recall: local semantic search over watched videos, articles and history, with optional website capture.",
   "type": "module",
   "scripts": {
     "setup": "pnpm install --frozen-lockfile --ignore-scripts && pnpm run vendor",
