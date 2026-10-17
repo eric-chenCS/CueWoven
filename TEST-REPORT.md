@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.2.0 update
+
+Added optional Refine beside the popup search box. All 37 Node tests pass. The new tests/browser/refine-search.cjs browser test verifies independent default searches, combined and editable clues, keyboard focus and submission, date filters, clearing, closing refinement, popup reopen and delayed-response rejection. Controlled responses isolate UI races; a second phase uses the real local MiniLM model and ranker with two saved transcript fixtures. The refined Minecraft query opened 1:12, then an independent battery query opened 0:42. Light/dark popup screenshots were inspected and horizontal overflow was checked. YouTube capture itself was not changed or retested for this UI update.
+
 ## Version 2.1.0 update
 
 The user confirmed that v2 captures live transcripts and opens exact transcript moments in their normal Edge session. Version 2.1 adds automatic transcript attempts after a Takeout import and a resumable missing-transcript queue. All 37 Node tests, the 53-video import/queue browser regression, existing Takeout checks, and the actual background-tab capture pipeline with controlled YouTube responses passed. A deliberate 50-video-cap regression was detected by the new browser test and restored. See UPDATE-2.1.md for scope, reproduction and limitations. New automatic queue outcomes were controlled, not an account-wide live import.
