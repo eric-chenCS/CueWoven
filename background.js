@@ -6,7 +6,7 @@ import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2 };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -167,7 +167,9 @@ const handlers = {
     if (bulkRunning) throw new Error('A pre-load is already running.');
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
-    return {job: (await getTranscriptJobs()).start(ids)};
+    const settings = await getSettings();
+    const concurrency = [3, 6, 8, 12].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
+    return {job: (await getTranscriptJobs()).start(ids, concurrency)};
   },
   async 'transcript-job-status'(_msg, sender) {
     requireLibrary(sender);

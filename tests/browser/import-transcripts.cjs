@@ -38,11 +38,11 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.evaluate(()=>window.releaseBulk());
   await page.waitForFunction(()=>document.querySelector('#bulk-summary').textContent.startsWith('Paused:'));
   await page.waitForFunction(()=>!document.querySelector('#takeout-import').disabled);
-  assert.equal(await page.evaluate(()=>bulkCalls.length),56);
-  assert.match(await page.locator('#bulk-summary').innerText(),/49 not attempted/);
+  assert.equal(await page.evaluate(()=>bulkCalls.length),59);
+  assert.match(await page.locator('#bulk-summary').innerText(),/46 not attempted/);
   // Reopening the page rebuilds the remaining queue from persisted title-only records.
   await page.reload();await page.waitForFunction(()=>!document.querySelector('#history-transcripts').disabled);
-  assert.match(await page.locator('#history-transcripts').innerText(),/49/);
+  assert.match(await page.locator('#history-transcripts').innerText(),/46/);
   // Title-only opt-out leaves the queue untouched, including on duplicate imports.
   await page.locator('#takeout-transcripts').uncheck();
   await page.locator('#takeout-import').setInputFiles(file);

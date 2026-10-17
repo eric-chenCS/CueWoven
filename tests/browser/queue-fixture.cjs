@@ -26,7 +26,10 @@ exports.installControlledQueue = page => page.evaluate(async () => {
   },
  });
  chrome.runtime.sendMessage = async message => {
-  if(message.type === 'transcript-job-start')return {job:queue.start(message.urls)};
+  if(message.type === 'transcript-job-start') {
+   const {settings} = await chrome.storage.local.get('settings');
+   return {job:queue.start(message.urls, settings?.transcriptConcurrency ?? 6)};
+  }
   if(message.type === 'transcript-job-pause')return {job:queue.pause()};
   if(message.type === 'transcript-job-status')return {job:queue.get()};
   return original(message);

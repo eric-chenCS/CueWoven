@@ -1,4 +1,4 @@
-# Recall v2.4 installation
+# Recall v2.5 installation
 
 ## From this repository
 
@@ -6,13 +6,13 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.4.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.5.0. Keeping the same folder preserves the extension identity and local library.
 
-For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching uses up to three inactive muted tabs, with progress and Pause after active videos available when settings is reopened. A browser/extension restart or interrupted worker may stop the job; retry missing transcripts afterward. See UPDATE-2.4.md.
+For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching uses six inactive muted tabs by default, configurable up to 12 in Settings → Parallel videos, with progress and Pause after active videos available when settings is reopened. A browser/extension restart or interrupted worker may stop the job; retry missing transcripts afterward. See UPDATE-2.5.md.
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v2.4.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v2.5.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
