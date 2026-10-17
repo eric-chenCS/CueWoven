@@ -1,4 +1,4 @@
-# Recall v2.6 installation
+# Recall v2.7 installation
 
 ## From this repository
 
@@ -6,13 +6,13 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.6.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube tabs. Reopen Library & settings. The version should read 2.7.0. Keeping the same folder preserves the extension identity and local library.
 
-For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching opens no tabs by default, with 6 background requests configurable up to 12 in Settings → Parallel videos, with progress and Pause after active videos available when settings is reopened. Some captions require the player. Open those videos normally, or select Settings → Transcript fetching → Allow fallback tabs (maximum two muted tabs). A browser/extension restart or interrupted worker may stop the job; retry missing transcripts afterward. See UPDATE-2.6.md.
+For history imported earlier, click Fetch missing transcripts; no re-import is needed. Both Takeout imports and the browser-history Add all action attempt transcripts by default, with separate title-only checkboxes. Keep settings open until titles are saved and the background job starts. After that you can close settings, keeping the browser open. Fetching uses one separate minimized window with six muted player tabs at a time by default; choose three in Settings → Parallel videos to reduce load. Your main tab bar stays clear. Return to settings for progress or Pause after active videos. The window closes after completion or pause; closing it manually pauses new work. It is minimized, not fully hidden or closed, and may appear in the taskbar. An extension/browser restart can interrupt the job; retry missing transcripts afterward. See UPDATE-2.7.md.
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v2.6.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v2.7.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 

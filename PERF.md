@@ -1,3 +1,9 @@
+# Minimized capture window (v2.7)
+
+Request-only capture from v2.6 is removed. Six full YouTube players run in one separate minimized window (or three for lower load). This isolates the main tab bar and restores player/session capture; it does not claim lower per-player memory/CPU or bypass YouTube restrictions. The headed Windows regression completed eight controlled videos with six concurrent players while preserving main-window focus; normal completion, pause and manual closure cleaned up the owned window. Coalesced library refresh remains: 30 completion events produce one refresh.
+
+A create-about:blank-then-navigate approach repeatedly stalled the last controlled navigation. Opening the player URL directly eliminated that reproduced stall. Adding tabs can restore a Chromium window, so Recall reapplies minimized state without issuing a focus command. Issuing focused:false again while minimizing changed the main-window focus in a headed test; using a state-only update passed. These are browser behavior checks, not a throughput or RAM benchmark.
+
 # Transcript-import performance experiments (v2.6)
 
 | Change | Measurement | Result |

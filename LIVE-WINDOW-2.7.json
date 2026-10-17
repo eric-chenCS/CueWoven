@@ -1,0 +1,22 @@
+{
+  "version": "2.7.0",
+  "testedAt": "2026-10-17T17:46:49.833Z",
+  "environment": "Isolated Chromium; no user cookies/history",
+  "videoId": "jNQXAC9IVRw",
+  "captureWindow": {
+    "state": "minimized",
+    "focused": false,
+    "windowId": 1743942041
+  },
+  "mainWindowCaptureTabs": 0,
+  "windowClosedAfterJob": true,
+  "liveCaptionSuccess": false,
+  "results": [
+    {
+      "ok": false,
+      "reason": "No transcript found (player-captions: empty; caption-tracks: empty; player-request: empty; transcript-api: get_transcript HTTP 400; transcript-panel: empty)",
+      "status": "failed",
+      "videoId": "jNQXAC9IVRw"
+    }
+  ]
+}

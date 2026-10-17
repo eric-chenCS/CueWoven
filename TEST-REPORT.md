@@ -1,5 +1,14 @@
 # Recall test report
 
+## Version 2.7.0 update
+
+All 62 Node tests pass. They cover shared window creation, minimized/unfocused options, recovery, navigated/moved anchors, preserving user-added tabs, manual closure without recreation, cleanup before reporting a job finished, and cleanup failures. A headed Windows Chromium test verified six simultaneous muted capture tabs in one separate minimized window, unchanged main-window focus and no capture tabs in its tab bar. Eight controlled videos completed while all settings pages were closed; restored progress, original dates, real-model search at 0:42, pause, manual window closure, already-indexed skips and coalesced refresh passed. Both 53-video history-import regressions also passed.
+
+The window behavior was tested in a real headed browser as well as an isolated browser harness. Caption bodies in the successful eight-video regression are controlled. A separate live public-video run confirmed minimized/unfocused state, zero main-window capture tabs and automatic window cleanup, but YouTube still returned empty caption responses and transcript API HTTP 400 in that isolated session. Successful live caption capture is **not** claimed for this session; the user's previously confirmed Edge capture path remains in use. See [live results](LIVE-WINDOW-2.7.json) and UPDATE-2.7.md. No real-device memory or account-wide throughput improvement is claimed.
+
+The v2.6 direct-request helper, no-tab selector and two-tab fallback are removed. The completion-refresh optimization is retained. No dependency or permission changed. Historical version reports below describe their respective releases.
+
+
 ## Version 2.6.0 update
 
 All 66 Node tests pass, including bounded response parsing, signed URL preservation, XML/JSON captions, transcript API fallback, caption host/video validation, rate limits, and the two-tab mode cap. A reversed-host-validation mutation failed these tests and was restored. Both 53-video Takeout and browser-history regressions passed with the existing queue, original watch dates, title preservation, pause and timestamp search.

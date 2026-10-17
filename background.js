@@ -2,12 +2,12 @@
 // and the offscreen document that holds the model and the index.
 import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
-import { fetchTranscript } from './lib/fetch-transcript.js';
+import { createCaptureWindow } from './lib/capture-window.js';
 import { createTranscriptQueue } from './lib/transcript-queue.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -71,22 +71,14 @@ function flashBadge(tabId, text, color) {
 // ---------------------------------------------------------------------------
 const waiters = new Map(); // tabId -> resolve({ok, reason})
 
-async function fetchVideoTranscript(id, onTab = () => {}, allowTabs = false) {
+const captureWindow = createCaptureWindow(chrome);
+const captureTabs = new Map();
+
+async function fetchVideoTranscript(id, onTab = () => {}) {
   if ((await engine('has', {videoId: id})).has) return {videoId: id, status: 'skipped', reason: 'Already indexed'};
-  let transcript;
-  try { transcript = await fetchTranscript(id); } catch (error) {
-    if (error.rateLimited) {
-      if (jobsReady) (await jobsReady).pause();
-      return {videoId: id, status: 'failed', reason: error.message, rateLimited: true};
-    }
-    if (!allowTabs) return {videoId: id, status: 'failed', reason: error.message};
-  }
-  if (transcript) {
-    const res = await engine('index', transcript);
-    chrome.runtime.sendMessage({type: 'index-changed'}).catch(() => {});
-    return {videoId: id, status: 'done', chunkCount: res.chunkCount, title: res.video.title};
-  }
-  const tab = await chrome.tabs.create({url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
+  const windowId = await captureWindow.get();
+  const tab = await chrome.tabs.create({windowId, url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
+  captureTabs.set(tab.id, windowId);
   // Register immediately, before awaiting storage or mute operations.
   const outcome = new Promise(resolve => {
     const timer = setTimeout(() => { waiters.delete(tab.id); resolve({ok: false, reason: 'Timed out'}); }, 75000);
@@ -95,9 +87,11 @@ async function fetchVideoTranscript(id, onTab = () => {}, allowTabs = false) {
   try {
     onTab(tab.id);
     await chrome.tabs.update(tab.id, {muted: true});
+    await captureWindow.minimize(windowId);
     const result = await outcome;
     return {...result, videoId: id, status: result.ok ? 'done' : 'failed'};
   } finally {
+    captureTabs.delete(tab.id);
     settleWaiter(tab.id, {ok: false, reason: 'Transcript tab closed'});
     await chrome.tabs.remove(tab.id).catch(() => {});
   }
@@ -115,10 +109,12 @@ function getTranscriptJobs() {
         if (tab?.url && videoIdFromUrl(tab.url) === active.videoId && new URL(tab.url).searchParams.get('recall_index') === '1') await chrome.tabs.remove(tab.id).catch(() => {});
       }
     }
+    await captureWindow.recover();
     const jobs = createTranscriptQueue({
       initial: transcriptJob,
-      processVideo: (id, onTab) => fetchVideoTranscript(id, onTab, jobs.get()?.mode === 'tabs'),
-      beforeStart: () => engine('warmup'),
+      processVideo: fetchVideoTranscript,
+      beforeStart: async () => {captureWindow.begin();await engine('warmup');},
+      afterFinish: () => captureWindow.close(),
       onChange(job) {
         if (['running', 'pausing'].includes(job.status)) {
           if (!jobKeepAlive) jobKeepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
@@ -148,6 +144,7 @@ async function bulkIndex(urls) {
   // Keep this bounded operation alive while a tab is fetching its transcript.
   const keepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
   try {
+    captureWindow.begin();
     await engine('warmup');
     const ids = Array.from(new Set(urls.map(videoIdFromUrl).filter(Boolean)));
     for (const [n, id] of ids.entries()) {
@@ -157,14 +154,13 @@ async function bulkIndex(urls) {
         return item;
       };
       report('working');
-      const result = await fetchVideoTranscript(id, undefined, (await getSettings()).transcriptMode === 'tabs');
+      const result = await fetchVideoTranscript(id);
       results.push(report(result.status, result));
-      if (result.rateLimited) break;
     }
     return { results };
   } finally {
     clearInterval(keepAlive);
-    bulkRunning = false;
+    try { await captureWindow.close(); } finally { bulkRunning = false; }
   }
 }
 
@@ -183,9 +179,8 @@ const handlers = {
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
-    const concurrency = [3, 6, 8, 12].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
-    const mode = settings.transcriptMode === 'tabs' ? 'tabs' : 'quiet';
-    return {job: (await getTranscriptJobs()).start(ids, mode === 'tabs' ? Math.min(concurrency, 2) : concurrency, mode)};
+    const concurrency = [3, 6].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
+    return {job: (await getTranscriptJobs()).start(ids, concurrency)};
   },
   async 'transcript-job-status'(_msg, sender) {
     requireLibrary(sender);
@@ -314,4 +309,16 @@ chrome.runtime.onInstalled.addListener(async ({ reason }) => {
 
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'recall-prune') handlers.prune().catch(() => {});
+});
+
+// Manual closure pauses the job rather than repeatedly recreating a window.
+function onCaptureWindowRemoved(windowId) {
+  if (!captureWindow.removed(windowId)) return;
+  if (jobsReady) jobsReady.then(jobs => jobs.pause()).catch(() => {});
+  for (const [tabId, owner] of captureTabs) if (owner === windowId) settleWaiter(tabId, {ok: false, reason: 'Capture window closed'});
+}
+chrome.windows?.onRemoved?.addListener(onCaptureWindowRemoved);
+chrome.tabs?.onRemoved?.addListener((tabId, info) => {
+  if (info?.isWindowClosing && captureTabs.has(tabId)) onCaptureWindowRemoved(info.windowId);
+  settleWaiter(tabId, {ok: false, reason: 'Capture tab closed'});
 });

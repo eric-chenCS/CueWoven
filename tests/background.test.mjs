@@ -51,7 +51,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, transcriptMode: 'quiet' });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 });
 });
 
 test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported schemes', () => {
@@ -92,7 +92,7 @@ test('background transcript jobs are controlled only from Library & settings', a
 
 test('interrupted-job cleanup closes only tracked tabs still showing their capture URL', async () => {
   const closed = [];
-  chrome.storage.session = {get: async () => ({transcriptJob: {
+  chrome.storage.session = {remove: async () => {},get: async () => ({transcriptJob: {
     id: 'interrupted', revision: 2, status: 'running', total: 5, completed: 1, done: 1, failed: 0, skipped: 0, results: [],
     active: [{videoId: 'aaaaaaaaaaa', tabId: 10}, {videoId: 'bbbbbbbbbbb', tabId: 11}, {videoId: 'ccccccccccc', tabId: 12}],
   }})};
