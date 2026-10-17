@@ -11,6 +11,7 @@ For the optional browser regression, install Playwright separately from the proj
 ```sh
 node tests/browser/import-transcripts.cjs
 node tests/browser/refine-search.cjs
+node tests/browser/single-video.cjs
 ```
 
 This uses controlled transcript outcomes with the real local embedding/search engine. It can download model weights, creates an isolated temporary browser profile, and does not use your normal browser history or cookies.

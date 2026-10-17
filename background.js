@@ -165,8 +165,12 @@ const handlers = {
   },
 
   // From the popup / library page
-  async search({ query, sinceDays }) {
+  async search({ query, sinceDays, singleVideo, offset = 0 }) {
     const s = await getSettings();
+    if (singleVideo === true) {
+      if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid search position.');
+      return engine('search', { query, sinceDays, perVideo: 1, limit: 2, offset });
+    }
     return engine('search', { query, sinceDays, perVideo: s.perVideo, limit: 12 });
   },
   status: () => engine('status'),

@@ -88,3 +88,37 @@ test('title-only history matches are marked and filtered by their original watch
   assert.equal(rank(unit(1,0,0),index,saved)[0].titleOnly,true);
   assert.deepEqual(rank(unit(1,0,0),index,saved,{sinceMs:now-7*864e5}),[]);
 });
+
+test('single-video pages rank distinct videos beyond the list limit and retain each best timestamp', () => {
+  const saved = new Map();
+  const rows = [];
+  for (let i = 0; i < 25; i++) {
+    const videoId = `V${i}`;
+    saved.set(videoId, {videoId, title: videoId, watchedAt: now});
+    rows.push({videoId, start: 10 + i, text: 'best moment', vec: unit(1, (i + 1) / 40, 0)},
+      {videoId, start: 200, text: 'another moment', vec: unit(1, (i + 1.5) / 40, 0)});
+  }
+  const index = makeIndex(rows);
+  const options = {perVideo: 1, limit: 2};
+  const ids = [];
+  for (let offset = 0; offset < 25; offset++) {
+    const page = rank(unit(1, 0, 0), index, saved, {...options, offset});
+    assert.equal(page[0].start, offset + 10);
+    assert.equal(page.length, offset === 24 ? 1 : 2);
+    ids.push(page[0].videoId);
+  }
+  assert.deepEqual(ids, Array.from({length: 25}, (_, i) => `V${i}`));
+  assert.deepEqual(rank(unit(1, 0, 0), index, saved, {...options, offset: 25}), []);
+});
+
+test('pagination skips only eligible matches after date and minimum-score filtering', () => {
+  const index = makeIndex([
+    {videoId: 'B', start: 1, text: 'old', vec: unit(1, 0, 0)},
+    {videoId: 'A', start: 42, text: 'best recent', vec: unit(1, 0.1, 0)},
+    {videoId: 'A', start: 90, text: 'next recent', vec: unit(1, 0.2, 0)},
+    {videoId: 'A', start: 200, text: 'unrelated', vec: unit(0, 0, 1)},
+  ]);
+  const options = {sinceMs: now - 864e5, minScore: 0.5, limit: 1, perVideo: 3};
+  assert.equal(rank(unit(1, 0, 0), index, videos, {...options, offset: 1})[0].start, 90);
+  assert.deepEqual(rank(unit(1, 0, 0), index, videos, {...options, offset: 2}), []);
+});

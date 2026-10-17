@@ -160,14 +160,14 @@ async function indexVideo({ video, segments, method }) {
   return storeChunks(video, chunks, method);
 }
 
-async function search({ query, limit, perVideo, sinceDays }) {
+async function search({ query, limit, perVideo, sinceDays, offset }) {
   const q = String(query || '').trim();
   if (!q) return { results: [] };
   const { videos, index } = await getIndex();
   if (!index.meta.length) return { results: [], empty: true };
   const [qv] = await embed([q]);
   const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs }) };
+  return { results: rank(qv, index, videos, { query: q, limit, perVideo, sinceMs, offset }) };
 }
 
 async function status() {
