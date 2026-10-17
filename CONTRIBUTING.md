@@ -14,6 +14,7 @@ node tests/browser/refine-search.cjs
 node tests/browser/single-video.cjs
 node tests/browser/browser-history-transcripts.cjs
 node tests/browser/background-transcripts.cjs
+node tests/browser/adaptive-scenes.cjs
 ```
 
 These use controlled YouTube/transcript outcomes with the real local embedding/search engine. They can download model weights, create isolated temporary browser profiles, and do not use your normal browser history or cookies. The browser-history test pregrants history permission in a copied test-only manifest; it does not verify the optional permission prompt. The background test uses the real service worker and temporary tabs to verify processing continues after settings closes.

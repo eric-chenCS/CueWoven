@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 2.15.0 update
+
+All 168 Node tests pass. The adaptive scene browser test verifies a brief real video-frame event between routine snapshots, scene search at its timestamp, quiet checkpoint suppression, the shared six-extra budget, independent frame keys and backup restore. Existing scene, capture-hold, OCR and import-integrity browser regressions are included. See [UPDATE-2.15.md](UPDATE-2.15.md) for the measured probe cost, mutation check, storage/processing limits and controlled-video test scope. Historical results below describe their original versions.
+
 ## Version 2.14.0 update
 
 All 156 Node tests and the real-model browser regressions listed in [UPDATE-2.14.md](UPDATE-2.14.md) pass. The update covers exclusive capture holds, restore during scene search, OCR cancellation during Delete/Clear, conservative exact-line deduplication, changing numbers/negation, watermark filtering, bounded observation metadata and playback-only lead-in. The release notes document the frame microbenchmark, mutation check, unchanged dependencies and sampled-English/live-test limitations. Historical results below describe their original versions.
