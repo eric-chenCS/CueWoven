@@ -17,7 +17,7 @@ test('background queue fetches at most three at once and continues after individ
       return {status: videoId === ids(3)[2] ? 'skipped' : 'done'};
     },
   });
-  queue.start(ids(8));
+  queue.start(ids(8), 3);
   await queue.wait();
   const state = queue.get();
   assert.equal(max, 3);
@@ -32,7 +32,7 @@ test('pause finishes only active videos, without needing any settings-page callb
   const queue = createTranscriptQueue({processVideo: async () => {
     await new Promise(resolve => release.push(resolve));return {status: 'done'};
   }});
-  queue.start(ids(10));await tick();
+  queue.start(ids(10), 3);await tick();
   assert.equal(release.length, 3);
   assert.equal(queue.pause().status, 'pausing');
   release.forEach(resolve => resolve());await queue.wait();
@@ -73,4 +73,24 @@ test('warmup errors stop the job with a useful message instead of hanging', asyn
   queue.start(ids(1));await queue.wait();
   assert.equal(queue.get().status, 'interrupted');assert.equal(queue.get().reason, 'Model offline');
   assert.equal(queue.get().completed, 0);
+});
+
+for (const concurrency of [3, 6, 8, 12, undefined]) {
+  test(`queue respects parallel limit ${concurrency ?? 'default 6'}`, async () => {
+    let active = 0, peak = 0;
+    const queue = createTranscriptQueue({processVideo: async () => {
+      active++;peak = Math.max(peak, active);await tick();active--;return {status: 'done'};
+    }});
+    queue.start(ids(25), concurrency);await queue.wait();
+    assert.equal(peak, concurrency ?? 6);
+    assert.equal(queue.get().done, 25);
+    assert.equal(queue.get().concurrency, concurrency ?? 6);
+  });
+}
+test('invalid concurrency cannot open an unbounded number of tabs', () => {
+  const queue = createTranscriptQueue({processVideo: async () => ({status: 'done'})});
+  for (const limit of [0, -1, 1, 13, 1000, Infinity, NaN, '12', null]) {
+    assert.throws(() => queue.start(ids(25), limit), /parallel videos/);
+    assert.equal(queue.get(), null);
+  }
 });

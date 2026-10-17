@@ -1,5 +1,12 @@
 # Recall test report
 
+## Version 2.5.0 update
+
+All 55 Node tests pass. Queue tests cover 3, 6, 8, 12 and the default of 6, and reject invalid/unbounded limits. A deliberate inverted-validation mutation failed the tests and was restored. Both 53-video history-import browser regressions passed with the new six-video default, including pause, title-only opt-out, failure preservation and real-model transcript search at 0:42.
+
+The real service-worker browser test selected 12 through settings, verified persistence after reload, fetched 14 controlled videos while all settings pages were closed, then paused a 15-video job after its 12 active videos. Tabs stayed inactive and muted and closed afterward. Original watch dates and restored progress passed. These tests use controlled YouTube responses; no live account-wide throughput benchmark was performed. Twelve tabs can use substantial memory and YouTube may throttle requests.
+
+
 ## Version 2.4.0 update
 
 Browser-history Add all now attempts transcripts by default. Transcript work moved into a background queue with up to three concurrent muted inactive tabs and one model warmup. Settings can be closed after the job starts. All 49 Node tests, both 53-video import browser tests (production queue with controlled caption outcomes), and the real service-worker background browser test passed. Six videos finished with every settings page closed; progress, original dates, search at 0:42, pause and tab cleanup were verified. Destructive data operations are blocked during an active job. Polling uses wall-clock deadlines to avoid repeated throttled timer cycles. See UPDATE-2.4.md for browser/worker interruption behavior and limits. No live account-wide speedup was measured; temporary YouTube tabs are still required.

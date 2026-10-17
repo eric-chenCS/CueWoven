@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.4.0** supports optional history import, automatic transcript fetching, and local semantic search.
+Recall helps you find a YouTube video from a vague memory and jump to the matching transcript moment. Version **2.5.0** supports optional history import, automatic transcript fetching, and local semantic search.
 
 ## Team setup
 
@@ -26,14 +26,14 @@ If switching from a different installed folder, export your library first and im
 - Describe what you remember in the popup. By default, Recall shows the strongest matching video and its best transcript moment. Use **→** and **←** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered.
 - Searches are independent by default. Click **Refine** beside the search box to add more clues to the current query. Edit those clues to build on the original search. Changing the main query, closing Refine, or reopening the popup clears extra clues.
 - Optionally import the extracted Google Takeout `watch-history.json`, up to 100 MB. Recall saves titles first, then attempts available transcripts in muted background tabs. Uncheck **Fetch transcripts after import** for titles only.
-- Use **Fetch missing transcripts** for already imported titles. Fetching runs in the background with up to three videos at once. Once the titles are saved and fetching starts, you can close settings; keep the browser open. Return to settings for progress or **Pause after active videos**. Large or blocked histories can still take time.
+- Use **Fetch missing transcripts** for already imported titles. Fetching runs in the background with six videos at once by default (choose 3, 6, 8, or 12 in Settings → Parallel videos). Once the titles are saved and fetching starts, you can close settings; keep the browser open. Return to settings for progress or **Pause after active videos**. Large or blocked histories can still take time.
 - **Find videos visited in this browser** scans this browser profile's history. **Add all found videos to Recall** now attempts available transcripts automatically, unless its transcript checkbox is unchecked. Videos already indexed are skipped; failures keep their titles.
 
 YouTube may not provide a transcript for every video or session. Failed attempts keep the title searchable. Title-only results open the video without a timestamp. The project owner confirmed live capture in their normal Edge session; isolated test browsers received empty captions even without Recall. See [the test report](TEST-REPORT.md).
 
 The embedding model runs locally. First use downloads weights from Hugging Face. Captions and thumbnails come from YouTube; transcript fetching sends video requests to YouTube. The index and settings stay in your browser profile. Imported title-only entries stay until deleted; transcripts follow the configured retention period.
 
-Temporary muted background tabs are still needed to use YouTube's player/session. The browser must stay open. A browser restart, extension reload or interrupted worker can stop a job; use **Fetch missing transcripts** to retry. This does not guarantee instant or universally available captions. See [UPDATE-2.4.md](UPDATE-2.4.md).
+Temporary muted background tabs are still needed to use YouTube's player/session. The browser must stay open. A browser restart, extension reload or interrupted worker can stop a job; use **Fetch missing transcripts** to retry. This does not guarantee instant or universally available captions. See [UPDATE-2.5.md](UPDATE-2.5.md).
 
 ## Edit and share changes
 
@@ -65,6 +65,6 @@ GitHub changes do not automatically update installed extensions. Load your check
 | `tests/` | Unit tests and optional controlled browser test |
 | `licenses/` | Third-party runtime license notices |
 
-Run `pnpm run zip` after setup to make a loadable `recall-v2.4.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
+Run `pnpm run zip` after setup to make a loadable `recall-v2.5.zip` including the generated runtime. ZIP files, dependencies, model weights, history exports, browser profiles and build metadata should not be committed.
 
 Third-party notices are included. Existing native Node dependency audit findings and their browser-bundle reachability limits are documented in [TEST-REPORT.md](TEST-REPORT.md); the dependency graph is not audit-clean. No project-wide open-source license has been selected.
