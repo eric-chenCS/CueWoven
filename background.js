@@ -4,6 +4,7 @@ import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
 import { createCaptureWindow } from './lib/capture-window.js';
 import { createTranscriptQueue } from './lib/transcript-queue.js';
+import './lib/scene-policy.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
@@ -194,8 +195,9 @@ const handlers = {
     const settings=await getSettings();if (!settings.enabled || settings.scenesEnabled === false) return {disabled:true};
     if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');
     const {tab,clock}=await speechContext(sender.tab.id);
-    if (!tab.active || !clock.visible || clock.video.videoId !== input.video?.videoId) throw new Error('Only the current watched video can save scenes.');
-    return engine('scene-index',{video:input.video,start:input.start,image:input.image});
+    const age=Date.now()-input.capturedAt;
+    if (!tab.active || !clock.visible || clock.paused || clock.seeking || clock.ad || clock.video.videoId!==input.video?.videoId || clock.revision!==input.revision || !Number.isFinite(input.start) || !Number.isFinite(input.capturedAt) || age< -1000 || age>=globalThis.__recallScenePolicy.MAX_AGE_MS)return {inactive:true};
+    return engine('scene-index',{video:clock.video,start:input.start,image:input.image,adaptive:input.adaptive===true});
   },
   async 'scene-capture-error'({reason},sender) {
     if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')) throw new Error('Invalid scene source.');

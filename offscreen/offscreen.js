@@ -212,7 +212,7 @@ async function exportIndex() {
     const chunks = (await db.chunksOf(v.videoId)).sort((a, b) => a.start - b.start);
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
-  const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt})=>({videoId,start,image,indexedAt}));
+  const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt,adaptive})=>({videoId,start,image,indexedAt,...(adaptive?{adaptive:true}:{})}));
   const screenText=(await db.screenText.all()).map(({videoId,start,text,indexedAt,observedLines})=>({videoId,start,text,indexedAt,...(observedLines?{observedLines}:{})}));
   return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes,screenText };
 }
@@ -304,10 +304,16 @@ async function indexScreen(input){
 }
 
 let visionState = {status:'idle'}, sceneTask = null;
+const extraSceneBudget=globalThis.__recallScenePolicy.createBudget();
 const visionModel = createVisionModel(state=>{visionState=state;broadcast({type:'vision-state',state});});
 async function indexScene(input) {
   const scene = validateScene(input);
   if (captureHold.held() || sceneTask || screenTask || visualQueries.size || indexImportBusy) return {busy:true};
+  const now=Date.now();
+  if(scene.adaptive){
+    if(!extraSceneBudget.allows(now))return {rateLimited:true,retryAfterMs:extraSceneBudget.retryAfter(now)};
+    extraSceneBudget.record(now);
+  }
   const epoch=sceneEpoch;
   sceneTask = (async()=>{
     const vec = await visionModel.image(scene.image);
@@ -315,10 +321,11 @@ async function indexScene(input) {
     if (!await db.getVideo(scene.video.videoId)) await importHistory({videos:[{...cleanVideo(scene.video),watchedAt:Date.now()}],historyImported:false});
     if(epoch!==sceneEpoch)return {disabled:true};
     await db.touchWatch(scene.video.videoId,Date.now());
-    const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,vec,indexedAt:Date.now(),watchedAt:Date.now()});
+    if(epoch!==sceneEpoch)return {disabled:true};
+    const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,vec,indexedAt:Date.now(),watchedAt:Date.now()});
     invalidate();broadcast({type:'index-changed'});return response;
   })();
-  try {return await sceneTask;} finally {sceneTask = null;}
+  try {return await sceneTask;} catch(error){if(epoch!==sceneEpoch)return {disabled:true};throw error;} finally {sceneTask = null;}
 }
 function searchScenes(query,options) {
   return visualQuery(async()=>{
@@ -368,7 +375,7 @@ const handlers = {
   'ocr-stop':async()=>{screenEpoch++;ocrModel.release();return {ok:true};},
   'scene-index': indexScene,
   'vision-status': async()=>({...visionState,busy:captureHold.held() || !!sceneTask || !!screenTask || visualQueries.size>0 || indexImportBusy}),
-  'vision-stop': async()=>{visionModel.release();return {ok:true};},
+  'vision-stop': async()=>{sceneEpoch++;visionModel.release();return {ok:true};},
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),
   'speech-stop': ({reason}) => speech.stop(reason),

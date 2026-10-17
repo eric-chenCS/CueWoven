@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v2.14 – Search What You've Watched",
-  "short_name": "Recall v2.14",
-  "version": "2.14.0",
+  "name": "Recall v2.15 – Search What You've Watched",
+  "short_name": "Recall v2.15",
+  "version": "2.15.0",
   "description": "Semantic search over the YouTube videos you've watched. Type a vague memory, jump to the exact second. 100% on-device.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -52,6 +52,7 @@
         "https://www.youtube.com/*"
       ],
       "js": [
+        "lib/scene-policy.js",
         "content/scene-capture.js",
         "content/screen-capture.js",
         "content/speech-capture.js",

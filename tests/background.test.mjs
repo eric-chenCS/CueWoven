@@ -92,6 +92,15 @@ test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported sche
     'https://www.youtube.com/not-a-video?v=dQw4w9WgXcQ',
   ]) assert.equal(videoIdFromUrl(url), null, url);
 });
+test('buffered scene frames require fresh timestamps and the same active playback revision',async()=>{
+ chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:true}})}};
+ const url='https://www.youtube.com/watch?v=aaaaaaaaaaa',sender={id:'x',tab:{id:1},url},clock={video:{videoId:'aaaaaaaaaaa',title:'Trusted metadata'},time:49,revision:2,visible:true};
+ chrome.tabs={get:async()=>({active:true,url}),sendMessage:async()=>clock};chrome.runtime.getContexts=async()=>[{}];chrome.runtime.sendMessage=async msg=>msg;
+ const frame={type:'scene-frame',video:{videoId:'aaaaaaaaaaa',title:'Page metadata'},start:42,revision:2,capturedAt:Date.now(),adaptive:true};
+ for(const patch of [{capturedAt:undefined},{capturedAt:Date.now()-11000},{capturedAt:Date.now()+5000},{revision:1},{start:NaN},{video:{videoId:'bbbbbbbbbbb'}}])assert.deepEqual(await request({...frame,...patch},sender),{inactive:true});
+ for(const field of ['paused','seeking','ad']){clock[field]=true;assert.deepEqual(await request(frame,sender),{inactive:true});clock[field]=false;}
+ const result=await request(frame,sender);assert.equal(result.type,'scene-index');assert.equal(result.start,42);assert.equal(result.adaptive,true);assert.equal(result.video.title,'Trusted metadata');
+});
 
 test('single-video searches use unique video pages while list searches retain their settings', async () => {
   chrome.storage = {local: {get: async () => ({settings: {perVideo: 5}})}};

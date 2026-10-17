@@ -34,6 +34,7 @@ test('scene input rejects external images, oversized data, decompression bombs a
   const jpeg=Buffer.from([255,216,255,192,0,17,8,0,180,1,64,3,1,17,0,2,17,0,3,17,0]);
   const good={...scene,image:'data:image/jpeg;base64,'+jpeg.toString('base64')};
   assert.equal(validateScene(good).key,'aaaaaaaaaaa:1');
+  const early=validateScene({...good,start:21,adaptive:true}),late=validateScene({...good,start:27,adaptive:true});assert.notEqual(early.key,late.key);assert.notEqual(early.key,validateScene({...good,start:21}).key);assert.equal(late.adaptive,true);
   jpeg[9]=255;assert.throws(()=>validateScene({...good,image:'data:image/jpeg;base64,'+jpeg.toString('base64')}),/320/);
   assert.equal(SCENES_TOTAL,2000);assert.equal(SCENES_PER_VIDEO,240);
 });
