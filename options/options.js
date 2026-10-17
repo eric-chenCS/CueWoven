@@ -2,7 +2,8 @@ import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js'
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6 };
+const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -12,7 +13,7 @@ let jobWaiter = null;
 let libraryRefresh;
 
 function updateTranscriptButton() {
-  const count = videos.filter(v => v.method === 'history-title').length;
+  const count = videos.filter(needsTranscript).length;
   $('history-transcripts').disabled = bulkBusy || historyImportBusy || !count;
   $('history-transcripts').textContent = count ? `Fetch missing transcripts (${count})` : 'Fetch missing transcripts';
 }
@@ -84,7 +85,7 @@ function renderLibrary() {
     t.textContent = v.title || v.videoId;
     const m = document.createElement('div');
     m.className = 'm';
-    m.textContent = [v.channel, v.method === 'history-title' ? 'Title saved · no transcript' : `${v.chunkCount} moments`, 'indexed ' + new Date(v.indexedAt).toLocaleString()].filter(Boolean).join(' · ');
+    m.textContent = [v.channel, v.method === 'history-title' ? 'Title saved · no transcript' : v.method === 'speech-local' ? `${v.chunkCount} moments · AI speech, played portions only` : `${v.chunkCount} moments`, 'indexed ' + new Date(v.indexedAt).toLocaleString()].filter(Boolean).join(' · ');
     info.append(t, m);
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -104,7 +105,7 @@ function renderLibrary() {
       loadLibrary();
     });
     actions.append(open, del);
-    if (v.method === 'history-title') {
+    if (needsTranscript(v)) {
       const index = document.createElement('button');
       index.className = 'btn ghost small';
       index.textContent = 'Add transcript';
@@ -171,7 +172,7 @@ async function addHistory(entries, fetchTranscripts) {
   if (!await saveHistoryTitles(entries)) return false;
   if (fetchTranscripts) {
     const importedIds = new Set(entries.map(v => v.videoId));
-    await runBulk(videos.filter(v => v.method === 'history-title' && importedIds.has(v.videoId))
+    await runBulk(videos.filter(v => needsTranscript(v) && importedIds.has(v.videoId))
       .sort((a, b) => b.watchedAt - a.watchedAt).map(v => v.videoId), true);
   }
   return true;
@@ -217,7 +218,7 @@ function updateHistorySelection() {
 function renderHistory() {
   const list = $('history-list');
   list.textContent = '';
-  const indexed = new Set(videos.filter(v => v.method !== 'history-title').map(v => v.videoId));
+  const indexed = new Set(videos.filter(v => !needsTranscript(v)).map(v => v.videoId));
   const query = $('history-filter').value.trim().toLowerCase();
   const matches = historyCandidates.filter(v => (v.title + ' ' + v.videoId).toLowerCase().includes(query));
   for (const v of matches) {
@@ -391,6 +392,7 @@ async function loadSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   const s = Object.assign({}, DEFAULTS, settings);
   $('enabled').checked = !!s.enabled;
+  $('speechEnabled').checked = s.speechEnabled !== false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   $('maxAgeDays').value = String(s.maxAgeDays);
   $('perVideo').value = String(s.perVideo);
@@ -401,6 +403,7 @@ let savedTimer;
 async function saveSettings() {
   const settings = {
     enabled: $('enabled').checked,
+    speechEnabled: $('speechEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
     perVideo: Number($('perVideo').value),
@@ -412,7 +415,7 @@ async function saveSettings() {
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
   if (settings.maxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency']) $(id).addEventListener('change', saveSettings);
+for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

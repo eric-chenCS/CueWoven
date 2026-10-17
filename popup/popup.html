@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v2.7</title>
+    <title>Recall v2.8</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v2.7</span>
+        <span>Recall v2.8</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -51,6 +51,13 @@
       <span id="index-now-text">Index this video now</span>
       <button id="index-now-btn" class="btn small">Index</button>
     </div>
+
+    <section id="speech" class="speech" aria-labelledby="speech-heading" hidden>
+      <h2 id="speech-heading">Speech-to-text</h2>
+      <p>For videos without usable captions. Starts automatically if caption capture fails. English, on this device. Captures only the player audio you play; no microphone. First use downloads a speech model and uses extra CPU.</p>
+      <div class="speech-actions"><button id="speech-start" class="btn ghost small">Retry speech-to-text</button><button id="speech-stop" class="btn small" hidden>Stop</button></div>
+      <p id="speech-status" role="status" aria-live="polite"></p>
+    </section>
 
     <div id="model" class="model" hidden>
       <div class="model-text" id="model-text">Loading the search model…</div>

@@ -1,3 +1,9 @@
+# Automatic speech fallback (v2.8)
+
+Recognition runs in a separate worker using quantized Whisper tiny.en on one WASM thread. The audio worklet emits one second of 16 kHz mono PCM per message, with no video frames sent to the extension. Recognition uses 15-second windows, one inference at a time, at most two queued windows plus the in-flight window. Silence is skipped. Backlog stops capture instead of growing indefinitely, and the worker is released after stopping. Speech model progress notifications are coalesced to percentage changes. Background history capture tabs never load the speech model.
+
+In one isolated model check, a 14.14-second generated speech fixture took 3,286 ms to prepare and 1,758 ms to recognize. These single-run timings are diagnostic evidence, not a device-wide speed or RAM claim. Actual player-audio capture, recognition, embedding and search passed both the controlled end-to-end test and one live public YouTube video. English recognition is imperfect and coverage begins after caption failure/model preparation, not at the start of the video. First downloads and sustained recognition add network/CPU cost; the existing search and import regressions pass with this feature enabled.
+
 # Minimized capture window (v2.7)
 
 Request-only capture from v2.6 is removed. Six full YouTube players run in one separate minimized window (or three for lower load). This isolates the main tab bar and restores player/session capture; it does not claim lower per-player memory/CPU or bypass YouTube restrictions. The headed Windows regression completed eight controlled videos with six concurrent players while preserving main-window focus; normal completion, pause and manual closure cleaned up the owned window. Coalesced library refresh remains: 30 completion events produce one refresh.

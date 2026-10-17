@@ -43,6 +43,13 @@ function makeIndex(rows) {
 }
 
 const now = Date.now();
+test('rank marks partial AI speech results distinctly from full captions', () => {
+  const index = makeIndex([{videoId:'speech',start:42,text:'heard words',vec:unit(1,0)}]);
+  const record = {title:'Video',method:'speech-local'};
+  assert.equal(rank(unit(1,0),index,new Map([['speech',record]]))[0].speechGenerated,true);
+  record.method = 'captions';
+  assert.equal(rank(unit(1,0),index,new Map([['speech',record]]))[0].speechGenerated,false);
+});
 const videos = new Map([
   ['A', { videoId: 'A', title: 'Black holes explained', channel: 'Space', indexedAt: now }],
   ['B', { videoId: 'B', title: 'Lithium-Ion Physics Breakdown', channel: 'Lab', indexedAt: now - 40 * 864e5 }],

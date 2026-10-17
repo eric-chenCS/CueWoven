@@ -78,7 +78,7 @@ function render(results, query) {
     node.querySelector('.time').textContent = r.titleOnly ? 'Video' : formatTime(r.start);
     node.querySelector('.title').textContent = r.title || r.videoId;
     highlight(node.querySelector('.snippet'), r.titleOnly ? 'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), Math.round(r.score * 100) + (r.titleOnly ? '% title match' : '% match')]
+    node.querySelector('.meta').textContent = [r.channel, ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', Math.round(r.score * 100) + (r.titleOnly ? '% title match' : '% match')]
       .filter(Boolean)
       .join(' · ');
     node.addEventListener('click', (e) => {
@@ -265,6 +265,7 @@ async function refreshStatus() {
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
+  if (msg.type === 'speech-state') renderSpeech(msg.state);
   if (msg.type === 'model-status') showModel(msg.state);
   if (msg.type === 'index-changed') refreshStatus();
   return false;
@@ -320,7 +321,8 @@ $('start-empty').addEventListener('click', async () => {
   const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
   singleVideo.checked = singleVideoView !== false;
   $('start-choice').hidden = !!onboardingComplete || stats.videos > 0;
-  setupIndexNow();
+  await setupIndexNow();
+  refreshSpeech();
   if (saved && saved.sinceDays) {
     sinceDays = saved.sinceDays;
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.days) === sinceDays)));
@@ -335,3 +337,31 @@ $('start-empty').addEventListener('click', async () => {
   }
   if (stats.videos) send({ type: 'warmup' }); // no model download is needed for an empty library
 })();
+
+// Caption failures start speech automatically; the popup exposes status and controls.
+function renderSpeech(state = {}) {
+  const active = ['preparing', 'recording', 'stopping'].includes(state.status);
+  const videoTab = !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');
+  $('speech').hidden = !active && !videoTab;
+  $('speech-start').disabled = active || !videoTab;
+  $('speech-stop').hidden = !active;$('speech-stop').disabled = state.status === 'stopping';
+  const label = state.video?.title ? '“' + state.video.title + '”' : 'this video';
+  $('speech-status').textContent = state.status === 'preparing' ? 'Loading speech model… ' + Math.round((state.progress || 0) * 100) + '%' :
+    state.status === 'recording' ? 'Listening to ' + label + ' · ' + (state.saved || 0) + ' speech segments saved. Only played portions are captured.' :
+    state.status === 'stopping' ? 'Finishing captured audio…' : state.reason || (state.saved ? 'Saved ' + state.saved + ' speech segments from ' + label + '.' : 'Starts automatically when captions cannot be captured. You can retry here; transcripts may contain recognition errors.');
+}
+async function refreshSpeech() {
+  const state = await send({type: 'speech-status'}).catch(error => ({reason: error.message}));renderSpeech(state);
+}
+$('speech-start').addEventListener('click', async () => {
+  const button = $('speech-start');button.disabled = true;
+  try {
+    const response = await send({type: 'speech-start', tabId: currentTab.id});
+    if (response?.error) throw new Error(response.error);
+    renderSpeech(response);
+  } catch (error) {renderSpeech({reason: error.message});}
+});
+$('speech-stop').addEventListener('click', async () => {
+  $('speech-stop').disabled = true;
+  const response = await send({type: 'speech-stop'}).catch(error => ({reason: error.message}));renderSpeech(response);
+});
