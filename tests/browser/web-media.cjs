@@ -44,6 +44,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await enable({ audio: true });
     const tiktok = await context.newPage();
     await tiktok.goto("https://www.tiktok.com/@fixture/video/12345");
+    assert.equal(await tiktok.evaluate(async url=>fetch(url).then(response=>response.ok).catch(()=>false),base+'/content/speech-worklet.js'),false,'fixed extension ID cannot expose the worklet to a website');
     await tiktok.locator("#play").click();
     const heard = await wait(async () => {
       const result = await send({ type: "speech-status" });

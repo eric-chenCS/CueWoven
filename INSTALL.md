@@ -1,4 +1,4 @@
-# Recall v3.0 installation
+# Recall v3.1 installation
 
 ## From this repository
 
@@ -6,9 +6,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.0.0. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.1.0. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.0 adds optional article/website capture, general history imports, and compatible website video capture. Updating from v2.13–v2.15 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Existing YouTube history, captions, audio, scenes and OCR text stay intact; the additive database upgrade needs no re-import. See [UPDATE-3.0.md](docs/UPDATE-3.0.md).
+Version 3.1 fixes overbroad public-page exclusions and speeds full-text ranking, title imports and recaptures. Updating from v2.13–v3.0 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. The schema-5 upgrade prepares normalized text once without re-embedding existing content. Extra cached text counts against the 64 MiB web-content budget, so a library near that limit can downgrade older web content to titles sooner. Captions, scenes, dates and imported title metadata are preserved. See [UPDATE-3.1.md](docs/UPDATE-3.1.md).
 
 ## Enable websites and articles
 
@@ -24,7 +24,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.0.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.1.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
