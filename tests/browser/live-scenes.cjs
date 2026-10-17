@@ -3,7 +3,8 @@ const fs=require('fs'),path=require('path'),os=require('os');
 const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
 (async()=>{
  const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(),'recall-live-scenes-')),{headless:true,executablePath:process.env.RECALL_BROWSER,args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
- const report={version:'2.9.0',testedAt:new Date().toISOString(),environment:'Isolated Chromium; no user cookies/history; no mocked video/image/model responses',videoId:'jNQXAC9IVRw',sceneSaved:false};
+ const version=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8')).version;
+ const report={version,testedAt:new Date().toISOString(),environment:'Isolated Chromium; no user cookies/history; no mocked video/image/model responses',videoId:'jNQXAC9IVRw',sceneSaved:false};
  try {
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),base=`chrome-extension://${new URL(worker.url()).hostname}`;
   const options=await context.newPage();await options.goto(`${base}/options/options.html`);
@@ -26,7 +27,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   }
  }catch(error){report.error=error.message;}
  finally {
-  if(process.env.RECALL_SCREENSHOT_DIR)fs.writeFileSync(path.join(process.env.RECALL_SCREENSHOT_DIR,'recall-v2.9-live-scenes.json'),JSON.stringify(report,null,2)+'\n');
+  if(process.env.RECALL_SCREENSHOT_DIR)fs.writeFileSync(path.join(process.env.RECALL_SCREENSHOT_DIR,`recall-v${version.split('.').slice(0,2).join('.')}-live-scenes.json`),JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report));await context.close();
  }
 })().catch(error=>{console.error(error);process.exitCode=1});

@@ -1,3 +1,9 @@
+# Retrieval accuracy and migration (v2.10)
+
+Saved text vectors now use the spoken passage; title/channel context is scored separately. Legacy upgrades process 16 chunks per model batch, yield between batches, and update only vectors after checking current chunk identity. Parent existence is read once per video within each write transaction. Search stays available and cache reads coalesce; revision checks discard builds invalidated during asynchronous reads. Upgrading a large library still requires CPU time and can temporarily mix old/new vector recipes. No lower CPU or RAM claim is made.
+
+MiniLM and BGE-small both returned all 31 labeled synthetic first moments. Their single initialization-plus-batch runs took 2,395 and 3,017 ms respectively, including cache/download conditions, so they are not inference-only benchmarks. Whisper tiny.en took 1,464–1,710 ms for the generated speech variants; base.en took 2,694–2,802 ms, with zero normalized word errors for both. These measurements support keeping the lighter existing models on this narrow fixture; they do not establish universal model accuracy or speed. The runtime bundle, dependencies and media caps are unchanged.
+
 # Scene sampling and unified search (v2.9)
 
 Frames are encoded at no more than 320 × 180, at most once per 20 wall seconds and per playback bucket, only from a visible playing video. The live saved JPEG data URL was 11,323 characters; the hard input limit is 90,000 characters. Caps are 120 snapshots per video and 1,000 total. These caps bound frame storage rather than claiming every video fits a fixed byte size. Search reads scene metadata/vectors through a cursor and loads image data only for final displayed matches. One inference runs at a time, with at most the newest text query waiting; new frames skip a busy worker. The visual worker expires after 60 seconds idle.

@@ -1,0 +1,60 @@
+{
+  "testedAt": "2026-10-17T18:57:50.502Z",
+  "reference": "Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+  "results": [
+    {
+      "model": "Xenova/whisper-tiny.en",
+      "sample": "clean",
+      "text": " Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+      "loadMs": 2413,
+      "inferenceMs": 1710,
+      "audioSeconds": 14.1419375,
+      "wordErrorRate": 0
+    },
+    {
+      "model": "Xenova/whisper-tiny.en",
+      "sample": "noise",
+      "text": " Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+      "loadMs": 2413,
+      "inferenceMs": 1481,
+      "audioSeconds": 14.1419375,
+      "wordErrorRate": 0
+    },
+    {
+      "model": "Xenova/whisper-tiny.en",
+      "sample": "speed-1.25",
+      "text": " Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+      "loadMs": 2413,
+      "inferenceMs": 1464,
+      "audioSeconds": 11.3135,
+      "wordErrorRate": 0
+    },
+    {
+      "model": "Xenova/whisper-base.en",
+      "sample": "clean",
+      "text": " Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+      "loadMs": 2711,
+      "inferenceMs": 2802,
+      "audioSeconds": 14.1419375,
+      "wordErrorRate": 0
+    },
+    {
+      "model": "Xenova/whisper-base.en",
+      "sample": "noise",
+      "text": " battery charging cycles damage the electrodes and reduce energy capacity chemical reactions explain why a phone battery stores less charge over time recall saves the words you actually hear while watching a video",
+      "loadMs": 2711,
+      "inferenceMs": 2694,
+      "audioSeconds": 14.1419375,
+      "wordErrorRate": 0
+    },
+    {
+      "model": "Xenova/whisper-base.en",
+      "sample": "speed-1.25",
+      "text": " Battery charging cycles damage the electrodes and reduce energy capacity. Chemical reactions explain why a phone battery stores less charge over time. Recall saves the words you actually hear while watching a video.",
+      "loadMs": 2711,
+      "inferenceMs": 2776,
+      "audioSeconds": 11.3135,
+      "wordErrorRate": 0
+    }
+  ]
+}

@@ -9,6 +9,8 @@ import { rank } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
+import {EMBEDDING_VERSION,embeddingText,createEmbeddingMigration} from '../lib/embedding-migration.js';
+import {createRevisionCache} from '../lib/revision-cache.js';
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const DIM = 384;
@@ -93,17 +95,17 @@ async function embed(texts) {
   return out;
 }
 
-// What the model sees: title gives context ("the black hole video"), text gives the moment.
-const embedText = (title, text) => (title ? `${title}. ${text}` : text);
-
 // ---------------------------------------------------------------------------
 // In-memory index (rebuilt lazily from IndexedDB after any change)
 // ---------------------------------------------------------------------------
-let indexCache = null;
-
-async function getIndex() {
-  if (indexCache) return indexCache;
+let lastMigrationUpdate=0;
+const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChange:state=>{
+  if(state.updated!==undefined&&state.updated!==lastMigrationUpdate){lastMigrationUpdate=state.updated;invalidate();broadcast({type:'index-changed'});}
+  broadcast({type:'embedding-status',state});
+}});
+const indexCache=createRevisionCache(async()=>{
   const [videoList, chunks] = await Promise.all([db.listVideos(), db.allChunks()]);
+  migration.start(videoList,chunks).catch(()=>{});
   const videos = new Map(videoList.map((v) => [v.videoId, v]));
   const usable = chunks.filter((c) => c.vec && c.vec.length === DIM && videos.has(c.videoId));
   const matrix = new Float32Array(usable.length * DIM);
@@ -112,11 +114,10 @@ async function getIndex() {
     matrix.set(c.vec, i * DIM);
     meta[i] = { videoId: c.videoId, start: c.start, text: c.text };
   });
-  indexCache = { videos, index: { matrix, dim: DIM, meta } };
-  return indexCache;
-}
-
-const invalidate = () => { indexCache = null; };
+  return { videos, index: { matrix, dim: DIM, meta } };
+});
+const getIndex=()=>indexCache.get();
+const invalidate=()=>indexCache.invalidate();
 
 // ---------------------------------------------------------------------------
 // Operations
@@ -132,14 +133,14 @@ function cleanVideo(v) {
 }
 
 async function storeChunks(video, chunks, method, indexedAt) {
-  const vecs = await embed(chunks.map((c) => embedText(video.title, c.text)));
+  const vecs = await embed(chunks.map(c=>embeddingText({...video,method},c.text)));
   const existing = await db.getVideo(video.videoId);
   const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), chunkCount: chunks.length, method: method || null });
   if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
   await db.replaceVideo(
     record,
-    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i] }))
+    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION }))
   );
   invalidate();
   return { chunkCount: chunks.length, video: record };
@@ -154,7 +155,7 @@ async function importHistory({ videos }) {
   let imported = 0;
   for (const [i, v] of pending.entries()) {
     const record = {...cleanVideo(v), indexedAt: Date.now(), chunkCount: 1, method: 'history-title'};
-    const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i]}]);
+    const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}]);
     if (added) { imported++; invalidate(); }
   }
   return { imported, skipped: batch.length - imported };
@@ -190,7 +191,7 @@ async function search({ query, limit, perVideo, sinceDays, offset }) {
 async function status() {
   const videos = await db.listVideos();
   const chunks = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
-  return { videos: videos.length, chunks, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState };
+  return { videos: videos.length, chunks, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
 }
 
 async function exportIndex() {
@@ -201,7 +202,7 @@ async function exportIndex() {
     out.push(Object.assign({}, v, { chunks: chunks.map((c) => ({ start: c.start, text: c.text, ...(Number.isFinite(c.speechStart) ? {speechStart: c.speechStart, speechEnd: c.speechEnd} : {}) })) }));
   }
   const scenes = (await db.scenes.all()).map(({videoId,start,image,indexedAt})=>({videoId,start,image,indexedAt}));
-  return { format: 'recall-export', version: 1, model: MODEL_ID, exportedAt: new Date().toISOString(), videos: out, scenes };
+  return { format: 'recall-export', version: 1, model: MODEL_ID, embeddingVersion:EMBEDDING_VERSION,exportedAt: new Date().toISOString(), videos: out, scenes };
 }
 
 // Backups store text/images and re-embed here so vectors survive model changes.
@@ -279,8 +280,8 @@ async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
   if (existing && !['history-title', 'speech-local'].includes(existing.method)) return {skipped: true};
   const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: String(s.text || '').slice(0, 2000)})));
   if (!chunks.length) return {chunkCount: 0};
-  const vecs = await embed(chunks.map(c => embedText(video.title, c.text)));
-  const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i]})), rangeStart, rangeEnd);
+  const vecs = await embed(chunks.map(c => embeddingText({...video,method:'speech-local'},c.text)));
+  const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION})), rangeStart, rangeEnd);
   if (!result.skipped) {invalidate();broadcast({type: 'index-changed'});}
   return result;
 }
@@ -321,7 +322,7 @@ const handlers = {
     await speech.packet(audio, 16000, clock);return {ok: true};
   },
   ping: async () => ({ ok: true }),
-  warmup: async () => { await getExtractor(); return { ok: true }; },
+  warmup: async () => { await getExtractor(); await getIndex();return { ok: true }; },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
     return { has: !!video && !['history-title', 'speech-local'].includes(video.method) };

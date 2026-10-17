@@ -1,4 +1,14 @@
-# Review — Recall v2.9.0
+# Review — Recall v2.10.0
+
+Reviewed correctness, readability, module boundaries, security and resource use against the requested ma-copy adaptation and unified recall. Detailed branch findings and measured comparisons are in MA-COPY-REVIEW.md. The release retains current pagination, refinement, audio coverage and CLIP scenes; it does not replace main with the older teammate branch.
+
+Transcript/audio vectors exclude repeated title text, while titles/channels contribute bounded lexical context. Exact speech and Unicode word handling have regression tests. Raw ranking values are no longer displayed as probabilities. Source text and progress errors render through textContent. No new permissions, inference service or dependency is introduced. Separate model spaces and existing validated scene/audio boundaries remain intact.
+
+Old vectors upgrade in batches of 16 without rewriting videos or blocking the first search. Each write checks the current chunk and parent in a transaction; browser tests verify newer captions, dates and deletion win races. Revision-aware index reads prevent an invalidated in-flight build becoming the cache. Temporary mixed embedding recipes and first-use CPU work are documented. Existing caps, bounded media workers and sampled coverage remain unchanged.
+
+All 113 Node checks pass; disabling phrase matching failed the new regression and was restored. The real-model upgrade, scene, speech, import, pagination and refinement browser tests pass. The background-window manual-close UI check timed out once, then passed alone with diagnostics; its original timing cause is unconfirmed. The extracted v2.10 package also passed the legacy-upgrade and background-window regressions; the manual-close path completed on that packaged run. Live public-video evidence and the narrow model comparisons are documented in TEST-REPORT.md. Existing native-only audit findings remain deferred outside the browser build, with no new dependency changes. No confirmed release-blocking defect remains in the tested scope; the intermittent browser-test timeout remains a validation limitation.
+
+# Historical review — Recall v2.9.0
 
 Reviewed scene capture, storage migration, multimodal ranking, rendering and resource limits against the request for one search with evidence indicators. No mode selector ships. Scene images originate in the isolated script's current video element, not desktop/tab screenshots. The background validates the normal watched-video source and capture settings; the image boundary restricts JPEG size/dimensions before decode. External image URLs and oversized/decompression-bomb headers are rejected. Only local image vectors/text queries reach CLIP; images remain in IndexedDB and validated backup files. The browser permissions and dependency lockfile are unchanged.
 
