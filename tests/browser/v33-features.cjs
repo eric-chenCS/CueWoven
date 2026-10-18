@@ -85,13 +85,10 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   assert.ok(exported.includes('[email redacted]'));
   assert.equal(await f.worker.evaluate(id=>chrome.action.getBadgeText({tabId:id}),tab.id),'•');
   await article.close();await f.options.bringToFront();
-  // Explicit opt-in is required for queries, including imports.
-  const searchItem={kind:'search',url:'https://www.google.com/search?q=coral',title:'coral',watchedAt:Date.now()};
-  assert.equal((await f.send({type:'web-import',items:[searchItem]})).imported,0);
+  // Explicit opt-in remains available for live Google-query capture.
   await f.options.locator('details').filter({has:f.options.locator('#web-searches')}).locator('summary').first().click();
   await f.options.locator('#web-searches').check();
   await f.wait(()=>f.options.evaluate(async()=>(await chrome.storage.local.get('webCapture')).webCapture.searches===true));
-  assert.equal((await f.send({type:'web-import',items:[searchItem]})).imported,1);
   // Forget recent honors save time, not the years-old date of an imported visit.
   await f.send({type:'clear'});
   await f.options.evaluate(async()=>{

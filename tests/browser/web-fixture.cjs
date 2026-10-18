@@ -13,8 +13,8 @@ module.exports = async function fixture({ sites = ["example.com", "instagram.com
     }
   }
   const manifestPath = path.join(extension, "manifest.json"), manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-  manifest.permissions = [...new Set([...manifest.permissions, "scripting", "history"])];
-  manifest.optional_permissions = manifest.optional_permissions.filter((name) => !["scripting", "history"].includes(name));
+  manifest.permissions = [...new Set([...manifest.permissions, "scripting"])];
+  manifest.optional_permissions = manifest.optional_permissions.filter((name) => !["scripting"].includes(name));
   manifest.host_permissions.push(...sites.flatMap((site) => [`https://*.${site}/*`, `http://*.${site}/*`]));
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   const context = await chromium.launchPersistentContext(path.join(directory, "profile"), { headless: true, executablePath: process.env.RECALL_BROWSER, viewport: { width: 1e3, height: 800 }, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`] });

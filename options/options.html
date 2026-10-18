@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CueWoven v3.3.22 · Library &amp; settings</title>
+    <title>CueWoven v3.3.23 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,11 +12,11 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>CueWoven</h1></div>
-        <span class="version">v3.3.22</span>
+        <span class="version">v3.3.23</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
-            <li><a href="#sec-add">Add history</a></li>
+            <li><a href="#sec-add">Add videos</a></li>
             <li><a href="#sec-websites">Websites</a></li>
             <li><a href="#sec-capture">Settings</a></li>
             <li><a href="#sec-data">Your data</a></li>
@@ -26,11 +26,11 @@
 
       <main id="main" class="main" tabindex="-1">
         <section id="welcome" class="welcome" aria-labelledby="welcome-heading" hidden>
-          <h2 id="welcome-heading">How would you like to start?</h2>
+          <h2 id="welcome-heading">Build your memory as you browse</h2>
+          <p>Watch a video or enable your websites to start saving searchable moments. You can also restore a CueWoven backup.</p>
           <div class="row">
-            <button id="welcome-import" class="btn">Import YouTube history</button>
-            <button id="welcome-web" class="btn ghost">Import browser history</button>
-            <button id="welcome-empty" class="btn ghost">Start empty</button>
+            <button id="welcome-restore" class="btn">Restore backup</button>
+            <button id="welcome-empty" class="btn ghost">Start saving</button>
           </div>
         </section>
         <p id="startup-msg" class="msg" role="status" aria-live="polite"></p>
@@ -46,67 +46,17 @@
           <div id="library" class="library sheet" role="region" aria-label="Saved items" tabindex="0"></div>
         </section>
 
-        <!-- Add history -->
+        <!-- Add videos -->
         <section id="sec-add" class="sec" aria-labelledby="add-heading">
-          <h2 id="add-heading">Add history</h2>
+          <h2 id="add-heading">Add videos</h2>
           <div class="sheet">
-            <details class="fold">
-              <summary><span class="fold-title">YouTube watch history</span><span class="fold-sub">This browser or Google Takeout</span></summary>
-              <div class="fold-body">
-                <h3 class="group">From Google Takeout</h3>
-                <p class="block-desc">Export YouTube history as JSON from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>, then choose <strong>watch-history.json</strong>.</p>
-                <div class="row">
-                  <label class="btn file">Choose Takeout file<input id="takeout-import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
-                  <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
-                </div>
-                <label class="check"><input id="takeout-transcripts" type="checkbox" checked /><span>Fetch transcripts for the newest 200 missing videos</span></label>
-                <p id="history-import-msg" class="msg" role="status" aria-live="polite"></p>
-                <h3 class="group">From this browser</h3>
-                <p class="block-desc">Find YouTube videos in this browser's saved history, including visits from before you installed CueWoven. A visit does not necessarily mean you watched the video.</p>
-                <div class="row">
-                  <label for="history-days" class="visually-hidden">How far back</label>
-                  <select id="history-days">
-                    <option value="30">Last 30 days</option>
-                    <option value="90" selected>Last 90 days</option>
-                    <option value="365">Last year</option>
-                    <option value="0">All time</option>
-                  </select>
-                  <button id="history-scan" class="btn">Find videos</button>
-                </div>
-                <p id="history-msg" class="msg" role="status" aria-live="polite"></p>
-                <div id="history-tools" class="history-tools" hidden>
-                  <input id="history-filter" type="search" aria-label="Filter found videos" placeholder="Filter" />
-                  <div class="row">
-                    <button id="history-save" class="btn">Add all</button>
-                    <button id="history-index" class="btn ghost" disabled>Add selected</button>
-                    <label class="check inline"><input id="browser-transcripts" type="checkbox" checked /><span>Fetch transcripts for the newest 200 missing videos</span></label>
-                  </div>
-                </div>
-                <div id="history-list" class="history-list"></div>
-              </div>
-            </details>
-
-            <details class="fold">
-              <summary><span class="fold-title">Websites and searches</span><span class="fold-sub">This browser or a Takeout file</span></summary>
-              <div class="fold-body">
-                <p class="block-desc">Import titles and visit dates from Chrome BrowserHistory.json or Google Search My Activity JSON. Query import uses the Google search switch under Websites.</p>
-                <div class="row">
-                  <label for="web-history-days" class="visually-hidden">How far back</label>
-                  <select id="web-history-days"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option><option value="0" selected>All time</option></select>
-                  <button id="web-history-scan" class="btn">Import from this browser</button>
-                  <button id="web-history-stop" class="btn ghost" hidden>Pause</button>
-                  <label class="btn ghost file">Choose Takeout file<input id="web-history-file" type="file" accept="application/json,.json" class="visually-hidden" /></label>
-                </div>
-                <p id="web-import-msg" class="msg" role="status" aria-live="polite"></p>
-              </div>
-            </details>
-
             <details class="fold">
               <summary><span class="fold-title">Paste links</span><span class="fold-sub">One YouTube link per line</span></summary>
               <div class="fold-body">
                 <textarea id="bulk-urls" rows="4" aria-label="YouTube links, one per line" placeholder="https://youtu.be/..."></textarea>
                 <div class="row">
                   <button id="bulk-go" class="btn">Add videos</button>
+                  <button id="missing-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
                   <button id="bulk-stop" class="btn ghost" hidden>Pause</button>
                   <span id="bulk-summary" class="msg inline" role="status" aria-live="polite"></span>
                 </div>
@@ -150,7 +100,7 @@
                   <input id="web-all" type="checkbox" role="switch" class="switch" />
                 </label>
                 <label class="setting">
-                  <span class="setting-text"><strong>Save my Google searches</strong><span class="hint">Off by default; applies to live capture and history import. Obvious medical queries stay excluded.</span></span>
+                  <span class="setting-text"><strong>Save my Google searches</strong><span class="hint">Off by default; saves searches on allowed Google pages you visit. Obvious medical queries stay excluded.</span></span>
                   <input id="web-searches" type="checkbox" role="switch" class="switch" />
                 </label>
                 <label class="setting">
@@ -212,22 +162,22 @@
         <!-- Your data -->
         <section id="sec-data" class="sec" aria-labelledby="data-heading">
           <div class="sec-head"><h2 id="data-heading">Your data</h2><p id="data-saved" class="saved" aria-live="polite"></p></div>
-          <p class="desc">Stored only in this browser. Backups contain everything, so keep them private.</p>
+          <p class="desc">Your saved moments live in this browser profile. Export a backup before uninstalling, resetting your profile or moving to another computer.</p>
           <div class="sheet">
                 <label class="setting">
                   <span class="setting-text">Forget what I watch or read after</span>
                   <select id="maxAgeDays"><option value="1">24 hours</option><option value="7">7 days</option><option value="28">4 weeks</option><option value="365">12 months</option><option value="0">Forever</option></select>
                 </label>
-                <label class="setting">
-                  <span class="setting-text">Keep imported history<span class="hint">A limit removes older imports immediately. Export a backup first.</span></span>
-                  <select id="importMaxAgeDays"><option value="1">24 hours</option><option value="7">7 days</option><option value="28">4 weeks</option><option value="365">12 months</option><option value="0">Forever</option></select>
-                </label>
+
 
             <div class="block">
               <div class="row"><label for="forget-hours">Forget recent</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
-              <p class="hint">Remove whole items saved or updated during this period, including recent imports. Uses CueWoven's save date, not the original visit date.</p>
+              <p class="hint">Remove whole items saved or updated during this period, including recently restored items. Uses CueWoven's save date, not the original visit date.</p>
             </div>
-            <div class="block">
+            <div class="block" id="backup-controls">
+              <h3>Keep your saved moments safe</h3>
+              <p class="hint">One backup file contains your saved transcripts, page text, titles, source links, timestamps, on-screen text and captured images. Keep it private. Restore it in CueWoven to make those saved moments searchable again.</p>
+              <p class="hint">Uninstalling or clearing this browser profile can erase your library. There is no account or automatic cloud sync. A backup does not include full video files, audio recordings, settings, site permissions or downloaded AI models. If a source video or page disappears, its saved evidence remains available, but the backup cannot bring the original source back online.</p>
               <div class="row">
                 <button id="export" class="btn ghost">Export backup</button>
                 <label class="btn ghost file">Restore backup<input id="import" type="file" accept="application/json,.json" class="visually-hidden" /></label>

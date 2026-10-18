@@ -3,10 +3,10 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.waitForFunction(()=>document.querySelector('#maxAgeDays').value==='28');
  const expected=['24 hours','7 days','4 weeks','12 months','Forever'];
  const labels=async selector=>(await f.options.locator(selector).allTextContents()).map(text=>text.replace(' (default option)',''));
- for(const id of ['maxAgeDays','importMaxAgeDays'])assert.deepEqual(await labels('#'+id+' option'),expected);
+ for(const id of ['maxAgeDays'])assert.deepEqual(await labels('#'+id+' option'),expected);
  assert.deepEqual(await labels('#transcriptConcurrency option'),['1','3','6','10']);
  assert.equal(await f.options.locator('#sec-capture #theme').count(),1);
- const defaults={theme:'system',dwellSeconds:'20',perVideo:'2',transcriptConcurrency:'6',maxAgeDays:'28',importMaxAgeDays:'0'};
+ const defaults={theme:'system',dwellSeconds:'20',perVideo:'2',transcriptConcurrency:'6',maxAgeDays:'28'};
  for(const [id,value] of Object.entries(defaults)){const option=f.options.locator('#'+id+' option[data-default]');assert.equal(await option.count(),1);assert.equal(await option.getAttribute('value'),value);assert.match(await option.textContent(),/\(default option\)/);}
  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');
  for(const theme of ['light','dark']){
@@ -24,16 +24,16 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  const advanced=f.options.locator('details.fold').filter({has:f.options.locator('#transcriptConcurrency')});await advanced.locator('summary').first().click();
  for(const value of ['1','3','6','10']){await f.options.locator('#transcriptConcurrency').selectOption(value);await f.options.waitForFunction(value=>chrome.storage.local.get('settings').then(s=>s.settings.transcriptConcurrency===Number(value)),value);}
  for(const value of ['1','7','28','365','0']){
-  await f.options.locator('#maxAgeDays').selectOption(value);await f.options.locator('#importMaxAgeDays').selectOption(value);
-  await f.options.waitForFunction(value=>chrome.storage.local.get('settings').then(s=>s.settings.maxAgeDays===Number(value)&&s.settings.importMaxAgeDays===Number(value)),value);
+  await f.options.locator('#maxAgeDays').selectOption(value);
+  await f.options.waitForFunction(value=>chrome.storage.local.get('settings').then(s=>s.settings.maxAgeDays===Number(value)),value);
  }
  // Old ranges remain intact until explicitly changed, including when another setting is saved.
  await f.options.evaluate(()=>chrome.storage.local.set({settings:{maxAgeDays:30,importMaxAgeDays:90,enabled:true,transcriptConcurrency:10}}));await f.options.reload();
- await f.options.waitForFunction(()=>document.querySelector('#maxAgeDays').value==='30');assert.equal(await f.options.locator('#importMaxAgeDays').inputValue(),'90');
+ await f.options.waitForFunction(()=>document.querySelector('#maxAgeDays').value==='30');assert.equal(await f.options.locator('#importMaxAgeDays').count(),0);
  await f.options.locator('#lightMode').check();await f.options.waitForFunction(()=>chrome.storage.local.get('settings').then(s=>s.settings.lightMode));
  const retained=await f.options.evaluate(()=>chrome.storage.local.get('settings'));assert.equal(retained.settings.maxAgeDays,30);assert.equal(retained.settings.importMaxAgeDays,90);
  // Reset preferences leaves saved records, retention, site choices and browser grants intact.
- const imported=await f.send({type:'import-history',videos:[{videoId:'resetKeep01',title:'Keep my saved video',channel:'Fixture',watchedAt:Date.now()}]});assert.equal(imported.error,undefined);
+ const imported=await f.send({target:'offscreen',type:'import-history',videos:[{videoId:'resetKeep01',title:'Keep my saved video',channel:'Fixture',watchedAt:Date.now()}]});assert.equal(imported.error,undefined);
  const libraryBefore=await f.send({type:'list'});
  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,lightMode:true,speechEnabled:false,scenesEnabled:false,screenTextEnabled:false,dwellSeconds:60,perVideo:5,transcriptConcurrency:10,maxAgeDays:0,importMaxAgeDays:90},theme:'dark',singleVideoView:false,webCapture:{enabled:false,paused:true,domains:['example.com'],blocked:['excluded.test'],audio:true,searches:true},otherData:'keep'}));
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#theme').value==='dark');

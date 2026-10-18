@@ -5,7 +5,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  assert.equal(manifest.commands._execute_action.suggested_key.default,'Ctrl+Shift+F');assert.equal(manifest.omnibox.keyword,'rc');
  assert.equal(await f.options.locator('.brand h1').innerText(),'CueWoven');assert.match(await f.options.title(),/^CueWoven /);
  const oldTitle='Recall techniques in psychology',videoId='rename00001';
- const added=await f.send({type:'import-history',videos:[{videoId,title:oldTitle,channel:'Fixture',watchedAt:Date.now()}]});assert.ok(!added.error,added.error);
+ const added=await f.send({target:'offscreen',type:'import-history',videos:[{videoId,title:oldTitle,channel:'Fixture',watchedAt:Date.now()}]});assert.ok(!added.error,added.error);
  await f.options.evaluate(()=>chrome.storage.local.set({theme:'dark',onboardingComplete:true,settings:{enabled:false,maxAgeDays:0,importMaxAgeDays:0}}));
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#theme').value==='dark');
  const databases=await f.options.evaluate(()=>indexedDB.databases());assert.ok(databases.some(db=>db.name==='recall'));assert.ok(!databases.some(db=>db.name==='cuewoven'));

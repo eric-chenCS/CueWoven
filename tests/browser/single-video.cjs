@@ -33,7 +33,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
      segments:[{start:42+i,text:`Battery charging cycles damage electrodes and reduce energy capacity. This phone battery loses stored charge as chemical reactions change its materials. Explanation number ${i+1}.`}]});
     if(result.error)throw Error(result.error);
    }
-   const imported=await chrome.runtime.sendMessage({type:'import-history',videos:[{videoId:'zzzzzzzzzzz',title:'Battery charging and energy capacity',channel:'History fixture',watchedAt:Date.parse('2020-01-01')}]});
+   const imported=await chrome.runtime.sendMessage({target:'offscreen',type:'import-history',videos:[{videoId:'zzzzzzzzzzz',title:'Battery charging and energy capacity',channel:'History fixture',watchedAt:Date.parse('2020-01-01')}]});
    if(imported.error)throw Error(imported.error);
   });
   const query='battery charging energy capacity';

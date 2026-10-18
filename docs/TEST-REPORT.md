@@ -1,6 +1,10 @@
 # CueWoven test report
 
-## Current baseline — v3.3.22
+## Current baseline — v3.3.23
+
+All 277 Node tests pass after removal of obsolete history-import tests. Validation now covers missing public history routes, retained live-metadata validation, and existing storage/search/privacy behavior. Browser backup, caption-queue, article-capture, Enter-only search, responsive UI and preference checks pass; see [v3.3.23 validation](UPDATE-3.3.23.md). Historical counts below apply to their named versions.
+
+## v3.3.22 baseline
 
 All 290 Node tests pass. New isolated browser coverage verifies no requests or matches while typing or refining, draft-safe filters, first-Enter submission, second-Enter opening, stale reply rejection and reopen behavior. Real-model refinement and 14-result navigation checks also pass. Branding checks preserve the original database, saved content and legacy backups.
 

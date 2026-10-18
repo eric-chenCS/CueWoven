@@ -14,7 +14,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await context.route("https://www.instagram.com/**", (route) => route.fulfill({ contentType: "text/html", body: `<!doctype html><title>Celestial chemistry</title><main><button id="play">Play</button><video width="640" height="360" muted playsinline lang="en"></video><canvas width="1280" height="720" hidden></canvas></main><script>const video=document.querySelector('video'),canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),picture=new Image();picture.src=${JSON.stringify(picture)};function draw(){ctx.fillStyle='#345b78';ctx.fillRect(0,0,1280,720);if(picture.complete)ctx.drawImage(picture,0,0,1280,720);if(video.currentTime<12)return;ctx.fillStyle='#111';ctx.fillRect(80,570,1120,110);ctx.fillStyle='white';ctx.font='bold 42px Arial';ctx.fillText('The comet contains frozen water.',135,635);}setInterval(draw,100);draw();video.srcObject=canvas.captureStream(10);const track=video.addTextTrack('captions','English','en');track.mode='hidden';track.addCue(new VTTCue(0,120,'Electric current running through copper coils creates a magnetic field.'));document.querySelector('#play').onclick=()=>video.play();<\/script>` }));
     await context.route("https://www.tiktok.com/**", (route) => route.request().url().endsWith("/recall-test.wav") ? route.fulfill({ contentType: "audio/wav", body: fs.readFileSync(process.env.RECALL_SPEECH_WAV) }) : route.fulfill({ contentType: "text/html", body: `<!doctype html><title>Spoken science</title><button id="play" onclick="document.querySelector('video').play()">Play</button><video lang="en" width="640" height="360" controls loop src="/recall-test.wav"></video>` }));
     await enable({ scenes: true, ocr: true, audio: true });
-    const imported = await send({ type: "web-import", items: [{ kind: "page", url: "https://www.instagram.com/reel/demo12345", title: "Celestial chemistry", watchedAt: 17e11 }] });
+    const imported = await send({ target:'offscreen',type: "web-import", items: [{ kind: "page", url: "https://www.instagram.com/reel/demo12345", title: "Celestial chemistry", watchedAt: 17e11 }] });
     assert.equal(imported.imported, 1);
     const instagram = await context.newPage();
     await instagram.goto("https://www.instagram.com/reel/demo12345");
@@ -36,7 +36,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const popup = await context.newPage();
     await popup.goto(`${base}/popup/popup.html`);
     await popup.locator("#kind-filter").selectOption("video");
-    await popup.locator("#q").fill('"The comet contains frozen water"');
+    await popup.locator("#q").fill('"The comet contains frozen water"');await popup.locator("#q").press("Enter");
     await wait(async () => await popup.locator(".result").count());
     const href = await popup.locator(".result").first().getAttribute("href");
     assert.match(href, /^https:\/\/www\.instagram\.com\/reel\/demo12345#recall-time=\d+/);

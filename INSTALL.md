@@ -5,7 +5,7 @@ CueWoven runs in desktop Chrome and Microsoft Edge (Chromium 116 or newer). It i
 ## Download and load
 
 1. Open [Releases](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest).
-2. Download **cuewoven-v3.3.22.zip** under Assets. Extract it into a permanent folder.
+2. Download **cuewoven-v3.3.23.zip** under Assets. Extract it into a permanent folder.
 3. Open `chrome://extensions` or `edge://extensions`.
 4. Enable **Developer mode**, click **Load unpacked**, and select the extracted folder containing `manifest.json`.
 5. Pin CueWoven in the browser's extensions menu if you want quick toolbar access.
@@ -20,11 +20,11 @@ To start your own library, play a YouTube video. After the watch delay, CueWoven
 
 **Ctrl+Shift+F** opens the popup when the browser shortcut is available. If another extension or app claims it, set CueWoven's shortcut at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`, or use the toolbar icon.
 
-## Add websites or past history
+## Add websites or specific videos
 
 YouTube is included by default. In **Library & settings → Websites**, click **Add suggested sites** or **Add site**, approve browser access and refresh an already-open page. Denied permission leaves the list unchanged.
 
-In **Add history**, import extracted Google Takeout JSON or find visits saved by this browser. Importing is optional. [Supported formats and transcript fetching](docs/USAGE.md#bring-your-past-history).
+In **Add videos**, paste YouTube links to fetch their available captions. Past browser visits and Google Takeout imports are not supported. To move an existing CueWoven library, use **Your data → Export backup / Restore backup**. [What a backup contains](docs/USAGE.md#privacy-and-data).
 
 ## Update without losing your library
 
@@ -36,10 +36,10 @@ Unpacked extensions do not update automatically from GitHub. If you loaded a Git
 
 ## If something does not work
 
-- **Empty library:** try the samples, watch a video or import history. Imports initially provide titles, not past page content.
+- **Empty library:** try the samples, watch a video or add a YouTube link.
 - **No website capture:** check Save automatically, the site's listing and browser permission; refresh the page after enabling access. Private-page filters can intentionally skip a page.
 - **No transcript:** captions may be unavailable. Live English speech fallback needs playback and cannot recover audio from before it started.
 - **Slow first search:** allow the model download to finish. Reduce capture load with Lite mode or fewer parallel transcript fetches.
-- **Model download fails:** check internet access and the popup's model status, then retry. A title import alone does not avoid the initial search-model download.
+- **Model download fails:** check internet access and the popup's model status, then retry. Restoring a backup also needs the local search model.
 
 [User guide](docs/USAGE.md) · [Developer guide](CONTRIBUTING.md)
