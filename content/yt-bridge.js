@@ -10,6 +10,26 @@
   const FROM_BRIDGE = 'recall-bridge';
   const DEFAULTS = { enabled: true, dwellSeconds: 20, scenesEnabled: true,screenTextEnabled:true };
   const MAX_SEGMENTS = 20000;
+  
+  // --- SECURITY SANITIZER START ---
+  const SECRET_PATTERNS = [
+    { name: 'API_KEY', regex: /\b(?:sk-[a-zA-Z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{36,}|AKIA[0-9A-Z]{16}|xox[baprs]-[0-9a-zA-Z-]{10,}|AIza[0-9A-Za-z-_]{35}|(?:sk|rk)_(?:live|test)_[0-9a-zA-Z]{24,})\b/g },
+    { name: 'JWT', regex: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g },
+    { name: 'PRIVATE_KEY', regex: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
+    { name: 'AUTH_TOKEN', regex: /\b(?:Bearer|Authorization|api[_-]?key|secret|password)\s*[:=]\s*["']?[A-Za-z0-9_\-\.~+/]{12,}["']?/gi },
+    { name: 'SSN', regex: /\b(?!000|666|9\d{2})\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b/g }
+  ];
+
+  function sanitizeText(rawText) {
+    if (!rawText || typeof rawText !== 'string') return '';
+    let cleaned = rawText;
+    for (const { name, regex } of SECRET_PATTERNS) {
+      cleaned = cleaned.replace(regex, `[REDACTED_${name}]`);
+    }
+    return cleaned;
+  }
+  globalThis.__recallSanitizer = { sanitizeText };
+  // --- SECURITY SANITIZER END ---
 
   let playbackRevision = 0;
   for (const event of ['seeking', 'ratechange', 'pause', 'play']) document.addEventListener(event, () => {playbackRevision++;}, true);
@@ -143,13 +163,17 @@
     if (running) return running;
     running = (async () => {
       if (!current) return { ok: false, reason: 'Open a YouTube video first.' };
-      const video = Object.assign({}, current, { watchedAt: isForcedIndex() ? undefined : Date.now() });
+      const video = Object.assign({}, current, {
+        title: sanitizeText(current.title || ''),
+        watchedAt: isForcedIndex() ? undefined : Date.now()
+      });
       const check = await send({ type: 'should-index', videoId: video.videoId, manual, watchedAt: video.watchedAt });
       if (check && check.error) return { ok: false, reason: check.error };
       if (!check || !check.index) return { ok: true, skipped: true, reason: check && check.reason };
 
       const t = await requestTranscript(video.videoId, manual);
-      const segments = (t.segments || []).slice(0, MAX_SEGMENTS);
+      const rawSegments = (t.segments || []).slice(0, MAX_SEGMENTS);
+      const segments = rawSegments.map(seg => Object.assign({}, seg, { text: sanitizeText(seg.text || '') }));
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
         await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason });
