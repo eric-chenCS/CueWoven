@@ -42,7 +42,10 @@ test("page passages and packed vectors stay bounded without losing a precise sem
 test("page links highlight saved words and media links preserve site and playback lead-in", () => {
   const videoId = "web_" + "a".repeat(64), url = "https://example.com/article";
   const page = itemLink({ videoId, url, kind: "page", pageText: true, text: "Coral bleaching is caused by warm-water stress." });
-  assert.match(page, /#:~:text=Coral%20bleaching/);
+  assert.match(page, /#recall-text=Coral%20bleaching.*:~:text=Coral%20bleaching/);
+  const long = new URL(itemLink({ videoId, url, kind: "page", pageText: true, text: "one two three four five six seven eight nine ten" }));
+  assert.ok(long.hash.endsWith(":~:text=one%20two%20three%20four,seven%20eight%20nine%20ten"));
+  assert.equal(new URLSearchParams(long.hash.slice(1).split(":~:")[0]).get("recall-text"), "one two three four five six seven eight nine ten");
   assert.ok(page.includes("warm%2Dwater"));
   const video = itemLink({ videoId, url, kind: "video", screenText: true, start: 12 });
   assert.equal(video, "https://example.com/article#recall-time=9");
