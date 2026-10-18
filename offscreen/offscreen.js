@@ -8,125 +8,59 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
-import { rank,phraseText } from '../lib/search.js';
+import { rank } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
 import {EMBEDDING_VERSION,embeddingText,createEmbeddingMigration} from '../lib/embedding-migration.js';
+import {loadVideoChunks,packIndex} from '../lib/video-index.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
 import {createQueryCache} from '../lib/query-cache.js';
 import {createWebEngine} from './web-engine.js';
 import {policy} from '../lib/web-items.js';
+import {samples,sampleFor} from '../lib/samples.js';
+import {createTextModel} from './text-model.js';
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const DIM = 384;
-const BATCH = 16;
+const BATCH = 4;
 let indexImportBusy = false;
-
-// Transformers.js is imported lazily so the library, export and delete still work
-// (with a clear message) if `pnpm run setup` hasn't been run yet.
-async function loadRuntime() {
-  let mod;
-  try {
-    mod = await import('../vendor/transformers.bundle.js');
-  } catch (e) {
-    throw new Error('Model runtime missing. Run "pnpm run setup" in the recall folder, then reload the extension.');
-  }
-  const { pipeline, env } = mod;
-  // Download the model from the Hugging Face hub once, then use the browser cache (works offline after).
-  // The ONNX Runtime WASM files ship inside the extension (vendor/), because MV3 forbids remote code.
-  env.allowLocalModels = false;
-  env.useBrowserCache = true;
-  env.backends.onnx.wasm.wasmPaths = chrome.runtime.getURL('vendor/');
-  env.backends.onnx.wasm.numThreads = 1; // extension pages aren't cross-origin isolated
-  return pipeline;
-}
-
-// ---------------------------------------------------------------------------
-// Model
-// ---------------------------------------------------------------------------
-let extractorPromise = null;
-let modelState = { status: 'idle', progress: 0 };
-
-function broadcast(msg) {
-  chrome.runtime.sendMessage(msg).catch(() => {}); // nobody listening is fine
-}
-
-function setModelState(s) {
-  modelState = Object.assign({}, modelState, s);
-  broadcast({ type: 'model-status', state: modelState });
-}
-
-function getExtractor() {
-  if (!extractorPromise) {
-    setModelState({ status: 'loading', progress: 0 });
-    const files = new Map();
-    extractorPromise = loadRuntime().then((pipeline) => pipeline('feature-extraction', MODEL_ID, {
-      dtype: 'q8',
-      device: 'wasm',
-      progress_callback: (p) => {
-        if (p.status === 'progress' && p.file) {
-          files.set(p.file, { loaded: p.loaded || 0, total: p.total || 0 });
-          let loaded = 0;
-          let total = 0;
-          for (const f of files.values()) { loaded += f.loaded; total += f.total; }
-          setModelState({ status: 'loading', progress: total ? loaded / total : 0 });
-        }
-      },
-    }))
-      .then((ex) => {
-        setModelState({ status: 'ready', progress: 1 });
-        return ex;
-      })
-      .catch((e) => {
-        extractorPromise = null;
-        setModelState({ status: 'error', error: String(e && e.message || e) });
-        throw e;
-      });
-  }
-  return extractorPromise;
-}
-
-/** @returns {Promise<Float32Array[]>} one normalized vector per text */
-async function embed(texts) {
-  const extractor = await getExtractor();
-  const out = [];
-  for (let i = 0; i < texts.length; i += BATCH) {
-    const batch = texts.slice(i, i + BATCH);
-    const tensor = await extractor(batch, { pooling: 'mean', normalize: true });
-    const data = tensor.data;
-    const dim = tensor.dims[tensor.dims.length - 1];
-    for (let b = 0; b < batch.length; b++) out.push(Float32Array.from(data.subarray(b * dim, (b + 1) * dim)));
-  }
-  return out;
-}
-
+let modelState = {status: 'idle', progress: 0};
+function broadcast(msg) { chrome.runtime.sendMessage(msg).catch(() => {}); }
+const textModel = createTextModel(state => {modelState = state; broadcast({type: 'model-status', state});});
+const embed = textModel.embed;
 // ---------------------------------------------------------------------------
 // In-memory index (rebuilt lazily from IndexedDB after any change)
 // ---------------------------------------------------------------------------
 let lastMigrationUpdate=0;
-const web=createWebEngine({db,embed,onChange:()=>{queryCache.invalidate();broadcast({type:'index-changed'});}});
+const metadataUpdates = new Map();
+const web=createWebEngine({db,embed,onChange:()=>{queryCache.invalidate({destructive:false});broadcast({type:'index-changed'});}});
 const webTasks=new Set();
 const captionTasks=new Set();
 const migration=createEmbeddingMigration({embed,write:db.updateEmbeddings,onChange:state=>{
-  if(state.updated!==undefined&&state.updated!==lastMigrationUpdate){lastMigrationUpdate=state.updated;invalidate();broadcast({type:'index-changed'});}
+  if(state.updated!==undefined&&state.updated!==lastMigrationUpdate){lastMigrationUpdate=state.updated;invalidate(false);broadcast({type:'index-changed'});}
   broadcast({type:'embedding-status',state});
 }});
 const indexCache=createRevisionCache(async()=>{
-  const [videoList, chunks, screenText] = await Promise.all([db.listVideos(), db.allChunks(),db.screenText.all()]);
+  const [videoList,screenText]=await Promise.all([db.listVideos(),db.screenText.all()]);
+  const videos=new Map(videoList.filter(v=>!policy.webId(v.videoId)).map(v=>[v.videoId,v]));
+  for(const [id,video] of metadataUpdates)if(videos.has(id))videos.set(id,video);
+  const {chunks,indexedIds,overflow}=await loadVideoChunks(db,videos);
+  for(const [id,video] of metadataUpdates)if(videos.has(id))videos.set(id,video);
   migration.start(videoList,chunks).catch(()=>{});
-  const videos = new Map(videoList.filter(v=>!policy.webId(v.videoId)).map((v) => [v.videoId, v]));
-  const usable = [...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter((c) => c.vec && c.vec.length === DIM && (videos.has(c.videoId)||policy.webId(c.videoId)));
-  const matrix = new Float32Array(usable.length * DIM);
-  const meta = new Array(usable.length);
-  usable.forEach((c, i) => {
-    matrix.set(c.vec, i * DIM);
-    meta[i] = { videoId: c.videoId, start: c.start, text: c.text,kind:c.kind,lexicalText:c.lexicalText??phraseText(c.text) };
-  });
-  return { videos, index: { matrix, dim: DIM, meta } };
+  const usable=[...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter(c=>c.vec?.length===DIM&&(videos.has(c.videoId)||policy.webId(c.videoId)));
+  return {videos,index:packIndex(usable),indexedIds,overflow};
 });
 const getIndex=()=>indexCache.get();
-const invalidate=()=>{indexCache.invalidate();queryCache.invalidate();};
+const invalidate=(destructive=true)=>{indexCache.invalidate({destructive});queryCache.invalidate({destructive});if(destructive)metadataUpdates.clear();};
+async function refreshVideo(id) {
+  if (policy.webId(id)) await web.refresh(id);
+  else {
+    const video = await db.getVideo(id);
+    if (video) { metadataUpdates.set(id, video); indexCache.update(snapshot => snapshot.videos.set(id, video)); }
+  }
+  queryCache.invalidate({destructive:false});
+}
 
 // ---------------------------------------------------------------------------
 // Operations
@@ -134,8 +68,10 @@ const invalidate=()=>{indexCache.invalidate();queryCache.invalidate();};
 function cleanVideo(v) {
   return {
     videoId: String(v.videoId),
-    title: String(v.title || '').slice(0, 300),
-    channel: String(v.channel || '').slice(0, 200),
+    ...(v.sample===true&&sampleFor(v.videoId)?{sample:true}:{}),
+    ...(Number.isFinite(v.savedAt)&&v.savedAt>0&&v.savedAt<=Date.now()?{savedAt:v.savedAt}:{}),
+    title: policy.redactText(v.title).slice(0, 300),
+    channel: policy.redactText(v.channel).slice(0, 200),
     lengthSeconds: Number(v.lengthSeconds) || 0,
     ...(typeof v.historyImported==='boolean'?{historyImported:v.historyImported}:{}),
     watchedAt: Number.isFinite(v.watchedAt) && v.watchedAt > 0 ? v.watchedAt : undefined,
@@ -143,9 +79,10 @@ function cleanVideo(v) {
 }
 
 async function storeChunks(video, chunks, method, indexedAt) {
+  chunks = chunks.map(row=>({...row,text:policy.redactText(row.text)}));
   const vecs = await embed(chunks.map(c=>embeddingText({...video,method},c.text)));
   const existing = await db.getVideo(video.videoId);
-  const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), chunkCount: chunks.length, method: method || null });
+  const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), savedAt:indexedAt===undefined?Date.now():video.savedAt||indexedAt, chunkCount: chunks.length, method: method || null });
   if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
   if(indexedAt===undefined && video.watchedAt>0)record.historyImported=false;
@@ -154,25 +91,25 @@ async function storeChunks(video, chunks, method, indexedAt) {
     chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION })),
     {backgroundCapture:indexedAt===undefined && !(video.watchedAt>0)}
   );
-  invalidate();
+  invalidate(false);
   return { chunkCount: chunks.length, video: saved };
 }
 
 async function importHistory({ videos, historyImported=true }) {
-  const batch = validateHistoryBatch(videos);
+  const batch = validateHistoryBatch(videos).map(cleanVideo);
   const pending = [];let repaired=0;
   for (const video of batch) {
     if (!await db.getVideo(video.videoId)) pending.push(video);
     else if(historyImported && await db.repairImportOrigin(video.videoId,video.watchedAt))repaired++;
   }
-  if(repaired)invalidate();
+  if(repaired)invalidate(false);
   if (!pending.length) return { imported: 0, skipped: batch.length,repaired };
   const vecs = await embed(pending.map(v => `${v.title}. ${v.channel}`));
   let imported = 0;
   for (const [i, v] of pending.entries()) {
-    const record = {...cleanVideo(v), indexedAt: Date.now(), chunkCount: 1, method: 'history-title',historyImported};
+    const record = {...cleanVideo(v), indexedAt: Date.now(), savedAt:Date.now(),chunkCount: 1, method: 'history-title',historyImported};
     const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}]);
-    if (added) { imported++; invalidate(); }
+    if (added) { imported++; invalidate(false); }
   }
   return { imported, skipped: batch.length - imported,repaired };
 }
@@ -185,26 +122,33 @@ async function indexVideo({ video, segments, method }) {
 }
 
 const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
-async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all'}){
+async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',videoId}){
   const q=String(query||'').trim();
   if(!q)return {results:[]};
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
-  const result=await queryCache.get(JSON.stringify({query:q,perVideo,sinceDays:sinceDays||0,kind}),offset,limit);
+  if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
+  const result=await queryCache.get(JSON.stringify({query:q,videoId,perVideo,sinceDays:sinceDays||0,kind}),offset,limit);
   const results=await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
   return {...result,results:results.filter(hit=>!hit.scene||hit.image)};
 }
-async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all' }) {
+async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all',videoId }) {
   const q = String(query || '').trim();
   if (!q) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
-  const { videos:youtube, index } = await getIndex(),metadata=await web.metadata();
-  const videos=new Map([...youtube,...metadata].filter(([,v])=>kind==='all'||(v.kind||'video')===kind));
+  const { videos:youtube, index,indexedIds,overflow } = await getIndex(),metadata=await web.metadata();
+  const videos=new Map([...youtube,...metadata].filter(([id,v])=>(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
   const hasScenes = [...videos.values()].some(video=>video.sceneCount>0);
   if (!index.meta.length && !hasScenes && !metadata.size) return { results: [], empty: true };
-  const [qv] = await embed([q]);
+  const [qv] = await embed([q], {priority:'query'});
   const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  const pageHits=await web.search(q,qv,{sinceMs,kind,perVideo,limit:offset+limit+2000});
-  const words=[...rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs}),...pageHits].sort((a,b)=>b.score-a.score);
+  const pageHits=await web.search(q,qv,{sinceMs,kind,videoId,perVideo,limit:offset+limit+2000});
+  const older=[];
+  if(overflow)await db.scanChunks(rows=>{
+    const batch=rows.filter(row=>!indexedIds.has(row.id)&&videos.has(row.videoId)&&row.vec?.length===DIM);
+    older.push(...rank(qv,packIndex(batch),videos,{query:q,limit:offset+limit+2000,perVideo,sinceMs}));
+    if(older.length>offset+limit+2500){older.sort((a,b)=>b.score-a.score);older.length=offset+limit+2000;}
+  });
+  const words=[...older,...rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs}),...pageHits].sort((a,b)=>b.score-a.score);
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   if(!hasScenes)return {results:select(words)};
   try {
@@ -294,6 +238,13 @@ let screenTask=null,screenEpoch=0,sceneEpoch=0;
 const visualQueries=new Set();
 const ocrModel=createOcrModel(state=>broadcast({type:'ocr-state',state}));
 const captureHold=createCaptureHold({pending:()=>[screenTask,sceneTask,...visualQueries,...webTasks,...captionTasks],cancel:()=>{screenEpoch++;sceneEpoch++;web.cancel();ocrModel.release();}});
+function libraryChange(work,options){
+  return captureHold.run(async()=>{
+    invalidate();web.reset();
+    try{return await work();}
+    finally{invalidate();web.reset();}
+  },options);
+}
 function webCapture(work){if(captureHold.held()||indexImportBusy)return Promise.resolve({busy:true});const task=Promise.resolve().then(work);webTasks.add(task);return task.finally(()=>webTasks.delete(task));}
 async function captionChange(work){if(captureHold.held())throw Error('Wait for the current library change before indexing captions.');const task=Promise.resolve().then(work);captionTasks.add(task);try{return await task;}finally{captionTasks.delete(task);}}
 function visualQuery(work){
@@ -316,13 +267,13 @@ async function indexScreen(input){
     if(epoch!==screenEpoch)return {disabled:true};
     await db.touchWatch(id,now);
     const recent=await db.screenText.recent(id),observedLines=lines?.length?lines:[text];
-    const fresh=cleanScreenText(novelScreenLines(observedLines,recent,frame.start).join(' '));
+    const fresh=cleanScreenText(policy.redactText(novelScreenLines(observedLines,recent,frame.start).join(' ')));
     if(!fresh)return {ok:true,duplicate:true};
     const [vec]=await embed([fresh]);
     if(epoch!==screenEpoch)return {disabled:true};
-    const row=screenRecord({videoId:id,start:frame.start,text:fresh,observedLines,indexedAt:now});
+    const row=screenRecord({videoId:id,start:frame.start,text:fresh,observedLines:observedLines.map(policy.redactText),indexedAt:now});
     const response=await db.screenText.put({...row,vec,embeddingVersion:EMBEDDING_VERSION});
-    if(policy.webId(id))await web.refresh(id);invalidate();broadcast({type:'index-changed'});return response;
+    if(policy.webId(id))await web.refresh(id);invalidate(false);broadcast({type:'index-changed'});return response;
   })();
   try{return await screenTask;}catch(error){if(epoch!==screenEpoch)return {disabled:true};throw error;}finally{screenTask=null;}
 }
@@ -347,7 +298,7 @@ async function indexScene(input) {
     await db.touchWatch(scene.video.videoId,Date.now());
     if(epoch!==sceneEpoch)return {disabled:true};
     const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,vec,indexedAt:Date.now(),watchedAt:Date.now()});
-    if(policy.webId(scene.video.videoId)){await web.refresh(scene.video.videoId);queryCache.invalidate();}else invalidate();broadcast({type:'index-changed'});return response;
+    await refreshVideo(scene.video.videoId);broadcast({type:'index-changed'});return response;
   })();
   try {return await sceneTask;} catch(error){if(epoch!==sceneEpoch)return {disabled:true};throw error;} finally {sceneTask = null;}
 }
@@ -369,11 +320,11 @@ async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
   if(policy.webId(video.videoId))return webCapture(()=>web.media(video,segments.filter(s=>Number.isFinite(s.start)&&s.start>=rangeStart&&s.start<=rangeEnd).map(s=>({...s,text:cleanSpeechText(s.text)})),'Audio',[rangeStart,rangeEnd]));
   const existing = await db.getVideo(video.videoId);
   if (existing && !['history-title', 'speech-local'].includes(existing.method)) return {skipped: true};
-  const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: cleanSpeechText(String(s.text || '').slice(0, 2000))})));
+  const chunks = chunkTranscript(segments.filter(s => Number.isFinite(s.start) && s.start >= rangeStart && s.start <= rangeEnd).map(s => ({...s, text: policy.redactText(cleanSpeechText(String(s.text || '').slice(0, 2000)))})));
   if (!chunks.length) return {chunkCount: 0};
   const vecs = await embed(chunks.map(c => embeddingText({...video,method:'speech-local'},c.text)));
   const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION})), rangeStart, rangeEnd);
-  if (!result.skipped) {invalidate();broadcast({type: 'index-changed'});}
+  if (!result.skipped) {invalidate(false);broadcast({type: 'index-changed'});}
   return result;
 }
 
@@ -395,11 +346,30 @@ const speech = createLiveSpeech({
   onChange: state => broadcast({type: 'speech-state', state}),
 });
 
+async function loadSamples(){
+  let imported=0;
+  for(const sample of samples){
+    if(await db.getVideo(sample.videoId))continue;
+    const chunks=sample.lines.map((text,i)=>({text,start:i*8}));
+    const vecs=await embed(chunks.map(row=>row.text));
+    if(await db.addVideoIfAbsent({...cleanVideo(sample),sample:true,channel:'Recall demo',method:'demo',indexedAt:Date.now(),savedAt:Date.now(),chunkCount:chunks.length},chunks.map((row,i)=>({...row,videoId:sample.videoId,vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}))))imported++;
+  }
+  invalidate(false);broadcast({type:'index-changed'});return {imported};
+}
 const handlers = {
+  'load-samples':()=>captionChange(loadSamples),
+  'forget-recent':({hours})=>libraryChange(async()=>{
+    if(![1,24,168].includes(hours))throw Error('Choose the last hour, day or week.');
+    const since=Date.now()-hours*36e5;
+    const rows=(await db.listVideos()).filter(video=>(video.savedAt||video.indexedAt||0)>=since);
+    invalidate();web.reset();
+    for(const video of rows)await db.deleteVideo(video.videoId);
+    invalidate();web.reset();return {removed:rows.length};
+  }),
   'web-import':async({items})=>{const result=await webCapture(()=>web.importItems(items));if(result.busy)throw Error('Wait for the current library change to finish.');return result;},
   'web-capture':data=>webCapture(()=>web.capture(data)),
   'web-media':({video,segments})=>webCapture(()=>web.media(video,segments,'Transcript')),
-  'web-forget':({domain})=>captureHold.run(async()=>{const site=policy.domain(domain);if(!site)throw Error('Invalid site.');let removed=0;for(const video of await db.listVideos())if(video.url?policy.matches(new URL(video.url).hostname,[site]):policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site])){await db.deleteVideo(video.videoId);removed++;}web.reset();invalidate();return {removed};}),
+  'web-forget':({domain})=>libraryChange(async()=>{const site=policy.domain(domain);if(!site)throw Error('Invalid site.');let removed=0;for(const video of await db.listVideos())if(video.url?policy.matches(new URL(video.url).hostname,[site]):policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site])){await db.deleteVideo(video.videoId);removed++;}web.reset();invalidate();return {removed};}),
   'screen-index':indexScreen,
   'ocr-stop':async()=>{screenEpoch++;ocrModel.release();return {ok:true};},
   'scene-index': indexScene,
@@ -421,7 +391,7 @@ const handlers = {
   ping: async () => ({ ok: true }),
   warmup: async ({scenes=false}) => {
     const visual=scenes?visualQuery(async()=>{const videos=await db.listVideos();return videos.some(video=>video.sceneCount>0)?visionModel.warmup():null;}).catch(()=>null):null;
-    await Promise.all([getExtractor(),getIndex(),visual]);return {ok:true};
+    await Promise.all([textModel.warmup(),getIndex(),visual]);return {ok:true};
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
@@ -431,18 +401,18 @@ const handlers = {
   'touch-watch': async ({ videoId, watchedAt }) => {
     if (typeof videoId !== 'string' || !/^[\w-]{11}$/.test(videoId) || !Number.isFinite(watchedAt) || watchedAt <= 0 || watchedAt > Date.now() + 60000) throw new Error('Invalid watch timestamp.');
     const updated = await db.touchWatch(videoId, watchedAt);
-    if (updated) invalidate();
+    if (updated) await refreshVideo(videoId);
     return { updated };
   },
   index: input=>captionChange(()=>indexVideo(input)),
   search,
   status,
   list: async () => ({ videos: await db.listVideos() }),
-  delete: ({ videoId }) => captureHold.run(async()=>{await db.deleteVideo(videoId);web.reset();invalidate();return {ok:true};}),
-  clear: () => captureHold.run(async()=>{await db.clearAll();web.reset();invalidate();return {ok:true};}),
+  delete: ({ videoId }) => libraryChange(async()=>{await db.deleteVideo(videoId);web.reset();invalidate();return {ok:true};}),
+  clear: () => libraryChange(async()=>{await db.clearAll();web.reset();invalidate();return {ok:true};}),
   export: exportIndex,
-  import: data=>captureHold.run(()=>importIndex(data),{restore:true}),
-  prune: data=>captureHold.run(()=>prune(data)),
+  import: data=>libraryChange(()=>importIndex(data),{restore:true}),
+  prune: data=>libraryChange(()=>prune(data)),
 };
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {

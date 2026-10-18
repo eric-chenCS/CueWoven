@@ -29,7 +29,7 @@ test("unchanged page text reuses vectors, but evicted content can be indexed aga
   await f.engine.capture(input);
   assert.equal(embeddings, 2);
 });
-test('metadata reads invalidated by clear cannot resurrect old entries in memory',async()=>{const f=fixture();await f.engine.importItems([input]);const old=[...f.records.values()];let finish,calls=0;f.db.listVideos=()=>++calls===1?new Promise(resolve=>finish=()=>resolve(old)):Promise.resolve([]);const pending=f.engine.metadata();f.engine.reset();f.records.clear();finish();assert.equal((await pending).size,0);assert.equal(calls,2);});
+test('metadata reads invalidated by clear cannot resurrect old entries in memory',async()=>{const f=fixture();await f.engine.importItems([input]);const old=[...f.records.values()];let finish,calls=0;f.db.listVideos=()=>++calls===1?new Promise(resolve=>finish=()=>resolve(old)):Promise.resolve([]);const pending=f.engine.metadata();await new Promise(resolve=>setImmediate(resolve));f.engine.reset();f.records.clear();finish();assert.equal((await pending).size,0);assert.equal(calls,2);});
 test('history batches embed titles together and notify the library once per completed batch',async()=>{
   const batches=[];let changes=0;
   const f=fixture(async texts=>{batches.push(texts);return texts.map(()=>new Float32Array(384))},()=>changes++);

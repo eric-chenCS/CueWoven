@@ -6,16 +6,18 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const seed = await f.options.evaluate(async () => {
       const { normalizedPassage } = await import(chrome.runtime.getURL("lib/search.js")), db = await import(chrome.runtime.getURL("lib/db.js")), W = await import(chrome.runtime.getURL("lib/web-items.js"));
       const database = await new Promise((resolve, reject) => {
-        const req = indexedDB.open("recall", 5);
+        const req = indexedDB.open("recall", 6);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       }), vec = new Int8Array(384);
-      const tx = database.transaction(["videos", "items"], "readwrite");
+      const tx = database.transaction(["videos", "items", "titles"], "readwrite"), bundles = Array.from({length:64},(_,id)=>({id:String(id),items:[]}));
       for (let i = 0; i < 5e4; i++) {
         const id = "web_" + i.toString(16).padStart(64, "0"), title = "Ocean science source " + i;
         tx.objectStore("videos").put({ videoId: id, itemId: id, kind: "page", title, channel: "example.com", url: "https://example.com/history/" + i, watchedAt: 17e11, indexedAt: 17e11, historyImported: true, method: "web-title", chunkCount: 0 });
-        tx.objectStore("items").put({ id, contentAt: 0, passages: [normalizedPassage({ source: "Title", start: 0, text: title, vec, scale: 1 })] });
+        const item={id,contentAt:0,passages:[normalizedPassage({source:"Title",start:0,text:title,vec,scale:1})]};
+        tx.objectStore("items").put(item);bundles[i%64].items.push({id,passages:item.passages});
       }
+      for(const bundle of bundles)tx.objectStore("titles").put(bundle);
       await new Promise((resolve, reject) => {
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error);
