@@ -1,11 +1,27 @@
-# Recall documentation
+# WebLapse documentation
 
-Start with [installation](../INSTALL.md) and [team workflow](../CONTRIBUTING.md).
+## Start here
 
-- [Current release: v2.12 import and speech fixes](UPDATE-2.12.md)
-- [Test report, newest results first](TEST-REPORT.md)
-- [Code review, newest release first](REVIEW.md)
+- [Install the extension](../INSTALL.md)
+- [Use search, imports and privacy controls](USAGE.md)
+- [Understand the architecture and models](ARCHITECTURE.md)
+- [Build, test and contribute](../CONTRIBUTING.md)
+
+## Technical evidence
+
+- [Test report](TEST-REPORT.md) — results are labelled by version
+- [Search-language evaluation](UPDATE-3.3.13.md)
 - [Performance measurements and limits](PERF.md)
-- [ma-copy findings and model comparisons](MA-COPY-REVIEW.md)
+- [Code review](REVIEW.md)
+- [Model/branch comparison](MA-COPY-REVIEW.md)
 
-UPDATE files and LIVE/evaluation JSON preserve evidence for their named releases. Older failures and experiments describe historical versions; check the latest report before interpreting them as current behavior. No user history, model weights or browser profiles are stored here.
+The current release is [WebLapse v3.3.21](https://github.com/eric-chenCS/SwampHacks-XII/releases/tag/v3.3.21). Its unit suite has 290 tests. See [the architecture guide](ARCHITECTURE.md#validation) for the scope of browser and synthetic checks.
+
+<details>
+<summary>Historical release notes and experiments</summary>
+
+`UPDATE-*.md` and `LIVE-*.json` preserve evidence for their named versions. Early notes use the former Recall or Momento names. Past failures, model experiments and timings describe those versions and fixtures, not necessarily the current extension.
+
+Start with the [v3.3.21 release notes](UPDATE-3.3.21.md), [search measurements](UPDATE-3.3.13.md), [article-image design](UPDATE-3.3.14.md) or [adaptive scenes](UPDATE-2.15.md). The remaining versioned reports are available in this directory.
+
+</details>
