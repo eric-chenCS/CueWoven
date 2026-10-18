@@ -1,17 +1,18 @@
-/* Recall design tokens — "highlighter": calm ink on cool paper, one amber marker for the found moment. */
+/* Recall design tokens — "highlighter": neutral gray panels, one amber marker for the found moment. */
 :root {
-  --paper: #f6f7f9;
-  --surface: #ffffff;
-  --sunken: #eef1f5;
-  --ink: #172033;
-  --ink-2: #4b5567;
-  --ink-3: #657084;
-  --line: #e1e5ec;
-  --line-strong: #c9d0db;
-  --action: #0e6b73;
-  --action-hover: #0b5960;
+  --paper: #e2e2e2;
+  --surface: #fafafa;
+  --sunken: #d8d8d8;
+  --ink: #242424;
+  --ink-2: #4b4b4b;
+  --ink-3: #626262;
+  --line: #b8b8b8;
+  --line-strong: #737373;
+  --action: #222222;
+  --action-hover: #3d3d3d;
   --action-ink: #ffffff;
-  --action-soft: #e2f1f2;
+  --action-soft: #d8d8d8;
+  --focus: #000000;
   --marker: #ffd34d;
   --marker-ink: #2e2300;
   --good: #1e7a46;
@@ -35,18 +36,19 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #0f141b;
-    --surface: #161c25;
-    --sunken: #1c2430;
-    --ink: #e6ebf2;
-    --ink-2: #a8b3c2;
-    --ink-3: #8b97a8;
-    --line: #26303d;
-    --line-strong: #364252;
-    --action: #5cc2c9;
-    --action-hover: #7fd3d8;
-    --action-ink: #052326;
-    --action-soft: #12313a;
+    --paper: #3d3d3d;
+    --surface: #333333;
+    --sunken: #454545;
+    --ink: #f5f5f5;
+    --ink-2: #dedede;
+    --ink-3: #c4c4c4;
+    --line: #8c8c8c;
+    --line-strong: #c4c4c4;
+    --action: #ffffff;
+    --action-hover: #e5e5e5;
+    --action-ink: #222222;
+    --action-soft: #484848;
+    --focus: #ffffff;
     --marker: #f2c94c;
     --marker-ink: #1d1500;
     --good: #5cc98a;
@@ -58,18 +60,19 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #0f141b;
-  --surface: #161c25;
-  --sunken: #1c2430;
-  --ink: #e6ebf2;
-  --ink-2: #a8b3c2;
-  --ink-3: #8b97a8;
-  --line: #26303d;
-  --line-strong: #364252;
-  --action: #5cc2c9;
-  --action-hover: #7fd3d8;
-  --action-ink: #052326;
-  --action-soft: #12313a;
+  --paper: #3d3d3d;
+  --surface: #333333;
+  --sunken: #454545;
+  --ink: #f5f5f5;
+  --ink-2: #dedede;
+  --ink-3: #c4c4c4;
+  --line: #8c8c8c;
+  --line-strong: #c4c4c4;
+  --action: #ffffff;
+  --action-hover: #e5e5e5;
+  --action-ink: #222222;
+  --action-soft: #484848;
+  --focus: #ffffff;
   --marker: #f2c94c;
   --marker-ink: #1d1500;
   --good: #5cc98a;
@@ -109,10 +112,11 @@ a:hover { text-decoration: underline; }
 .btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line-strong); }
 .btn.ghost:hover:not(:disabled) { background: var(--sunken); }
 .btn.danger { background: var(--surface); color: var(--bad); border-color: currentColor; }
+.btn.danger:focus-visible { outline-color: var(--bad); }
 .btn.danger:hover:not(:disabled) { background: var(--bad-soft); }
 .btn.small { min-height: 28px; padding: 4px 10px; font-size: 12px; }
 
-:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 /* The marker: matched words and found moments. */
 mark { background: var(--marker); color: var(--marker-ink); border-radius: 2px; padding: 0 2px; }

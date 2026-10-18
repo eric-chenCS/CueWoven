@@ -65,7 +65,7 @@ textarea, input[type="search"], input[type="text"], select {
   font: 13px/1.4 var(--font); color: var(--ink); background: var(--surface);
   border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 7px 10px; min-height: 34px;
 }
-textarea:focus, input[type="search"]:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-soft); }
+textarea:focus, input[type="search"]:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
 select { cursor: pointer; }
 textarea { width: 100%; resize: vertical; margin: 0 0 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
 #filter { width: 260px; max-width: 100%; }
@@ -216,7 +216,7 @@ code { font-size: 12px; }
 .version { margin:-18px 0 24px 38px; }
 
 .btn.file { position:relative; }
-.btn.file:focus-within { outline:2px solid var(--action); outline-offset:2px; }
+.btn.file:focus-within { outline:2px solid var(--focus); outline-offset:2px; }
 
 .btn.file:has(input:disabled) { opacity:0.5; cursor:default; }
 @media (max-width:900px) { .version { position:absolute; right:0; top:18px; margin:0; } }
@@ -238,7 +238,7 @@ input.switch::after {
 }
 input.switch:checked { background: var(--action); }
 input.switch:checked::after { transform: translateX(16px); }
-input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+input.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
 .site-groups { display: grid; gap: 14px; }
 .site-group h3 { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
@@ -252,7 +252,7 @@ input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2
   width: 22px; height: 22px; border-radius: 50%; font: 16px/1 var(--font); display: grid; place-items: center;
 }
 .site-remove:hover { background: var(--line); color: var(--ink); }
-.site-remove:focus-visible { outline: 2px solid var(--action); outline-offset: 0; }
+.site-remove:focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
 .site-groups.blocked:not(:empty) { margin-top: 14px; }
 .site-groups.blocked .site { background: var(--bad-soft); }
 
