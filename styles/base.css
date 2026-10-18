@@ -1,13 +1,13 @@
-/* Recall design tokens — "reading lamp": cool paper by day, blue-slate at night, teal for actions, one amber marker for the found moment. */
+/* Recall design tokens — "reading lamp": cool paper by day, charcoal gray at night, teal for actions, one amber marker for the found moment. */
 :root {
-  --paper: #f2f4f7;
+  --paper: #ededed;
   --surface: #ffffff;
-  --sunken: #e9edf2;
-  --ink: #18202b;
-  --ink-2: #465163;
-  --ink-3: #5f6b7c;
-  --line: #dde2e9;
-  --line-strong: #848f9f;
+  --sunken: #e5e5e5;
+  --ink: #242424;
+  --ink-2: #4b4b4b;
+  --ink-3: #626262;
+  --line: #d6d6d6;
+  --line-strong: #848484;
   --action: #0d6870;
   --action-hover: #0a565d;
   --action-ink: #ffffff;
@@ -23,7 +23,7 @@
   --tint-reference: #7a4fd0;
   --tint-social: #c2417a;
   --tint-own: #0d6870;
-  --raise: 0 1px 2px rgb(16 24 40 / 0.05);
+  --raise: 0 1px 2px rgb(0 0 0 / 0.05);
 
   /* Legacy names kept so older rules still resolve. */
   --bg: var(--paper);
@@ -42,15 +42,15 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    /* Night reading room: deep blue-slate, cards lifted above the page, one calm teal action. */
-    --paper: #14181f;
-    --surface: #202630;
-    --sunken: #29313d;
-    --ink: #e6ebf2;
-    --ink-2: #b3bdcb;
-    --ink-3: #9ba8b8;
-    --line: #253041;
-    --line-strong: #738094;
+    /* Reference grays: darker panels on a lighter charcoal background; teal actions stay. */
+    --paper: #3d3d3d;
+    --surface: #333333;
+    --sunken: #454545;
+    --ink: #f0f0f0;
+    --ink-2: #dedede;
+    --ink-3: #c4c4c4;
+    --line: #5b5b5b;
+    --line-strong: #a0a0a0;
     --action: #5cc4c6;
     --action-hover: #7fd4d6;
     --action-ink: #062a2c;
@@ -72,15 +72,15 @@
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  /* Night reading room: deep blue-slate, cards lifted above the page, one calm teal action. */
-  --paper: #14181f;
-  --surface: #202630;
-  --sunken: #29313d;
-  --ink: #e6ebf2;
-  --ink-2: #b3bdcb;
-  --ink-3: #9ba8b8;
-  --line: #253041;
-  --line-strong: #738094;
+  /* Reference grays: darker panels on a lighter charcoal background; teal actions stay. */
+  --paper: #3d3d3d;
+  --surface: #333333;
+  --sunken: #454545;
+  --ink: #f0f0f0;
+  --ink-2: #dedede;
+  --ink-3: #c4c4c4;
+  --line: #5b5b5b;
+  --line-strong: #a0a0a0;
   --action: #5cc4c6;
   --action-hover: #7fd4d6;
   --action-ink: #062a2c;
