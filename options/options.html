@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.13 · Library &amp; settings</title>
+    <title>Recall v3.3.14 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.13</span>
+        <span class="version">v3.3.14</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -157,7 +157,7 @@
                   <span class="setting-text"><strong>Transcribe videos on these sites</strong><span class="hint">Local English speech recognition for played portions without captions. First use downloads the model.</span></span>
                   <input id="web-audio" type="checkbox" role="switch" class="switch" />
                 </label>
-                <div class="block"><details class="more"><summary>What gets saved?</summary><p>Only public page text and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
+                <div class="block"><details class="more"><summary>What gets saved?</summary><p>Public page text, up to three visible article images and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
                 </div>
               </div>
             </details>
@@ -172,7 +172,7 @@
           </div>
           <div class="sheet">
             <label class="setting"><span class="setting-text">Appearance<span class="hint">Choose the theme for Recall.</span></span><select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
+            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause images, scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
             <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" id="enabled" /></label>
             <label class="setting">
               <span class="setting-text">Watch time before saving</span>
@@ -185,6 +185,7 @@
               </select>
             </label>
             <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" id="speechEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save article images<span class="hint">Up to 3 visible images per page. Shares the 24 MB visual storage limit.</span></span><input type="checkbox" id="articleImagesEnabled" /></label>
             <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" id="scenesEnabled" /></label>
             <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" id="screenTextEnabled" /></label>
             <details class="fold">

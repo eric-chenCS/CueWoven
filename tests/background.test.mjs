@@ -52,7 +52,7 @@ test('history scanning filters URL hosts and merges duplicate visits without ret
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true,lightMode:false });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {

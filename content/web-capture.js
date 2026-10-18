@@ -120,6 +120,7 @@
         stopMedia();
         pageUrl = url || "";
         eligibleAt = Date.now();
+        globalThis.__recallArticleImages?.reset();
         lastText = "";
         lastSaved = 0;
         lastChecked = 0;
@@ -190,6 +191,7 @@
           if (force) return result;
         } else if (text.length < 40 && !google && !videoInfo) report("too-short");
       }
+      globalThis.__recallArticleImages?.tick({url:pageUrl,enabled:!settings.lightMode&&settings.articleImagesEnabled!==false,ready:lastSaved>0,isAllowed:()=>eligible()&&!document.hidden&&!settings.lightMode&&settings.articleImagesEnabled!==false}).catch(()=>{});
     } finally {
       busy = false;
     }
@@ -224,7 +226,7 @@
     if (area !== "local") return;
     if (changes.webCapture) config = changes.webCapture.newValue || {};
     if (changes.settings) settings = changes.settings.newValue || {};
-    if (!eligible() || changes.settings || changes.webCapture) stopMedia();
+    if (!eligible() || changes.settings || changes.webCapture){stopMedia();globalThis.__recallArticleImages?.reset();}
   });
   window.addEventListener("pagehide", stopMedia);
   document.addEventListener("seeking", () => revision++, true);

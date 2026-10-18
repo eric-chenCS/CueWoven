@@ -59,7 +59,7 @@ async function engine(type, payload = {}) {
 
 async function getSettings() {
   const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
-  return Object.assign({}, DEFAULT_SETTINGS, settings,settings?.lightMode?{speechEnabled:false,scenesEnabled:false,screenTextEnabled:false}:{},{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
+  return Object.assign({}, DEFAULT_SETTINGS, settings,settings?.lightMode?{speechEnabled:false,scenesEnabled:false,articleImagesEnabled:false,screenTextEnabled:false}:{},{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
 }
 
 // ---------------------------------------------------------------------------
@@ -453,6 +453,7 @@ chrome.tabs?.onRemoved?.addListener((tabId, info) => {
 
 
 chrome.storage?.onChanged?.addListener((changes, area) => {
+  if(area==='local'&&changes.webCapture&&(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false))engine('vision-stop').catch(()=>{});
   if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
   if (area === 'local' && changes.webCapture) {
     const blocked = changes.webCapture.newValue?.blocked || [];
@@ -463,7 +464,7 @@ chrome.storage?.onChanged?.addListener((changes, area) => {
   }
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
-  if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
+  if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.articleImagesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
   if (area === 'local' && settings && (settings.lightMode || settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});
 });
 

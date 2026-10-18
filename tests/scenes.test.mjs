@@ -46,3 +46,16 @@ test('noise-floor scene hits cannot displace eligible transcripts',()=>{
  const ranked=rankScenes([1,0],[{key:'noise:1',videoId:'noise',vec:[.23,.97]},{key:'useful:1',videoId:'useful',vec:[.27,.96]}],videos);
  assert.deepEqual(ranked.map(row=>row.videoId),['useful']);
 });
+
+test('article images have stable distinct keys and cannot masquerade as video frames',()=>{
+ const video={videoId:'web_'+'a'.repeat(64),kind:'page'},image='data:image/jpeg;base64,'+Buffer.from([255,216,255,192,0,17,8,0,180,1,64,3,1,17,0,2,17,0,3,17,0]).toString('base64');
+ const input={video,image,start:0,caption:'A diagram',imageId:'b'.repeat(64),articleImage:true};
+ assert.match(validateScene(input).key,/:image:/);assert.equal(validateScene(input).adaptive,false);
+ assert.throws(()=>validateScene({...input,video:{...video,kind:'video'}}),/Invalid/);
+ assert.throws(()=>validateScene({...input,imageId:'bad'}),/Invalid/);
+ const results=rankScenes([1,0],[{...validateScene(input),videoId:video.videoId,vec:[1,0]}],new Map([[video.videoId,video]]));
+ assert.equal(results[0].articleImage,true);assert.equal(results[0].caption,'A diagram');
+ assert.deepEqual(results[0].matchSources,['Article image']);
+ const words=[hit(video.videoId,0,.6,{kind:'page',titleOnly:true,matchSources:['Title']})];
+ const fused=fuseMatches(words,results,{perVideo:1});assert.equal(fused[0].articleImage,true);assert.deepEqual(fused[0].matchSources,['Title','Article image']);
+});
