@@ -136,3 +136,5 @@ body { overflow-y: auto; }
 .speech-body { padding:6px 0 2px; }
 .speech-body p { margin:4px 0 8px; color:var(--ink-2); line-height:1.4; }
 .speech-actions { display:flex; gap:6px; }
+
+.thumb img.website-icon { object-fit: contain; padding: 20px; }

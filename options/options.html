@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.6 · Library &amp; settings</title>
+    <title>Recall v3.3.7 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.6</span>
+        <span class="version">v3.3.7</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -126,9 +126,9 @@
               <input id="web-enabled" type="checkbox" role="switch" class="switch" />
             </label>
             <div class="block">
-              <p class="hint site-scope">Sites include their subdomains. Saving stays off until you turn it on.</p>
+              <p class="hint site-scope">Sites include their subdomains. Website saving starts off; YouTube video saving follows Settings.</p>
               <p id="web-scope-note" class="hint site-scope" hidden>All-public-site mode also includes sites outside this list. Removing a listed site excludes it from saving.</p>
-              <div id="web-sites" class="site-groups"></div>
+              <details id="web-site-list" class="more" open><summary>Websites (<span id="web-site-count">0</span>)</summary><div id="web-sites" class="site-groups"></div></details>
               <form id="web-add" class="row add-site">
                 <label for="web-domain" class="visually-hidden">Add a site</label>
                 <input id="web-domain" type="text" autocomplete="off" spellcheck="false" placeholder="Add a site, like example.com" />
@@ -140,9 +140,10 @@
                 <button id="web-fix" class="btn small" type="button">Give access</button>
               </div>
               <p id="web-msg" class="msg" role="status" aria-live="polite"></p>
+              <div id="web-exclusions" class="site-groups blocked"></div><p id="web-exclusions-help" class="hint" hidden>Excluded sites are not captured or imported. Use Allow again to restore a site to your list; deleted items are not restored.</p>
             </div>
             <details class="fold">
-              <summary><span class="fold-title">More options</span><span id="web-options-summary" class="fold-sub">Every site, searches, video audio, forget a site</span></summary>
+              <summary><span class="fold-title">More options</span><span id="web-options-summary" class="fold-sub">Every site, searches, video audio</span></summary>
               <div class="fold-body flush">
                 <label class="setting">
                   <span class="setting-text"><strong>Save from all public websites</strong><span class="hint">Not just the list above. Known private sites and detected private pages are skipped.</span></span>
@@ -157,13 +158,6 @@
                   <input id="web-audio" type="checkbox" role="switch" class="switch" />
                 </label>
                 <div class="block"><details class="more"><summary>What gets saved?</summary><p>Only public page text and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
-                  <h3><label for="web-forget-domain">Forget a site</label></h3>
-                  <p class="block-desc">Deletes saved items from this site and excludes future capture and imports until you allow it again.</p>
-                  <div class="row">
-                    <input id="web-forget-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" />
-                    <button id="web-forget" class="btn danger" type="button">Forget site</button>
-                  </div>
-                  <div id="web-exclusions" class="site-groups blocked"></div><p class="hint">Removing an exclusion allows the site again; it does not restore deleted items.</p>
                 </div>
               </div>
             </details>

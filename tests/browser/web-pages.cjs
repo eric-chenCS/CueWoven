@@ -54,7 +54,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const href = await popup.locator(".result").first().getAttribute("href");
     assert.match(href, /^https:\/\/articles\.example\.com\/reef#:~:text=/);
     assert.match(await popup.locator(".match-sources").first().textContent(), /Page text/);
-    assert.match(await popup.locator(".result img").first().getAttribute("src"), /web\.svg/);
+    assert.match(await popup.locator(".result img").first().getAttribute("src"), /_favicon\//);
     if (process.env.RECALL_SCREENSHOT_DIR) {
       await popup.screenshot({ path: path.join(process.env.RECALL_SCREENSHOT_DIR, "recall-v3-web-light.png"), fullPage: true });
       await popup.emulateMedia({ colorScheme: "dark" });
@@ -76,11 +76,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     assert.equal(race.clear.ok, true);
     assert.equal(race.after.videos.length, 0);
     await send({ type: "import", data: backup });
-    const siteOptions=options.locator("details.fold", { has: options.locator("#web-forget") });
-    if (!await siteOptions.evaluate(node=>node.open)) await siteOptions.locator("summary").first().click();
-    await options.locator("#web-forget-domain").fill("example.com");
-    await options.locator("#web-forget").click();
-    await options.waitForFunction(() => document.querySelector("#web-msg").textContent.startsWith("Deleted"));
+    const forgotten=await send({type:"web-forget",domain:"example.com"});assert.equal(forgotten.error,undefined);
     assert.equal((await send({ type: "list" })).videos.some((row) => row.url?.includes("example.com")), false);
     assert.equal((await send({ type: "web-import", items: [{ kind: "page", url: "https://articles.example.com/reef", title: "Coral reef science", watchedAt: Date.now() }] })).imported, 0);
     const layouts = [];

@@ -1,6 +1,6 @@
 // Websites settings: one on/off switch, a visible list of sites, add/remove, plain wording.
 const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=require('path');
-const SUGGESTED=30;
+const SUGGESTED=31;
 (async()=>{
  const f=await fixture(),errors=[],output=process.env.RECALL_SCREENSHOT_DIR||require('os').tmpdir(),o=f.options;
  f.context.on('weberror',event=>errors.push(event.error().message));
@@ -28,9 +28,15 @@ const SUGGESTED=30;
   await o.evaluate(()=>chrome.storage.local.set({webCapture:{enabled:false,paused:false,allSites:false,domains:['example.com','missing.test'],blocked:[],searches:false,audio:false},settings:{enabled:true,maxAgeDays:0,lightMode:false}}));
   await o.waitForFunction(()=>document.querySelectorAll('#web-sites .site').length===2);
   assert.equal(await o.locator('#web-restore').isVisible(),true,'can bring suggestions back');
+  // The list can be collapsed, and its count/icons remain accurate.
+  assert.equal(await o.locator('#web-site-count').innerText(),'2');
+  await o.locator('#web-site-list > summary').click();assert.equal(await o.locator('#web-sites').isVisible(),false);
+  await o.locator('#web-site-list > summary').click();assert.equal(await o.locator('#web-sites').isVisible(),true);
+  assert.match(await o.locator('#web-sites img').first().getAttribute('src'),/_favicon\//);
   // Remove a site with its × button.
   await o.locator('#web-sites .site-remove[aria-label="Remove missing.test"]').click();await msg('Removed missing.test');
   assert.deepEqual((await stored()).domains,['example.com']);
+  assert.ok((await stored()).blocked.includes('missing.test'));
   // Add a site; a pasted address is cleaned up and lands in "Added by you" or its group.
   await o.locator('#web-domain').fill('https://www.instagram.com/');await o.locator('#web-allow').click();await msg('Added instagram.com');
   assert.deepEqual(await o.locator('#web-sites .site-group:has(h3:text-is("Social")) .site span').allInnerTexts(),['instagram.com']);
@@ -44,9 +50,9 @@ const SUGGESTED=30;
   let config=await stored();assert.equal(config.enabled,true);assert.equal(config.paused,false);
   assert.equal(await o.locator('#web-access-row').isVisible(),false);
   // A listed site Chrome hasn't allowed yet shows one clear warning with a fix button.
-  await o.evaluate(()=>chrome.storage.local.get('webCapture').then(({webCapture})=>chrome.storage.local.set({webCapture:{...webCapture,domains:[...webCapture.domains,'missing.test']}})));
+  await o.evaluate(()=>chrome.storage.local.get('webCapture').then(({webCapture})=>chrome.storage.local.set({webCapture:{...webCapture,domains:[...webCapture.domains,'ungranted.test']}})));
   await o.waitForFunction(()=>!document.querySelector('#web-access-row').hidden);
-  assert.match(await o.locator('#web-access').innerText(),/hasn't given Recall access to missing\.test/);
+  assert.match(await o.locator('#web-access').innerText(),/hasn't given Recall access to ungranted\.test/);
   assert.equal(await o.locator('#web-fix').isVisible(),true);
   // Turn it off: pages stay saved, status says so.
   await o.locator('#web-enabled').uncheck();await msg('Turned off');
@@ -63,12 +69,14 @@ const SUGGESTED=30;
   await o.evaluate(()=>chrome.storage.local.get(['settings','webCapture']).then(({settings,webCapture})=>chrome.storage.local.set({settings:{...settings,lightMode:false,enabled:false},webCapture:{...webCapture,paused:false}})));
   await o.waitForFunction(()=>document.querySelector('#web-state').textContent.includes('Save automatically is off'));
   await o.evaluate(()=>chrome.storage.local.get(['settings','webCapture']).then(({settings,webCapture})=>chrome.storage.local.set({settings:{...settings,enabled:true},webCapture:{...webCapture,paused:true}})));
-  // Forget a site: deletes and blocks it; it can be allowed again from the same place.
-  await o.locator('#web-forget-domain').fill('example.com');await o.locator('#web-forget').click();await msg("Recall won't save from it again");
-  assert.deepEqual(await o.locator('#web-exclusions .site span').allInnerTexts(),['example.com']);
+  // Exclusions from the popup/API remain manageable without a duplicate removal form.
+  assert.equal(await o.locator('#web-forget-domain').count(),0);
+  const forgotten=await f.send({type:'web-forget',domain:'example.com'});assert.equal(forgotten.error,undefined);
+  await o.locator('#web-exclusions [aria-label="Allow again example.com"]').waitFor();
+  assert.ok((await o.locator('#web-exclusions .site span').allInnerTexts()).includes('example.com'));
   assert.equal(await o.locator('#web-sites .site span',{hasText:/^example\.com$/}).count(),0,'forgotten site leaves the list');
-  await o.locator('#web-exclusions .site-remove').click();await msg('can be saved again');
-  assert.equal(await o.locator('#web-exclusions .site').count(),0);
+  await o.locator('#web-exclusions [aria-label="Allow again example.com"]').click();await msg('can be saved again');
+  assert.equal(await o.locator('#web-exclusions [aria-label="Allow again example.com"]').count(),0);
   // Bring the suggested sites back.
   await o.locator('#web-restore').click();await msg('suggested sites');
   assert.equal((await stored()).domains.length>=SUGGESTED,true);

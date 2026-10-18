@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.7 update
+
+All 235 Node tests pass. Browser checks cover one-time starter-site initialization (including YouTube/Instagram), exclusions surviving reload and preventing import, collapsible lists, browser icons and broken-image fallback, mixed Match 2/3 navigation and 14-result paging. Website controls, article/search/import/backup, responsive layouts, defaults/reset and theme preferences pass. A controlled background pipeline confirms exclusion stops active YouTube fetching; further audio packets from excluded YouTube are rejected. A disposable starter-domain mutation fails the exclusion-preservation regression. The audit findings remain unchanged. See [UPDATE-3.3.7.md](UPDATE-3.3.7.md).
+
 ## Version 3.3.6 update
 
 All 231 Node tests pass. Browser checks cover default labels, the exact reset-button wording, restored capture/search/theme preferences and persistence, and preservation of saved records, retention, site settings and grants. Existing preference and responsive UI checks pass. A disposable mutation that changes retention during reset fails its preservation regression. No dependency, schema or model changes.

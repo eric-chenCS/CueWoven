@@ -22,7 +22,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   await page.waitForFunction(()=>calls.some(call=>call.type==='warmup'));assert.equal(await page.evaluate(()=>calls.find(call=>call.type==='warmup').scenes),true);
   await page.locator('#q').fill('first');await page.waitForSelector('.result');await page.locator('#q').press('Enter');
   await page.waitForFunction(()=>opened.length===1);assert.match((await page.evaluate(()=>opened[0])).url,/v=aaaaaaaaaaa&t=42s/);assert.equal(await page.evaluate(()=>closes),1);
-  await page.locator('#next-video').click();await page.waitForFunction(()=>document.querySelector('#page-label').textContent==='Video 2');await page.locator('#q').press('Control+Enter');
+  await page.locator('#next-video').click();await page.waitForFunction(()=>document.querySelector('#page-label').textContent==='Match 2');await page.locator('#q').press('Control+Enter');
   await page.waitForFunction(()=>opened.length===2);assert.equal(await page.evaluate(()=>opened[1].active),false);assert.match(await page.evaluate(()=>opened[1].url),/v=bbbbbbbbbbb/);
   await page.locator('#q').fill('old slow');await page.waitForFunction(()=>!!window.releaseOld);
   await page.locator('#q').fill('new clue');await page.locator('#q').press('Enter');await page.waitForFunction(()=>opened.length===3);assert.match(await page.evaluate(()=>opened[2].url),/v=bbbbbbbbbbb/);

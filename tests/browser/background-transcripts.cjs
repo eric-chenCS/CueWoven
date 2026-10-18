@@ -87,12 +87,15 @@ const limit=Number(process.env.RECALL_TEST_CONCURRENCY || 6), total=limit+2;
   await page.locator('#bulk-urls').fill(Array.from({length:limit+3},(_,i)=>String(i+200).padStart(11,'a')).join('\n'));
   await page.locator('#bulk-go').click();await wait(()=>captionRequests>=limit);
   const manual=(await worker.evaluate(()=>chrome.storage.session.get('captureWindow'))).captureWindow;
-  await worker.evaluate(id=>chrome.windows.remove(id),manual.windowId);release();
+  if(process.env.RECALL_TEST_EXCLUDE_YOUTUBE==='1')await worker.evaluate(async()=>{const {webCapture}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,blocked:['youtube.com']}});});
+  else await worker.evaluate(id=>chrome.windows.remove(id),manual.windowId);
+  release();
   await page.waitForFunction(()=>document.querySelector('#bulk-summary').textContent.startsWith('Paused:'),null,{timeout:10000});
   const closed=(await worker.evaluate(()=>chrome.storage.session.get('transcriptJob'))).transcriptJob;
   assert.equal(closed.completed,limit);assert.equal(closed.failed,limit);assert.equal(closed.total-closed.completed,3);
   assert.equal((await worker.evaluate(()=>chrome.tabs.query({url:'https://www.youtube.com/watch*'}))).length,0);
   assert.equal((await worker.evaluate(()=>chrome.storage.session.get('captureWindow'))).captureWindow,undefined);
+  if(process.env.RECALL_TEST_EXCLUDE_YOUTUBE==='1')await worker.evaluate(async()=>{const {webCapture}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,blocked:[]}});});
   // Already-indexed videos need no window at all.
   await page.locator('#bulk-urls').fill(entries.map(e=>e.titleUrl).join('\n'));await page.locator('#bulk-go').click();
   await page.waitForFunction(()=>document.querySelector('#bulk-summary').textContent.startsWith('Finished:'));
@@ -104,7 +107,7 @@ const limit=Number(process.env.RECALL_TEST_CONCURRENCY || 6), total=limit+2;
   await worker.evaluate(()=>Promise.all(Array.from({length:30},()=>chrome.runtime.sendMessage({type:'index-changed'}))));
   await page.waitForTimeout(800);assert.equal(await page.evaluate(()=>listReads),1);
   await page.locator('section').filter({has:page.locator('#transcriptConcurrency')}).screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR || os.tmpdir(),'recall-v2.7-settings.png')});
-  console.log('BACKGROUND_TRANSCRIPTS_PASS: concurrency '+limit+'; real service worker, bounded concurrent muted tabs in one separate minimized/unfocused window, settings closed while videos finish, restored progress, original dates, real-model search at 0:42, pause, manual window close without recreation, already-indexed skip, main-window isolation and cleanup. YouTube responses controlled.');
+  console.log('BACKGROUND_TRANSCRIPTS_PASS: YouTube exclusion '+(process.env.RECALL_TEST_EXCLUDE_YOUTUBE==='1')+'; concurrency '+limit+'; real service worker, bounded concurrent muted tabs in one separate minimized/unfocused window, settings closed while videos finish, restored progress, original dates, real-model search at 0:42, pause, manual window close without recreation, already-indexed skip, main-window isolation and cleanup. YouTube responses controlled.');
  } catch(error) {
   const worker=context.serviceWorkers()[0];
   if(worker)console.error('BACKGROUND_DIAGNOSTICS',JSON.stringify(await worker.evaluate(async()=>({state:await chrome.storage.session.get(['transcriptJob','captureWindow']),tabs:await chrome.tabs.query({url:'https://www.youtube.com/watch*'})})).catch(()=>({worker:'unavailable'}))));

@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.6** labels default preferences and adds **Reset settings to default** in Settings. Reset restores capture, search and appearance preferences while keeping saved content, retention choices and site access. Grouped website controls, themes, 1/3/6/10 fetching, moments help and the scrolling library remain available. See [the defaults update](docs/UPDATE-3.3.6.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.7** adds website icons, a collapsible starter site list including YouTube and Instagram, and Match 2/3 labels for mixed results. The × beside a site excludes future capture/import without deleting saved memories. Defaults/reset, themes, fetch limits and the scrolling library remain. See [the website and icon update](docs/UPDATE-3.3.7.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 
