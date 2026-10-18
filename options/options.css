@@ -97,7 +97,11 @@ textarea { width: 100%; resize: vertical; margin: 0 0 10px; font-family: ui-mono
 
 /* Library list */
 .library:empty { display: none; }
-.library { overflow: hidden; }
+.library { overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; }
+#moments-help { margin: 0 0 12px; }
+#web-features { margin: -6px 0 16px; }
+#web-access { overflow-wrap: anywhere; }
+.btn[aria-pressed="true"] { background: var(--action-soft); border-color: var(--action); color: var(--ink); }
 .vid { display: flex; align-items: center; gap: 14px; padding: 10px 16px; }
 .vid + .vid { border-top: 1px solid var(--line); }
 .vid img { width: 96px; height: 54px; object-fit: cover; border-radius: var(--r-sm); background: var(--sunken); flex: none; }

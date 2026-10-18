@@ -1,19 +1,44 @@
 import { parseWebHistory, policy } from "../lib/web-items.js";
 import { beginLibraryTask, libraryBusy, onLibraryBusy } from "../lib/library-busy.js";
 const $ = (id) => document.getElementById(id), send = (msg) => chrome.runtime.sendMessage(msg);
-let settings = {}, busy = false, stopping = false;
+let settings = {}, busy = false, stopping = false, refreshId = 0;
 async function refresh() {
-  settings = { enabled: false, paused: false, domains: [], blocked: [], ...(await chrome.storage.local.get("webCapture")).webCapture };
+  const request = ++refreshId;
+  const stored = await chrome.storage.local.get(["webCapture", "settings"]);
+  const current = { enabled: false, paused: false, domains: [], blocked: [], ...stored.webCapture };
+  const domains = current.domains.filter(host => !(current.blocked || []).some(blocked => host === blocked || host.endsWith("." + blocked)));
+  const [scripting, allAccess, ...siteAccess] = await Promise.all([
+    chrome.permissions.contains({ permissions: ["scripting"] }),
+    chrome.permissions.contains({ origins: ["https://*/*", "http://*/*"] }),
+    ...domains.map(async host => (await Promise.all(["https", "http"].map(scheme => chrome.permissions.contains({ origins: [`${scheme}://*.${host}/*`] })))).some(Boolean)),
+  ]);
+  if (request !== refreshId) return;
+  settings = current;
+  const saving = stored.settings?.enabled !== false;
+  const state = !settings.enabled ? "Off" : settings.paused ? "Paused" : !saving ? "Paused by Save automatically" : "On";
+  const mode = settings.allSites ? "All public sites" : "Selected sites";
   $("web-audio").checked = !!settings.audio;
-  $("web-searches").checked=settings.searches===true;
+  $("web-searches").checked = settings.searches === true;
   $("web-pause").disabled = !settings.enabled;
   $("web-pause").textContent = settings.paused ? "Resume" : "Pause";
+  $("web-pause").setAttribute("aria-pressed", String(settings.enabled && settings.paused));
   $("web-off").disabled = !settings.enabled;
-  $("web-state").textContent = !settings.enabled ? "Website capture is off." : settings.paused ? "Website capture is paused." : settings.allSites ? "Capturing eligible public websites after you read or play them." : "Enabled sites: " + settings.domains.join(", ");
+  $("web-off").setAttribute("aria-pressed", String(!settings.enabled));
+  $("web-all").setAttribute("aria-pressed", String(!!settings.allSites));
+  $("web-state").textContent = `Website capture: ${state}. Selected access: ${mode.toLowerCase()}.`;
+  const missing = domains.filter((_, index) => !siteAccess[index]);
+  $("web-access").textContent = settings.allSites
+    ? "Allowed scope: all eligible public websites. Private-page checks and excluded sites still apply." + (!allAccess ? " Full browser permission is missing; only sites with granted access can be captured." : "")
+    : "Allowed sites: " + (domains.length ? domains.join(", ") + " (including subdomains)." : "None. Add a site below.") + (missing.length ? " Browser permission missing: " + missing.join(", ") + ". Allow these sites again." : "");
+  if (!scripting && settings.enabled) $("web-access").textContent += " Browser scripting permission is missing; allow site access again.";
+  const audio = settings.audio ? (stored.settings?.lightMode ? "On (paused by Lite mode)" : "On") : "Off";
+  $("web-features").textContent = `Google search queries: ${settings.searches ? "On" : "Off"}. Video audio: ${audio}.`;
+  $("web-options-summary").textContent = `${state} · ${mode} · Queries ${settings.searches ? "on" : "off"} · Audio ${settings.audio ? "on" : "off"}`;
   $("web-exclusions").textContent = settings.blocked?.length ? "Sites you excluded: " + settings.blocked.join(", ") : "No additional excluded sites.";
 }
 async function save(patch) {
-  await chrome.storage.local.set({ webCapture: { ...settings, ...patch } });
+  settings = { ...settings, ...patch };
+  await chrome.storage.local.set({ webCapture: settings });
   const result = await send({ type: "web-sync" });
   if (result.error) throw Error(result.error);
   await refresh();
@@ -130,7 +155,7 @@ $("web-history-stop").addEventListener("click", () => {
   $("web-history-stop").textContent = "Finishing this batch…";
 });
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && changes.webCapture) refresh().catch(() => {
+  if (area === "local" && (changes.webCapture || changes.settings)) refresh().catch(() => {
   });
 });
 onLibraryBusy(() => {
@@ -139,3 +164,5 @@ onLibraryBusy(() => {
 refresh().catch((error) => $("web-msg").textContent = error.message);
 
 $("web-searches").addEventListener("change",()=>save({searches:$("web-searches").checked}).catch(error=>$("web-msg").textContent=error.message));
+
+for (const event of [chrome.permissions.onAdded, chrome.permissions.onRemoved]) event.addListener(() => refresh().catch(error => $("web-msg").textContent = error.message));

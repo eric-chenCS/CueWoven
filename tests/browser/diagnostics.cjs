@@ -33,7 +33,6 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const blocked = await f.options.evaluate(async () => (await chrome.storage.local.get("webCapture")).webCapture.blocked);
     assert.ok(blocked.includes("www.example.com"));
     await f.send({ type: "web-import", items: [{ kind: "page", url: "https://old.example.com/article", title: "Old imported article", watchedAt: Date.now() - 400 * 864e5 }, { kind: "page", url: "https://recent.example.com/article", title: "Recent imported article", watchedAt: Date.now() - 10 * 864e5 }] });
-    await f.options.locator("details.fold").filter({has:f.options.locator("#maxAgeDays")}).locator("summary").first().click();
     await f.options.locator("#maxAgeDays").selectOption("0");
     await f.options.locator("#importMaxAgeDays").selectOption("90");
     await f.wait(async () => {

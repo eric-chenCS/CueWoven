@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.2 · Library &amp; settings</title>
+    <title>Recall v3.3.3 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,13 +12,13 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.2</span>
+        <span class="version">v3.3.3</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
             <li><a href="#sec-add">Add history</a></li>
             <li><a href="#sec-websites">Websites</a></li>
-            <li><a href="#sec-capture">Capture</a></li>
+            <li><a href="#sec-capture">Settings</a></li>
             <li><a href="#sec-data">Your data</a></li>
           </ul>
         </nav>
@@ -42,7 +42,8 @@
             <input id="filter" type="search" placeholder="Filter" aria-label="Filter saved items" />
           </div>
           <div class="stats" id="stats"></div>
-          <div id="library" class="library sheet"></div>
+          <details class="more" id="moments-help"><summary>What are moments?</summary><p>A moment is a searchable piece of a video or page: spoken words, on-screen text or a passage you read. Several moments can come from one item. Video matches link to a timestamp; page matches highlight the saved passage when supported. Scenes are saved images and are counted separately.</p></details>
+          <div id="library" class="library sheet" role="region" aria-label="Saved items" tabindex="0"></div>
         </section>
 
         <!-- Add history -->
@@ -120,6 +121,8 @@
           <h2 id="web-capture-heading">Websites</h2>
           <p class="desc">Off until you allow a site. Saves the text of pages you read there.</p>
           <p id="web-state" class="state" role="status" aria-live="polite"></p>
+          <p id="web-access" class="block-desc" role="status" aria-live="polite"></p>
+          <p id="web-features" class="hint" role="status" aria-live="polite"></p>
           <div class="sheet">
             <div class="block">
               <div class="row">
@@ -132,7 +135,7 @@
               <p id="web-msg" class="msg" role="status" aria-live="polite"></p>
             </div>
             <details class="fold">
-              <summary><span class="fold-title">More options</span><span class="fold-sub">All sites, pause, video audio</span></summary>
+              <summary><span class="fold-title">More options</span><span id="web-options-summary" class="fold-sub">All sites, pause, video audio</span></summary>
               <div class="fold-body">
                 <div class="row">
                   <button id="web-all" class="btn ghost">Allow all public sites</button>
@@ -148,14 +151,14 @@
           </div>
         </section>
 
-        <!-- Capture -->
+        <!-- Settings -->
         <section id="sec-capture" class="sec" aria-labelledby="capture-heading">
           <div class="sec-head">
-            <h2 id="capture-heading">Capture</h2>
+            <h2 id="capture-heading">Settings</h2>
             <p id="saved" class="saved" aria-live="polite"></p>
           </div>
           <div class="sheet">
-            <label class="setting"><span class="setting-text">Light mode<span class="hint">Keep captions and articles; pause scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
+            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
             <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" id="enabled" /></label>
             <label class="setting">
               <span class="setting-text">Watch time before saving</span>
@@ -171,23 +174,15 @@
             <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" id="scenesEnabled" /></label>
             <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" id="screenTextEnabled" /></label>
             <details class="fold">
-              <summary><span class="fold-title">Advanced</span><span class="fold-sub">Results, speed, how long to keep</span></summary>
+              <summary><span class="fold-title">Advanced</span><span class="fold-sub">Results and speed</span></summary>
               <div class="fold-body flush">
                 <label class="setting">
-                  <span class="setting-text">Moments per video</span>
+                  <span class="setting-text">Moments per video<span class="hint">Maximum matching moments from one video in the results.</span></span>
                   <select id="perVideo"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5">5</option></select>
                 </label>
                 <label class="setting">
                   <span class="setting-text">Videos fetched at once</span>
                   <select id="transcriptConcurrency"><option value="3">3</option><option value="6">6</option></select>
-                </label>
-                <label class="setting">
-                  <span class="setting-text">Forget what I watch or read after</span>
-                  <select id="maxAgeDays"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="0">Never</option></select>
-                </label>
-                <label class="setting">
-                  <span class="setting-text">Keep imported history<span class="hint">A limit removes older imports immediately. Export a backup first.</span></span>
-                  <select id="importMaxAgeDays"><option value="0">Forever</option><option value="365">1 year</option><option value="90">90 days</option></select>
                 </label>
               </div>
             </details>
@@ -196,9 +191,18 @@
 
         <!-- Your data -->
         <section id="sec-data" class="sec" aria-labelledby="data-heading">
-          <h2 id="data-heading">Your data</h2>
+          <div class="sec-head"><h2 id="data-heading">Your data</h2><p id="data-saved" class="saved" aria-live="polite"></p></div>
           <p class="desc">Stored only in this browser. Backups contain everything, so keep them private.</p>
           <div class="sheet">
+                <label class="setting">
+                  <span class="setting-text">Forget what I watch or read after</span>
+                  <select id="maxAgeDays"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="0">Never</option></select>
+                </label>
+                <label class="setting">
+                  <span class="setting-text">Keep imported history<span class="hint">A limit removes older imports immediately. Export a backup first.</span></span>
+                  <select id="importMaxAgeDays"><option value="0">Forever</option><option value="365">1 year</option><option value="90">90 days</option></select>
+                </label>
+
             <div class="block">
               <div class="row"><label for="forget-hours">Forget recent</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
               <p class="hint">Remove whole items saved or updated during this period, including recent imports. Uses Recall's save date, not the original visit date.</p>

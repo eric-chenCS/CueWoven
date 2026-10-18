@@ -67,6 +67,12 @@ async function loadLibrary() {
   updateTranscriptButton();
 }
 
+function sizeLibrary() {
+  const lib = $('library'), rows = lib.querySelectorAll('.vid');
+  lib.style.maxHeight = rows.length > 5 ? `${Math.ceil(rows[4].getBoundingClientRect().bottom - lib.getBoundingClientRect().top + lib.scrollTop + 1)}px` : '';
+}
+new ResizeObserver(sizeLibrary).observe($('library'));
+
 function renderLibrary() {
   const lib = $('library');
   const f = $('filter').value.trim().toLowerCase();
@@ -133,6 +139,8 @@ function renderLibrary() {
     row.append(img, info, actions);
     lib.append(row);
   }
+  lib.scrollTop = 0;
+  sizeLibrary();
 }
 
 $('filter').addEventListener('input', renderLibrary);
@@ -433,7 +441,7 @@ async function loadSettings() {
 }
 
 let savedTimer;
-async function saveSettings() {
+async function saveSettings(event) {
   const settings = {
     enabled: $('enabled').checked,
     lightMode:$('lightMode').checked,
@@ -448,9 +456,11 @@ async function saveSettings() {
   };
   for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
   await chrome.storage.local.set({ settings });
-  $('saved').textContent = 'Saved';
+  const status = $(event?.target?.closest('#sec-data') ? 'data-saved' : 'saved');
+  $('saved').textContent = $('data-saved').textContent = '';
+  status.textContent = 'Saved';
   clearTimeout(savedTimer);
-  savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
+  savedTimer = setTimeout(() => (status.textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
 for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
