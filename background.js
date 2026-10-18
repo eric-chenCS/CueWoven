@@ -12,7 +12,7 @@ import {policy} from './lib/web-items.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true, lightMode:false };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true, lightMode:false };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -271,7 +271,7 @@ const handlers = {
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
-    const concurrency = [3, 6].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
+    const concurrency = [1, 3, 6, 10].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
     return {job: (await getTranscriptJobs()).start(ids, concurrency)};
   },
   async 'transcript-job-status'(_msg, sender) {

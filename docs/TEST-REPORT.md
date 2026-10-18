@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.4 update
+
+All 229 Node tests pass. Browser preferences checks cover exact menu choices, 1/3/6/10 persistence, preservation of previous 30/90-day values, explicit theme override of the system setting across popup/options and reload, and system fallback. A controlled YouTube browser pipeline reaches ten concurrent caption fetches through the real service worker, preserves original import dates, retrieves at 0:42, pauses and cleans up its minimized capture window.
+
 ## Version 3.3.3 update
 
 All 223 Node tests pass. Isolated browser checks cover collapsible moments help, Settings/Lite mode labels, retention controls in Your data, five-row library sizing and keyboard scrolling at 320/768/1024/1440 px, filtering, allowed-site/missing-permission status, paused/off action indicators and persistent search/audio summaries. Diagnostics and original-date retention checks pass. No model, database or capture-policy changes.

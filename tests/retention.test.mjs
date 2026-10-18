@@ -24,3 +24,12 @@ test('background-fetched imported transcripts retain their exemption at 31 days'
  for(const method of ['captions','speech-local','import'])assert.equal(shouldForgetVideo({method,historyImported:true,indexedAt:fetched,watchedAt:old},30,now),false);
  assert.equal(shouldForgetVideo({method:'captions',historyImported:false,indexedAt:fetched,watchedAt:old},30,now),true);
 });
+
+for (const days of [1,7,28,365]) test(`both retention policies respect ${days} days at the cutoff`,()=>{
+ for(const historyImported of [false,true]){
+  const entry={historyImported,method:'captions',indexedAt:now-(days*864e5)-1,watchedAt:now-(days*864e5)-1};
+  assert.equal(shouldForgetVideo(entry,days,now,days),true);
+  assert.equal(shouldForgetVideo({...entry,indexedAt:now-days*864e5,watchedAt:now-days*864e5},days,now,days),false);
+  assert.equal(shouldForgetVideo(entry,0,now,0),false);
+ }
+});

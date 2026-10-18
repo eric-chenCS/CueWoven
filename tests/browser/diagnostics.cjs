@@ -34,7 +34,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     assert.ok(blocked.includes("www.example.com"));
     await f.send({ type: "web-import", items: [{ kind: "page", url: "https://old.example.com/article", title: "Old imported article", watchedAt: Date.now() - 400 * 864e5 }, { kind: "page", url: "https://recent.example.com/article", title: "Recent imported article", watchedAt: Date.now() - 10 * 864e5 }] });
     await f.options.locator("#maxAgeDays").selectOption("0");
-    await f.options.locator("#importMaxAgeDays").selectOption("90");
+    await f.options.locator("#importMaxAgeDays").selectOption("28");
     await f.wait(async () => {
       const rows = (await f.send({ type: "list" })).videos;
       return rows.some((row) => row.title === "Recent imported article") && !rows.some((row) => row.title === "Old imported article");
