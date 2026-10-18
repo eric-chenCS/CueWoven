@@ -78,3 +78,22 @@ test('video metadata is saved without captions and is bound to permitted active 
   f.clock.private=true;await assert.rejects(f.access.handlers['web-metadata'](input,f.sender),/Private/);
   assert.equal(f.calls.length,1);
 });
+
+const articleJpeg='data:image/jpeg;base64,'+Buffer.from([255,216,255,192,0,17,8,0,180,1,64,3,1,17,0,2,17,0,3,17,0]).toString('base64');
+test('article images are tied to an allowed visible page, fresh timestamp and bounded JPEG',async()=>{
+ const f=fixture(),input={url:f.tab.url,image:articleJpeg,caption:'A public figure',capturedAt:Date.now()};
+ await f.access.handlers['web-image'](input,f.sender);assert.equal(f.calls[0].type,'article-image');
+ await assert.rejects(f.access.handlers['web-image']({...input,url:'https://www.example.com/other'},f.sender),/Invalid/);
+ await assert.rejects(f.access.handlers['web-image']({...input,capturedAt:0},f.sender),/Invalid/);
+ await assert.rejects(f.access.handlers['web-image']({...input,image:'https://example.com/a.jpg'},f.sender),/Invalid/);
+ await assert.rejects(f.access.handlers['web-image']({...input,caption:'x'.repeat(601)},f.sender),/Invalid/);
+ await assert.rejects(f.access.handlers['web-image'](input,{...f.sender,frameId:1}),/Invalid/);
+ f.tab.active=false;assert.equal((await f.access.handlers['web-image'](input,f.sender)).inactive,true);
+ f.tab.active=true;f.clock.private=true;await assert.rejects(f.access.handlers['web-image'](input,f.sender),/Private/);
+});
+test('article-image messages have a bounded per-tab capture budget',async()=>{
+ const f=fixture(),input={url:f.tab.url,image:articleJpeg,caption:'A figure',capturedAt:Date.now()};
+ for(let i=0;i<3;i++)await f.access.handlers['web-image'](input,f.sender);
+ assert.equal((await f.access.handlers['web-image'](input,f.sender)).rateLimited,true);
+ assert.equal(f.calls.length,3);
+});

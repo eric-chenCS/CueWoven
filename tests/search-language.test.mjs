@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {wordText,stem} from '../lib/search-language.js';
-import {prepareQuery,createPool,addPassage,rankPool} from '../lib/search.js';
+import {prepareQuery,createPool,addPassage,rankPool,nearTie} from '../lib/search.js';
 import {searchIntent,matchesSource,searchWithFallback} from '../lib/search-intent.js';
 const lexical=(query,text)=>{const p=createPool(prepareQuery(query));addPassage(p,{text},{title:'',channel:''},.3,(score,match)=>({score,match}));return rankPool(p)[0];};
 test('word endings connect rotation, rotate, rotating and tires without substring matches',()=>{
@@ -73,4 +73,8 @@ test('empty inferred filters relax once while manual restrictions remain',async(
   assert.equal(unchanged.relaxed,false);
   const lastPage=await searchWithFallback(intent,30,async()=>({results:[],hasFirst:true}));
   assert.equal(lastPage.relaxed,false);
+});
+
+test('article visual evidence never produces a text-score near-tie hint',()=>{
+ assert.equal(nearTie([{videoId:'a',score:.5,articleImage:true,matchSources:['Article image']},{videoId:'b',score:.49}]),false);
 });

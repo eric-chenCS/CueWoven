@@ -1,9 +1,9 @@
 // Serialize scene inference and release its worker after inactivity.
 export function createVisionModel(onState = () => {}) {
-  let worker = null, nextId = 0, timer, running = false, queuedText = null, warming = null;
+  let worker = null, nextId = 0, timer, deadline, running = false, queuedText = null, warming = null;
   const pending = new Map();
   function release() {
-    clearTimeout(timer);worker?.terminate();worker = null;
+    clearTimeout(timer);clearTimeout(deadline);worker?.terminate();worker = null;
     for (const request of pending.values()) request.reject(new Error('Scene processing stopped.'));
     pending.clear();onState({status: 'idle'});
     queuedText?.reject(new Error('Scene processing stopped.'));queuedText = null;
@@ -25,12 +25,13 @@ export function createVisionModel(onState = () => {}) {
       const result = await new Promise((resolve, reject) => {
         const id = ++nextId;
         pending.set(id, {resolve, reject, progress: progress => {const current = Math.round(progress * 100);if (current !== percent) {percent = current;onState({status: 'loading', operation: type, progress});}}});
+        deadline=setTimeout(()=>{release();},180000);
         worker.postMessage({id, type, ...payload});
       });
       onState({status:'ready'});return result;
     } catch (error) {onState({status: 'error', error: error.message});throw error;}
     finally {
-      running = false;
+      clearTimeout(deadline);running = false;
       const next = queuedText;queuedText = null;
       if (next) call('text',{query:next.query}).then(next.resolve,next.reject);
       else timer = setTimeout(release,60000);

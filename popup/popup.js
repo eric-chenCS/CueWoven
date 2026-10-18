@@ -85,19 +85,19 @@ function render(results, query) {
     const url = resultLink(r);
     node.href = url;
     setItemImage(node.querySelector('img'), r);
-    if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
+    if (r.image) node.querySelector('img').alt = r.articleImage?(r.caption||'Saved article image'):'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
     node.querySelector('.title').textContent = r.title || r.videoId;
-    highlight(node.querySelector('.snippet'),r.scene?'A scene you watched.':r.titleOnly?'Matched the title.':'“'+r.text+'”',terms);
+    highlight(node.querySelector('.snippet'),r.articleImage?(r.caption||'An image from this article.'):r.scene?'A scene you watched.':r.titleOnly?'Matched the title.':'“'+r.text+'”',terms);
     const meta=node.querySelector('.meta');
     meta.textContent=[r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
-    meta.title=r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
+    meta.title=r.articleImage?'Image saved from this article':r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
     // Like Microsoft Recall: results that share the meaning but not your specific words say so.
     if(r.match==='related'){const tag=document.createElement('span');tag.className='related';tag.textContent='Related';tag.title='Similar in meaning, but doesn\u2019t contain the specific words you searched for';node.querySelector('.match-sources').append(tag);}
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
       const indicator=document.createElement('span');indicator.textContent=label;
-      indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':label==='Page text'?'Text saved from a page you read':label==='Search'?'A saved search query':'A title from saved history';node.querySelector('.match-sources').append(indicator);
+      indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Article image'?'A compressed image saved from this article':label==='Image caption'?'Caption or alternative text of a saved article image':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':label==='Page text'?'Text saved from a page you read':label==='Search'?'A saved search query':'A title from saved history';node.querySelector('.match-sources').append(indicator);
     }
     node.addEventListener('click', (e) => {
       e.preventDefault();
@@ -157,6 +157,7 @@ async function runSearch() {
   $('ignore-inferred').hidden=!res.appliedFilters?.length;
   document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-checked',String(Number(c.dataset.days)===(res.appliedSinceDays??sinceDays))));
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
+  else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
   if (res.empty) {showIdle();return;}
   if (!res.results.length) {
     if (singleVideo.checked && resultOffset > 0) {

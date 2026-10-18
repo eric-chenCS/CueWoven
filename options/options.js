@@ -55,7 +55,7 @@ async function loadLibrary() {
   stats.textContent = '';
   const screenMoments=videos.reduce((n,v)=>n+(v.screenCount||0),0);
   stats.title=`${screenMoments} on-screen text moments`;
-  for (const [n,label] of [[videos.length,videos.length===1?'item':'items'],[moments+screenMoments,'moments'],[videos.reduce((n,v)=>n+(v.sceneCount||0),0),'scenes']].filter(([n],i)=>i===0||n>0)) {
+  for (const [n,label] of [[videos.length,videos.length===1?'item':'items'],[moments+screenMoments,'moments'],[videos.reduce((n,v)=>n+(v.sceneCount||0),0),'images / scenes']].filter(([n],i)=>i===0||n>0)) {
     const s = document.createElement('span');
     s.className = 'stat';
     const b = document.createElement('b');
@@ -108,7 +108,7 @@ function renderLibrary() {
     const m = document.createElement('div');
     m.className = 'm';
     m.textContent=[v.channel,v.method==='history-title'?'Title only':`${v.chunkCount} moments`,v.method==='speech-local'?'AI speech':'',new Date(v.indexedAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})].filter(Boolean).join(' · ');
-    m.title=[v.sceneCount?`${v.sceneCount} scenes`:'',v.screenCount?`${v.screenCount} on-screen text moments`:'',v.method==='speech-local'?'Played portions only':''].filter(Boolean).join(' · ');
+    m.title=[v.sceneCount?`${v.sceneCount} ${v.kind==='page'?'images':'scenes'}`:'',v.screenCount?`${v.screenCount} on-screen text moments`:'',v.method==='speech-local'?'Played portions only':''].filter(Boolean).join(' · ');
     info.append(t, m);
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -461,13 +461,14 @@ async function loadSettings() {
   $('enabled').checked = !!s.enabled;
   $('lightMode').checked=!!s.lightMode;
   $('speechEnabled').checked = s.speechEnabled !== false;
+  $('articleImagesEnabled').checked = s.articleImagesEnabled !== false;
   $('scenesEnabled').checked = s.scenesEnabled !== false;
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   selectRetention('maxAgeDays', s.maxAgeDays);
   selectRetention('importMaxAgeDays', s.importMaxAgeDays || 0);
   $('perVideo').value = String(s.perVideo);
-  for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
+  for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
 
@@ -478,6 +479,7 @@ async function saveSettings(event) {
     lightMode:$('lightMode').checked,
     speechEnabled: $('speechEnabled').checked,
     scenesEnabled: $('scenesEnabled').checked,
+    articleImagesEnabled: $('articleImagesEnabled').checked,
     screenTextEnabled:$('screenTextEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
@@ -485,7 +487,7 @@ async function saveSettings(event) {
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
-  for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
+  for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
   await chrome.storage.local.set({ settings });
   const status = $(event?.target?.closest('#sec-data') ? 'data-saved' : 'saved');
   $('saved').textContent = $('data-saved').textContent = '';
@@ -494,7 +496,7 @@ async function saveSettings(event) {
   savedTimer = setTimeout(() => (status.textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

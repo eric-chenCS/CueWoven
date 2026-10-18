@@ -87,6 +87,10 @@ export function createWebEngine({ db, embed, onChange = () => {
       }
       return save(video, pagePassages(input.text), { replaceSource: "Page text", pageFingerprint });
     },
+    async imageCaption(video,caption){
+      if(!caption)return;
+      return save(video,[{start:0,text:caption,anchor:caption.slice(0,500),source:'Image caption'}],{});
+    },
     async media(video, segments, source, replaceRange) {
       if (!["Transcript", "Audio"].includes(source) || !Array.isArray(segments) || segments.length > 160) throw Error("Invalid played-video transcript.");
       const rows = segments.filter((row) => Number.isFinite(row.start) && row.start >= 0 && row.start <= 86400 * 30 && typeof row.text === "string" && row.text.trim()).map((row) => ({ start: row.start, text: policy.redactText(row.text).trim().slice(0, 2e3), source, ...replaceRange ? { speechStart: replaceRange[0], speechEnd: replaceRange[1] } : {} }));
@@ -96,7 +100,7 @@ export function createWebEngine({ db, embed, onChange = () => {
     async restore(input) {
       const valid = await cleanItem(input), rows = Array.isArray(input.passages) ? input.passages : [];
       if (rows.length > WEB_PASSAGES) throw Error("Too many saved page passages.");
-      const sources = new Set(["Page text", "Transcript", "Audio"]);
+      const sources = new Set(["Page text", "Transcript", "Audio","Image caption"]);
       for (const row of rows) if (!row || !sources.has(row.source) || typeof row.text !== "string" || row.text.length > 4e3 || !Number.isFinite(row.start) || row.start < 0 || row.start > 86400 * 30 || row.anchor !== void 0 && (typeof row.anchor !== "string" || row.anchor.length > 500)) throw Error("Invalid saved page passage.");
       for (const row of rows) if (row.speechStart !== void 0 || row.speechEnd !== void 0) {
         if (!Number.isFinite(row.speechStart) || !Number.isFinite(row.speechEnd) || row.speechStart < 0 || row.speechEnd <= row.speechStart || row.speechEnd - row.speechStart > 180) throw Error("Invalid saved audio range.");

@@ -1,8 +1,8 @@
-# Recall v3.3.13 installation
+# Recall v3.3.14 installation
 
 ## From the ZIP
 
-Extract `recall-v3.3.13.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `recall-v3.3.14.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## Open Recall
 
@@ -14,9 +14,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.13 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.14 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.13 starts with YouTube only and saving enabled. Add suggested sites adds the remaining 30 domains after requesting browser access. Existing custom lists, exclusions and intentional pauses remain. See [UPDATE-3.3.13.md](docs/UPDATE-3.3.10.md).
+Version 3.3.14 starts with YouTube only and saving enabled. Add suggested sites adds the remaining 30 domains after requesting browser access. Existing custom lists, exclusions and intentional pauses remain. See [UPDATE-3.3.14.md](docs/UPDATE-3.3.14.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Lite mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 
@@ -30,7 +30,7 @@ New setups have saving enabled for YouTube only. Choose **Add suggested sites (3
 
 The same settings area imports extracted Takeout **Chrome/BrowserHistory.json** and **My Activity/Search** JSON files (up to 100 MB), or scans this browser's saved visits after optional history permission. Page titles, search queries and YouTube titles become searchable; old page bodies are not fetched. Keep settings open while importing. Pause preserves completed entries; importing again skips completed duplicates.
 
-Live allowed pages save up to the first 2,000 visible words. Compatible visible HTML videos use native captions, sampled scenes and on-screen OCR. **Transcribe website video audio** is a separate off-by-default English-only option. Protected/cross-origin players, iframes, login walls and native social apps may not work. These techniques capture played portions, not an entire historical video. The popup's **Forget and block site** blocks future capture and removes its saved entries. Use the popup site-pause button to pause website capture quickly.
+Live allowed pages save up to the first 2,000 visible words and up to three visible article images. Images are compressed to at most 320 pixels per side and share the existing 24 MB visual store with video snapshots. Captions/alt text are searchable; CLIP adds local visual matching. The existing CLIP model downloads about 154 MB on first use if not already cached. Turn off **Save article images** or use Lite mode to pause new image capture. Only accessible images are captured; originals and full pages are not archived. Compatible visible HTML videos use native captions, sampled scenes and on-screen OCR. **Transcribe website video audio** is a separate off-by-default English-only option. Protected/cross-origin players, iframes, login walls and native social apps may not work. These techniques capture played portions, not an entire historical video. The popup's **Forget and block site** blocks future capture and removes its saved entries. Use the popup site-pause button to pause website capture quickly.
 
 Search **Everything**, or filter to **Videos**, **Pages** or **Searches**. Articles use text highlights when supported and the passage remains; website video time links need a matching player and the allowed page script. Feed URLs can be approximate. Full web content is capped at 2,000 items or 64 MiB of accounted text/vector payload, with older items retained as titles. Model memory and database overhead are additional.
 
@@ -38,7 +38,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.3.13.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.3.14.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -70,4 +70,4 @@ Model downloads and thumbnail requests use the network. Transcripts, vectors and
 
 Select **Search this video** on an active video to restrict results; Recall tries Index first if needed. **Copy link** shares its time. Type `rc` plus Space/Tab in the browser address bar to search your saved library. An empty popup offers optional **Try sample videos**; they are original demo clips and do not fetch YouTube.
 
-**Lite mode** pauses scene, on-screen text and speech capture together. Expand Speech-to-text in the popup for its manual controls. **Forget recent** in Your data removes whole items using their Recall save date, including recent imports; its confirmation explains the deletion. The suggested last-week chip only changes a filter after you click it. New text is heuristically redacted; captured images are not. Site allowlists and exclusions remain recommended for private browsing contexts.
+**Lite mode** pauses article-image, scene, on-screen text and speech capture together. Expand Speech-to-text in the popup for its manual controls. **Forget recent** in Your data removes whole items using their Recall save date, including recent imports; its confirmation explains the deletion. The suggested last-week chip only changes a filter after you click it. New text is heuristically redacted; captured images are not. Site allowlists and exclusions remain recommended for private browsing contexts.
