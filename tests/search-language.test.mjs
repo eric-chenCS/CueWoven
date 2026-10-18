@@ -43,3 +43,9 @@ test('website passages without embedded owner IDs remain separate and sort safel
   for(const videoId of ['page:a','page:b'])addPassage(pool,{text:'same title',start:0},{videoId,title:'same title',channel:''},.5,(score,match)=>({videoId,score,match}),0);
   assert.deepEqual(rankPool(pool,{perVideo:1}).map(r=>r.videoId),['page:a','page:b']);
 });
+
+test('an explicit part number can beat a small semantic advantage for the wrong part',()=>{
+  const pool=createPool(prepareQuery('building log cabin by hand part five'));
+  for(const [videoId,text,semantic] of [['wrong','building log cabin by hand part 6',.8],['right','building log cabin by hand part 5',.72]])addPassage(pool,{videoId,text,start:0},{videoId,title:text,channel:''},semantic,(score,match)=>({videoId,score,match}));
+  assert.equal(rankPool(pool,{perVideo:1})[0].videoId,'right');
+});
