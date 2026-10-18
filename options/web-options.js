@@ -7,7 +7,7 @@ async function refresh() {
   $("web-audio").checked = !!settings.audio;
   $("web-searches").checked=settings.searches===true;
   $("web-pause").disabled = !settings.enabled;
-  $("web-pause").textContent = settings.paused ? "Resume website capture" : "Pause website capture";
+  $("web-pause").textContent = settings.paused ? "Resume" : "Pause";
   $("web-off").disabled = !settings.enabled;
   $("web-state").textContent = !settings.enabled ? "Website capture is off." : settings.paused ? "Website capture is paused." : settings.allSites ? "Capturing eligible public websites after you read or play them." : "Enabled sites: " + settings.domains.join(", ");
   $("web-exclusions").textContent = settings.blocked?.length ? "Sites you excluded: " + settings.blocked.join(", ") : "No additional excluded sites.";

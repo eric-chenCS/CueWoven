@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.0** keeps searches responsive during capture, prioritizes queries over background embedding, bounds the resident video index, and speeds up large history searches. It adds current-video search, copyable moment links, `rc` address-bar search, optional original sample videos, a capture indicator, Light mode and recent-item deletion. YouTube keeps exact-second links; articles use passage highlights. See [the update and measured tests](docs/UPDATE-3.3.0.md) and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.1** applies the supplied minimal UI: a search-first popup, yellow moment highlights, teal controls, and a sidebar library with expandable settings. It retains all v3.3.0 search, capture, privacy and storage improvements. Current-video scope, copy links, samples, query consent, Light mode and recent-item deletion remain accessible. See [the UI update](docs/UPDATE-3.3.1.md), [the v3.3.0 behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 

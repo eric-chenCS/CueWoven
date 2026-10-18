@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.1 update
+
+The supplied minimal UI is integrated with all v3.3.0 features. All 223 Node tests pass. Isolated browser checks cover sidebar/disclosures, keyboard file focus, progress reveal, light/dark popup and library layouts, and 320–1440 px settings without horizontal overflow. Existing feature, navigation, article/import/backup, diagnostics, newest-200 transcript queue and automatic speech tests pass. Disabling progress reveal fails the new browser test; the correct code was restored. All 52 backend/capture files are byte-identical to v3.3.0, so no new model/performance claim or migration is made. See [UPDATE-3.3.1.md](UPDATE-3.3.1.md) for the design and scope.
+
 ## Version 3.3.0 update
 
 All 223 Node tests pass, including continuous-capture race guards, prioritized worker scheduling, idle/deadline recovery, packed-index bounds, privacy/redaction, timeout and address-bar behavior. Reverting soft query invalidation fails the new regression. Browser tests cover old-library migration, 1,001-video overflow retrieval, 205-title/newest-200 imports, all new popup controls, playable samples, OCR/scene cancellation, private-page controls, caption/OCR/CLIP/Whisper sources and backup restore. The 50,000-title plus 600-full-page benchmark passes unchanged budgets at 467 ms median/695 ms p95 new-query latency and 3 ms p95 cached paging. The controlled reindex workload's worst search was 317 ms, compared with the earlier 2,973 ms recording. Whole-browser memory remains hundreds of MiB; these measurements are not an extension-only allocation or a long-duration leak guarantee. See [UPDATE-3.3.0.md](UPDATE-3.3.0.md) for scope, tradeoffs, unchanged native-only dependency findings and upgrade instructions.

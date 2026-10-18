@@ -86,10 +86,10 @@ function render(results, query) {
     node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
     node.querySelector('.title').textContent = r.title || r.videoId;
-    highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? r.kind?'From your history · title match. Read this page with website capture enabled to save its text.':'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : r.pageText?'Saved page text':r.kind==='search'?'Saved search query':r.sample?'Authored sample captions':'Spoken-content match']
-      .filter(Boolean)
-      .join(' · ');
+    highlight(node.querySelector('.snippet'),r.scene?'A scene you watched.':r.titleOnly?'Matched the title.':'“'+r.text+'”',terms);
+    const meta=node.querySelector('.meta');
+    meta.textContent=[r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
+    meta.title=r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
       const indicator=document.createElement('span');indicator.textContent=label;
       indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':label==='Page text'?'Text saved from a page you read':label==='Search'?'A saved search query':'A title from saved history';node.querySelector('.match-sources').append(indicator);
@@ -275,15 +275,8 @@ $('next-video').addEventListener('click', () => {
 let stats = { videos: 0, chunks: 0 };
 
 function showIdle() {
-  if (!(stats.total||stats.videos)) {
-    empty('Your Recall library is empty so far', [
-      'Watch YouTube, import browser/search history, or enable website capture in Library & settings.',
-    ], 'Website capture is optional and starts off.');
-  } else {
-    empty('Describe what you remember', [
-      `Searching ${stats.total||stats.videos} saved items: video moments, pages and search queries.`,
-    ], 'Try: “the part about why batteries wear out”');
-  }
+  if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, import history or try the samples.']);
+  else empty('Describe what you remember',[],'Like “the part about why batteries wear out”');
 }
 
 function showModel(state) {
@@ -294,7 +287,7 @@ function showModel(state) {
     $('model-text').textContent = 'Couldn’t load the search model: ' + (state.error || 'unknown error');
     $('model-bar').style.width = '0';
   } else {
-    $('model-text').textContent = `Loading the search model (first run downloads ~23 MB)… ${Math.round((state.progress || 0) * 100)}%`;
+    $('model-text').textContent = `Loading search… ${Math.round((state.progress || 0) * 100)}%`;
     $('model-bar').style.width = Math.round((state.progress || 0) * 100) + '%';
   }
 }
@@ -305,7 +298,8 @@ async function refreshStatus() {
   stats = s;
   renderEmbedding(s.embeddingMigration);
   if (s.total||s.videos) $('start-choice').hidden = true;
-  statusEl.textContent = `${s.videos} videos`+(s.pages?` · ${s.pages} pages`:'')+(s.searches?` · ${s.searches} searches`:'')+` · ${s.chunks} moments` + (s.scenes ? ` · ${s.scenes} scenes` : '');
+  statusEl.textContent=`${(s.total||s.videos||0).toLocaleString()} saved`;
+  statusEl.title=`${s.videos} videos`+(s.pages?`, ${s.pages} pages`:'')+(s.searches?`, ${s.searches} searches`:'')+`, ${s.chunks} moments`+(s.scenes?`, ${s.scenes} scenes`:'');
   showModel(s.model);
 }
 
@@ -325,8 +319,8 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------------------------------------------------------------------------
 async function setupIndexNow() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if(currentTab)send({type:'capture-status',tabId:currentTab.id}).then(state=>{$('capture-indicator').textContent='This tab: '+captureLabel(state.reason);}).catch(()=>{});
-  if(currentTab&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
+  if(currentTab&&/^https?:/.test(currentTab.url||''))send({type:'capture-status',tabId:currentTab.id}).then(state=>{$('capture-indicator').textContent=captureLabel(state.reason);$('capture-indicator').hidden=!$('page-capture').hidden;}).catch(()=>{});
+  if(currentTab&&/^https?:/.test(currentTab.url||'')&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
   if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
   $('index-now').hidden = false;
   try {
@@ -335,7 +329,7 @@ async function setupIndexNow() {
     if(!currentMedia&&videoIdFromUrl(currentTab.url))currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};
     $('video-scope-row').hidden=!currentMedia;
     if(!currentTab.url.startsWith('https://www.youtube.com/'))$('index-now').hidden=!video;
-    if (video && video.title) $('index-now-text').textContent = `Index “${video.title}”`;
+    if (video && video.title) $('index-now-text').textContent = video.title;
   } catch (_) {
     if(videoIdFromUrl(currentTab.url)){currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};$('video-scope-row').hidden=false;}
   }
@@ -344,12 +338,12 @@ async function setupIndexNow() {
 $('index-now-btn').addEventListener('click', async () => {
   const btn = $('index-now-btn');
   btn.disabled = true;
-  btn.textContent = 'Indexing…';
+  btn.textContent = 'Saving…';
   const res = await send({ type: 'index-tab', tabId: currentTab.id });
   btn.disabled = false;
   if (res && res.ok) {
-    btn.textContent = 'Done ✓';
-    $('index-now-text').textContent = res.chunkCount ? `Indexed ${res.chunkCount} moments from this video` : 'Indexed';
+    btn.textContent = 'Saved';
+    $('index-now-text').textContent = res.chunkCount ? `Saved ${res.chunkCount} moments` : 'Saved';
     refreshStatus();
   } else {
     btn.textContent = 'Retry';
@@ -360,7 +354,7 @@ $('index-now-btn').addEventListener('click', async () => {
 async function refreshPageCapture(){
   if(!currentTab)return;
   const status=await send({type:'web-page-status',tabId:currentTab.id}).catch(()=>({reason:'refresh-required'}));
-  $('page-capture-status').textContent='This page: '+captureLabel(status.reason);
+  $('page-capture-status').textContent=captureLabel(status.reason);
   $('page-save-now').disabled=!['saved','duplicate','waiting','too-short'].includes(status.reason);
   $('page-forget').disabled=!status.host||status.incognito;
 }

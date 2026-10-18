@@ -11,6 +11,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await options.locator("#web-history-file").setInputFiles({ name: "BrowserHistory.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(chromeHistory)) });
     await options.waitForFunction(() => document.querySelector("#web-import-msg").textContent.startsWith("Done:"));
     assert.equal((await send({ type: "list" })).videos.find((row) => row.videoId === "aaaaaaaaaaa")?.title, "A YouTube video");
+    await options.locator("details").filter({has:options.locator("#web-searches")}).locator("summary").first().click();
     await options.locator("#web-searches").check();
     await options.waitForTimeout(300);
     const searches = [{ title: "Has buscado coral bleaching", titleUrl: "https://www.google.com/search?q=coral+bleaching", time: "2020-01-01T12:00:00Z" }];

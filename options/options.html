@@ -3,171 +3,237 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.0 · Library &amp; settings</title>
+    <title>Recall v3.3.1 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <div class="wrap">
-      <header class="head">
-        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.3.0</h1></div>
-        <p class="lede">Search videos, pages, articles and past queries. Your index lives only in this browser.</p>
-        <div class="stats" id="stats"></div>
-      </header>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="shell">
+      <aside class="side">
+        <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
+        <span class="version">v3.3.1</span>
+        <nav aria-label="Settings sections">
+          <ul class="nav">
+            <li><a href="#sec-library">Library</a></li>
+            <li><a href="#sec-add">Add history</a></li>
+            <li><a href="#sec-websites">Websites</a></li>
+            <li><a href="#sec-capture">Capture</a></li>
+            <li><a href="#sec-data">Your data</a></li>
+          </ul>
+        </nav>
+      </aside>
 
-      <section id="welcome" class="card welcome" hidden>
-        <h2>How would you like to start?</h2>
-        <p>Import your past video, browser or search history, or start with an empty library. Importing is optional.</p>
-        <div class="row">
-          <button id="welcome-import" class="btn">Import YouTube history</button>
-          <button id="welcome-web" class="btn ghost">Import browser/search history</button>
-          <button id="welcome-empty" class="btn ghost">Start empty</button>
-        </div>
-        <p class="note">Start with YouTube, or enable optional website capture below. You can import history later.</p>
-      </section>
-      <p id="startup-msg" class="note" role="status" aria-live="polite"></p>
-      <section class="card" aria-labelledby="web-history-heading">
-        <h2 id="web-history-heading">Import websites and Google searches</h2>
-        <p class="note">Choose extracted Google Takeout Chrome <strong>BrowserHistory.json</strong> or Google Search My Activity JSON. Titles, addresses, queries and dates become searchable locally. This does not download old pages, videos or private account content. Sensitive addresses are skipped. Use the YouTube importer below for YouTube history.</p>
-        <label class="btn file">Import browser or search JSON<input id="web-history-file" type="file" accept="application/json,.json" hidden /></label>
-        <div class="row"><label for="web-history-days">Browser history</label><select id="web-history-days"><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="0" selected>All available</option></select><button id="web-history-scan" class="btn ghost">Import this browser's history</button><button id="web-history-stop" class="btn ghost" hidden>Pause after this batch</button></div>
-        <p id="web-import-msg" class="note" role="status" aria-live="polite"></p>
-      </section>
-      <section class="card" aria-labelledby="web-capture-heading">
-        <h2 id="web-capture-heading">Websites &amp; articles</h2>
-        <p class="note">Optional: save text from articles and pages you read, plus available captions, sampled scenes and on-screen text from visible playing videos on websites such as Instagram and TikTok. This works in the browser, not native apps. Some protected or cross-origin players cannot expose images, captions or audio. Only grant sites you trust Recall to remember.</p>
-        <div class="row"><label for="web-domain">Site domain</label><input id="web-domain" type="text" autocomplete="off" placeholder="wikipedia.org" /><button id="web-allow" class="btn">Allow this site</button><button id="web-all" class="btn ghost">Allow public websites</button></div>
-        <p class="note">Allow public websites requests access to HTTP/HTTPS sites. Email, known financial/health/government sites, private paths, password/editor pages and incognito are excluded. Visible Sign out controls also stop capture. Text redaction hides recognizable email addresses, formatted phone numbers, SSNs and valid card numbers; images are not redacted. These checks cannot recognize every private or signed-in page; use specific sites for tighter control. Form values are never read. No past pages are fetched.</p>
-        <label class="setting"><span><strong>Save Google search queries</strong><br /><span class="note">Allow live capture and history import of eligible Google queries. Off by default. Obvious medical searches and private addresses are still skipped.</span></span><input id="web-searches" type="checkbox" /></label>
-        <label class="setting"><span><strong>Transcribe website video audio</strong><br /><span class="note">When captions are unavailable, try the local English speech model on the audio you play. Off by default; no microphone. Non-English language labels skip automatic transcription. Unknown audio may be misrecognized; the popup has Stop and manual Start.</span></span><input id="web-audio" type="checkbox" /></label>
-        <div class="row"><button id="web-pause" class="btn ghost">Pause website capture</button><button id="web-off" class="btn ghost">Turn off website capture</button><button id="web-forget" class="btn danger">Forget and block this site</button></div>
-        <p id="web-state" class="note" role="status" aria-live="polite"></p><p id="web-exclusions" class="note"></p><p id="web-msg" class="note" role="status" aria-live="polite"></p>
-        <p class="note">Text and media stay in this browser. First use downloads local model weights. Text capture keeps up to 2,000 words per page; full page/video-text storage is limited to 2,000 items or 64 MiB, then older items keep their titles. Scene/OCR limits below also apply across video sites.</p>
-      </section>
+      <main id="main" class="main" tabindex="-1">
+        <section id="welcome" class="welcome" aria-labelledby="welcome-heading" hidden>
+          <h2 id="welcome-heading">How would you like to start?</h2>
+          <div class="row">
+            <button id="welcome-import" class="btn">Import YouTube history</button>
+            <button id="welcome-web" class="btn ghost">Import browser history</button>
+            <button id="welcome-empty" class="btn ghost">Start empty</button>
+          </div>
+        </section>
+        <p id="startup-msg" class="msg" role="status" aria-live="polite"></p>
 
-      <section class="card" aria-labelledby="takeout-heading">
-        <h2 id="takeout-heading">Import from your YouTube account</h2>
-        <p class="note">Import your extracted <strong>watch-history.json</strong> from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>. Choose YouTube history in JSON format when exporting. Recall saves video titles, channels and watch dates locally and makes them searchable without fetching captions. The file is not uploaded.</p>
-        <label class="setting"><span><strong>Fetch transcripts after import</strong><br /><span class="note">Fetches captions for the newest 200 missing videos in a separate minimized Recall window. Use Fetch missing transcripts to fetch more. After titles are saved, you can close settings; keep the browser open. YouTube receives the video requests.</span></span><input id="takeout-transcripts" type="checkbox" checked /></label>
-        <label class="btn file">Import YouTube history<input id="takeout-import" type="file" accept="application/json,.json" hidden /></label>
-        <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
-        <p id="history-import-msg" class="note" role="status" aria-live="polite"></p>
-        <p class="note">Keep this page open while saving titles. Transcript fetching then continues in the background, even if you close settings. Reopen this page for progress or to pause after active videos finish. Use Fetch missing transcripts to retry unavailable captions or an interrupted job. Large histories can still take time. First use downloads the search model; thumbnails load from YouTube.</p>
-      </section>
+        <!-- Library -->
+        <section id="sec-library" class="sec" aria-labelledby="library-heading">
+          <div class="sec-head">
+            <h2 id="library-heading">Library</h2>
+            <input id="filter" type="search" placeholder="Filter" aria-label="Filter saved items" />
+          </div>
+          <div class="stats" id="stats"></div>
+          <div id="library" class="library sheet"></div>
+        </section>
 
-      <section class="card" aria-labelledby="history-heading">
-        <h2 id="history-heading">Find videos visited in this browser</h2>
-        <p class="note">Find YouTube videos you visited before installing Recall. History stays on this device. A visit does not necessarily mean you watched the video. This scans this browser's saved history, not your YouTube account history.</p>
-        <div class="row">
-          <label for="history-days">Look back</label>
-          <select id="history-days">
-            <option value="30">30 days</option>
-            <option value="90" selected>90 days</option>
-            <option value="365">1 year</option>
-            <option value="0">All available history</option>
-          </select>
-          <button id="history-scan" class="btn">Find YouTube history</button>
-        </div>
-        <p id="history-msg" class="note" role="status" aria-live="polite"></p>
-        <div id="history-tools" hidden>
-          <input id="history-filter" type="search" aria-label="Search history titles" placeholder="Search video titles…" />
-          <label class="setting"><span><strong>Fetch transcripts when adding all videos</strong><br /><span class="note">Save all titles first, then fetch captions for the newest 200 missing videos in a separate minimized Recall window. You can close settings after titles are saved; keep the browser open. YouTube receives video requests. Unavailable captions leave the title saved.</span></span><input id="browser-transcripts" type="checkbox" checked /></label>
-          <p class="note">Or select up to 20 videos per batch. Transcript fetching runs in the background. YouTube may block captions; only successful videos become searchable by what was said.</p>
-          <button id="history-index" class="btn" disabled>Index selected videos</button>
-          <button id="history-save" class="btn ghost">Add all found videos to Recall</button>
-        </div>
-        <div id="history-list" class="history-list"></div>
-      </section>
+        <!-- Add history -->
+        <section id="sec-add" class="sec" aria-labelledby="add-heading">
+          <h2 id="add-heading">Add history</h2>
+          <div class="sheet">
+            <details class="fold">
+              <summary><span class="fold-title">YouTube watch history</span><span class="fold-sub">Google Takeout file</span></summary>
+              <div class="fold-body">
+                <p class="block-desc">Export YouTube history as JSON from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>, then choose <strong>watch-history.json</strong>.</p>
+                <div class="row">
+                  <label class="btn file">Choose file<input id="takeout-import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                  <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
+                </div>
+                <label class="check"><input id="takeout-transcripts" type="checkbox" checked /><span>Fetch transcripts for the newest 200 missing videos</span></label>
+                <p id="history-import-msg" class="msg" role="status" aria-live="polite"></p>
+              </div>
+            </details>
 
-      <section class="card">
-        <h2>Fetch transcripts</h2>
-        <p class="note">Paste YouTube links, one per line. Recall fetches captions in a separate minimized window. It closes after fetching finishes or pauses. Once fetching starts, settings can be closed. Keep the browser open and return here for progress.</p>
-        <textarea id="bulk-urls" rows="5" aria-label="YouTube links to index" placeholder="https://www.youtube.com/watch?v=...&#10;https://youtu.be/..."></textarea>
-        <div class="row">
-          <button id="bulk-go" class="btn">Index these videos</button>
-          <button id="bulk-stop" class="btn ghost" hidden>Pause after active videos</button>
-          <span id="bulk-summary" class="note" role="status" aria-live="polite"></span>
-        </div>
-        <ul id="bulk-log" class="log" role="log" aria-live="polite" aria-relevant="additions text"></ul>
-      </section>
+            <details class="fold">
+              <summary><span class="fold-title">Websites and searches</span><span class="fold-sub">This browser or a Takeout file</span></summary>
+              <div class="fold-body">
+                <p class="block-desc">Import titles and visit dates from Chrome BrowserHistory.json or Google Search My Activity JSON. Query import uses the Google search switch under Websites.</p>
+                <div class="row">
+                  <label for="web-history-days" class="visually-hidden">How far back</label>
+                  <select id="web-history-days"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option><option value="0" selected>All time</option></select>
+                  <button id="web-history-scan" class="btn">Import from this browser</button>
+                  <button id="web-history-stop" class="btn ghost" hidden>Pause</button>
+                  <label class="btn ghost file">Choose Takeout file<input id="web-history-file" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                </div>
+                <p id="web-import-msg" class="msg" role="status" aria-live="polite"></p>
+              </div>
+            </details>
 
-      <section class="card">
-        <div class="row between">
-          <h2>Your Recall library</h2>
-          <input id="filter" type="search" placeholder="Filter by title, channel or site" aria-label="Filter saved items" />
-        </div>
-        <div id="library" class="library"></div>
-      </section>
+            <details class="fold">
+              <summary><span class="fold-title">YouTube visits in this browser</span><span class="fold-sub">From before you installed Recall</span></summary>
+              <div class="fold-body">
+                <div class="row">
+                  <label for="history-days" class="visually-hidden">How far back</label>
+                  <select id="history-days">
+                    <option value="30">Last 30 days</option>
+                    <option value="90" selected>Last 90 days</option>
+                    <option value="365">Last year</option>
+                    <option value="0">All time</option>
+                  </select>
+                  <button id="history-scan" class="btn">Find videos</button>
+                </div>
+                <p id="history-msg" class="msg" role="status" aria-live="polite"></p>
+                <div id="history-tools" class="history-tools" hidden>
+                  <input id="history-filter" type="search" aria-label="Filter found videos" placeholder="Filter" />
+                  <div class="row">
+                    <button id="history-save" class="btn">Add all</button>
+                    <button id="history-index" class="btn ghost" disabled>Add selected</button>
+                    <label class="check inline"><input id="browser-transcripts" type="checkbox" checked /><span>Fetch transcripts for the newest 200 missing videos</span></label>
+                  </div>
+                </div>
+                <div id="history-list" class="history-list"></div>
+              </div>
+            </details>
 
-      <section class="card">
-        <h2>Settings</h2>
-        <label class="setting"><span><strong>Light mode</strong><br /><span class="note">Keep captions and article text; stop scene capture, on-screen text and speech together. Existing evidence remains searchable. Models can still load when you search saved scenes.</span></span><input id="lightMode" type="checkbox" /></label>
-        <label class="setting">
-          <input type="checkbox" id="enabled" />
-          <span><strong>Index automatically</strong><br /><span class="note">Turn off to pause automatic YouTube and website capture. You can still manually index YouTube from the popup.</span></span>
-        </label>
-        <label class="setting">
-          <span><strong>Watch time before indexing</strong><br /><span class="note">Skips videos you only clicked past.</span></span>
-          <select id="dwellSeconds">
-            <option value="5">5 seconds</option>
-            <option value="10">10 seconds</option>
-            <option value="20">20 seconds</option>
-            <option value="30">30 seconds</option>
-            <option value="60">1 minute</option>
-          </select>
-        </label>
-        <label class="setting">
-          <span><strong>Forget watched or read items after</strong><br /><span class="note">Live titles, text, transcripts and scenes expire from recent activity. Imported entries use the separate setting below.</span></span>
-          <select id="maxAgeDays">
-            <option value="7">7 days</option>
-            <option value="30">30 days</option>
-            <option value="90">90 days</option>
-            <option value="365">1 year</option>
-            <option value="0">Never</option>
-          </select>
-        </label>
-        <label class="setting"><span><strong>Keep imported history</strong><br /><span class="note">Uses the original visit date, including imported captions. Choosing a limit removes older imported items immediately and during daily cleanup. Export a backup first if you want a copy.</span></span><select id="importMaxAgeDays"><option value="0">Forever</option><option value="365">1 year</option><option value="90">90 days</option></select></label>
-        <label class="setting">
-          <span><strong>Results per video</strong><br /><span class="note">How many moments each video can show in list view. One video at a time always shows its best moment.</span></span>
-          <select id="perVideo">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="5">5</option>
-          </select>
-        </label>
-        <label class="setting">
-          <span><strong>Parallel videos</strong><br /><span class="note">Muted videos in a separate minimized window. Six at once by default; choose three to reduce load. Applies to the next job.</span></span>
-          <select id="transcriptConcurrency">
-            <option value="3">3 videos</option>
-            <option value="6">6 videos (default)</option>
-          </select>
-        </label>
-        <label class="setting"><span><strong>Speech when captions are unavailable</strong><br /><span class="note">Automatically transcribe the English audio you play. Uses a local speech model and extra CPU; never uses your microphone. Only played portions are saved.</span></span><input type="checkbox" id="speechEnabled" /></label>
-        <label class="setting"><span><strong>Save scene snapshots</strong><br /><span class="note">Save small images around noticeable visual changes while playing visibly. Quiet footage uses fewer snapshots, about 20–60 seconds apart. Extra captures are limited to reduce load; brief events can still be missed. Images stay here. Uses a local visual model and extra CPU; up to 240 snapshots per video, 2,000 total, and a 24 MB image/vector budget. Oldest removed first.</span></span><input type="checkbox" id="scenesEnabled" /></label>
-        <label class="setting"><span><strong>Read on-screen text</strong><br /><span class="note">Read English subtitles and text baked into video images about every 5 seconds while playing visibly. Search shows an On-screen text indicator. Recognized words stay here; sharp frames are discarded. Uses extra CPU. Brief or small text may be missed. Up to 720 text moments per video and 10,000 total.</span></span><input type="checkbox" id="screenTextEnabled" /></label>
-        <p id="saved" class="note saved" aria-live="polite"></p>
-      </section>
+            <details class="fold">
+              <summary><span class="fold-title">Paste links</span><span class="fold-sub">One YouTube link per line</span></summary>
+              <div class="fold-body">
+                <textarea id="bulk-urls" rows="4" aria-label="YouTube links, one per line" placeholder="https://youtu.be/..."></textarea>
+                <div class="row">
+                  <button id="bulk-go" class="btn">Add videos</button>
+                  <button id="bulk-stop" class="btn ghost" hidden>Pause</button>
+                  <span id="bulk-summary" class="msg inline" role="status" aria-live="polite"></span>
+                </div>
+                <ul id="bulk-log" class="log" role="log" aria-live="polite" aria-relevant="additions text"></ul>
+              </div>
+            </details>
+          </div>
+        </section>
 
-      <section class="card">
-        <h2>Your data</h2>
-        <div class="row"><label for="forget-hours">Forget items saved or updated in the</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
-        <p class="note">Uses when Recall saved the item, including newly imported history. Removes the whole matching item and its evidence. For older backups without a saved date, uses the stored indexing date.</p>
-        <p class="note">Export saves your Recall library: video evidence, saved page text, imported addresses and search queries. Treat the JSON backup as private. Import recreates the index on this device.</p>
-        <div class="row">
-          <button id="export" class="btn ghost">Export index</button>
-          <label class="btn ghost file">Import index<input id="import" type="file" accept="application/json,.json" hidden /></label>
-          <span class="spacer"></span>
-          <button id="clear" class="btn danger">Delete everything</button>
-        </div>
-        <p id="data-msg" class="note" aria-live="polite"></p>
-      </section>
+        <!-- Websites -->
+        <section id="sec-websites" class="sec" aria-labelledby="web-capture-heading">
+          <h2 id="web-capture-heading">Websites</h2>
+          <p class="desc">Off until you allow a site. Saves the text of pages you read there.</p>
+          <p id="web-state" class="state" role="status" aria-live="polite"></p>
+          <div class="sheet">
+            <div class="block">
+              <div class="row">
+                <label for="web-domain" class="visually-hidden">Site</label>
+                <input id="web-domain" type="text" autocomplete="off" placeholder="wikipedia.org" />
+                <button id="web-allow" class="btn">Allow</button>
+                <button id="web-forget" class="btn ghost" title="Delete everything saved from this site and stop saving it">Forget</button>
+              </div>
+              <p id="web-exclusions" class="hint"></p>
+              <p id="web-msg" class="msg" role="status" aria-live="polite"></p>
+            </div>
+            <details class="fold">
+              <summary><span class="fold-title">More options</span><span class="fold-sub">All sites, pause, video audio</span></summary>
+              <div class="fold-body">
+                <div class="row">
+                  <button id="web-all" class="btn ghost">Allow all public sites</button>
+                  <button id="web-pause" class="btn ghost">Pause</button>
+                  <button id="web-off" class="btn ghost">Turn off</button>
+                </div>
+                <details class="more"><summary>What gets saved?</summary><p>Only public page text and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
+                <label class="check"><input id="web-searches" type="checkbox" /><span>Save Google search queries</span></label>
+                <p class="hint">Off by default; applies to live capture and history import. Obvious medical queries remain excluded.</p>
+                <label class="check"><input id="web-audio" type="checkbox" /><span>Transcribe video audio on these sites</span></label>
+              </div>
+            </details>
+          </div>
+        </section>
 
-      <section class="card" aria-labelledby="diagnostics-heading"><h2 id="diagnostics-heading">Storage &amp; capture diagnostics</h2><p id="storage-usage" class="note" role="status"></p><p class="note">The last 100 capture events from this browser session. Domains and reason codes only; no page addresses, titles, queries or content. Incognito events are excluded. Refresh to see recent events.</p><div class="row"><button id="diagnostics-refresh" class="btn ghost">Refresh diagnostics</button><button id="diagnostics-clear" class="btn ghost">Clear event log</button></div><p id="capture-empty" class="note">No capture events in this session.</p><div class="diagnostic-table"><table><thead><tr><th>Time</th><th>Site</th><th>Kind</th><th>Status</th></tr></thead><tbody id="capture-events"></tbody></table></div></section>
-      <footer class="foot note">Recall runs <code>all-MiniLM-L6-v2</code> on your device with Transformers.js. No servers, no accounts.</footer>
+        <!-- Capture -->
+        <section id="sec-capture" class="sec" aria-labelledby="capture-heading">
+          <div class="sec-head">
+            <h2 id="capture-heading">Capture</h2>
+            <p id="saved" class="saved" aria-live="polite"></p>
+          </div>
+          <div class="sheet">
+            <label class="setting"><span class="setting-text">Light mode<span class="hint">Keep captions and articles; pause scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
+            <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" id="enabled" /></label>
+            <label class="setting">
+              <span class="setting-text">Watch time before saving</span>
+              <select id="dwellSeconds">
+                <option value="5">5 sec</option>
+                <option value="10">10 sec</option>
+                <option value="20">20 sec</option>
+                <option value="30">30 sec</option>
+                <option value="60">1 min</option>
+              </select>
+            </label>
+            <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" id="speechEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" id="scenesEnabled" /></label>
+            <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" id="screenTextEnabled" /></label>
+            <details class="fold">
+              <summary><span class="fold-title">Advanced</span><span class="fold-sub">Results, speed, how long to keep</span></summary>
+              <div class="fold-body flush">
+                <label class="setting">
+                  <span class="setting-text">Moments per video</span>
+                  <select id="perVideo"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5">5</option></select>
+                </label>
+                <label class="setting">
+                  <span class="setting-text">Videos fetched at once</span>
+                  <select id="transcriptConcurrency"><option value="3">3</option><option value="6">6</option></select>
+                </label>
+                <label class="setting">
+                  <span class="setting-text">Forget what I watch or read after</span>
+                  <select id="maxAgeDays"><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option><option value="0">Never</option></select>
+                </label>
+                <label class="setting">
+                  <span class="setting-text">Keep imported history<span class="hint">A limit removes older imports immediately. Export a backup first.</span></span>
+                  <select id="importMaxAgeDays"><option value="0">Forever</option><option value="365">1 year</option><option value="90">90 days</option></select>
+                </label>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <!-- Your data -->
+        <section id="sec-data" class="sec" aria-labelledby="data-heading">
+          <h2 id="data-heading">Your data</h2>
+          <p class="desc">Stored only in this browser. Backups contain everything, so keep them private.</p>
+          <div class="sheet">
+            <div class="block">
+              <div class="row"><label for="forget-hours">Forget recent</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
+              <p class="hint">Remove whole items saved or updated during this period, including recent imports. Uses Recall's save date, not the original visit date.</p>
+            </div>
+            <div class="block">
+              <div class="row">
+                <button id="export" class="btn ghost">Export backup</button>
+                <label class="btn ghost file">Restore backup<input id="import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                <span class="spacer"></span>
+                <button id="clear" class="btn danger">Delete everything</button>
+              </div>
+              <p id="data-msg" class="msg" aria-live="polite"></p>
+            </div>
+            <details class="fold" id="sec-diagnostics">
+              <summary><span class="fold-title">Diagnostics</span><span class="fold-sub">Storage and why pages were skipped</span></summary>
+              <div class="fold-body">
+                <p id="storage-usage" class="hint" role="status"></p>
+                <div class="row">
+                  <button id="diagnostics-refresh" class="btn ghost small">Refresh</button>
+                  <button id="diagnostics-clear" class="btn ghost small">Clear</button>
+                </div>
+                <p id="capture-empty" class="hint">No events yet.</p>
+                <div class="diagnostic-table"><table><thead><tr><th>Time</th><th>Site</th><th>Kind</th><th>Status</th></tr></thead><tbody id="capture-events"></tbody></table></div>
+              </div>
+            </details>
+          </div>
+        </section>
+      </main>
     </div>
     <script type="module" src="diagnostics.js"></script>
     <script type="module" src="options.js"></script>
     <script type="module" src="web-options.js"></script>
+    <script type="module" src="nav.js"></script>
   </body>
 </html>
