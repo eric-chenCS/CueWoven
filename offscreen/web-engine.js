@@ -1,6 +1,7 @@
+import {matchesSource} from '../lib/search-intent.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
-import { cleanItem, pagePassages, quantize, webHit, policy, WEB_PASSAGES } from "../lib/web-items.js";
-import { prepareQuery, normalizedPassage } from "../lib/search.js";
+import { cleanItem, pagePassages, quantize, packedDot, webHitBuilder, policy, WEB_PASSAGES } from "../lib/web-items.js";
+import { prepareQuery, normalizedPassage, createPool, addPassage, rankPool } from "../lib/search.js";
 export function createWebEngine({ db, embed, onChange = () => {
 } }) {
   let epoch = 0;
@@ -103,20 +104,21 @@ export function createWebEngine({ db, embed, onChange = () => {
       const date = Number(input.indexedAt);
       return save(valid, rows, { restore: true, imported: input.historyImported === true, indexedAt: Number.isFinite(date) && date > 0 && date <= Date.now() + 6e4 ? date : Date.now() });
     },
-    async search(query, vector, { sinceMs = 0, kind = "all", videoId, perVideo = 2, limit = 2048 } = {}) {
-      const records = await cache(), best = [], prepared = prepareQuery(query);
+    // Add every saved website passage to a shared ranking pool (see lib/search.js). Passages of
+    // filtered-out items still count toward word frequencies, like the YouTube index.
+    async collect(pool, vector, { sinceMs = 0, kind = "all", videoId, source } = {}) {
+      const records = await cache();
       await db.items.searchScan((item) => {
         const video = records.get(item.id);
-        if (!video || videoId && video.videoId !== videoId || kind !== "all" && video.kind !== kind || sinceMs && (video.watchedAt || video.indexedAt || 0) < sinceMs) return;
-        const hits = item.passages.map((row) => webHit(query, vector, video, row, prepared)).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, perVideo);
-        best.push(...hits);
-        if (best.length > limit + 512) {
-          best.sort((a, b) => b.score - a.score);
-          best.length = limit;
-        }
+        const eligible = video && matchesSource(video,source) && !(videoId && video.videoId !== videoId) && !(kind !== "all" && video.kind !== kind) && !(sinceMs && (video.watchedAt || video.indexedAt || 0) < sinceMs);
+        for (const row of item.passages) addPassage(pool, row, eligible ? video : null, eligible ? packedDot(vector, row) : NaN, eligible ? webHitBuilder(video, row) : null, 0);
       });
-      const counts=new Map();
-      return best.sort((a,b)=>b.score-a.score||a.videoId.localeCompare(b.videoId)).filter(hit=>{const n=counts.get(hit.videoId)||0;counts.set(hit.videoId,n+1);return n<perVideo;}).slice(0,limit);
+      return pool;
+    },
+    async search(query, vector, { sinceMs = 0, kind = "all", videoId, perVideo = 2, limit = 2048, prepared = prepareQuery(query) } = {}) {
+      const pool = createPool(prepared);
+      await this.collect(pool, vector, { sinceMs, kind, videoId });
+      return rankPool(pool, { perVideo, limit });
     }
   };
 }

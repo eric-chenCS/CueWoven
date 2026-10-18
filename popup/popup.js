@@ -15,6 +15,7 @@ const singleVideo = $('single-video');
 const resultsEl = $('results');
 const statusEl = $('status');
 let sinceDays = 0;
+let inferFilters = true;
 let searchSeq = 0;
 let activeIndex = -1;
 let renderedSeq = -1;
@@ -52,6 +53,7 @@ function ago(ts) {
 }
 
 function empty(title, lines = [], hint = '') {
+  $('tie-hint').hidden = true;
   $('result-pages').hidden = true;
   resultsEl.textContent = '';
   const box = document.createElement('div');
@@ -91,6 +93,8 @@ function render(results, query) {
     const meta=node.querySelector('.meta');
     meta.textContent=[r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
     meta.title=r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
+    // Like Microsoft Recall: results that share the meaning but not your specific words say so.
+    if(r.match==='related'){const tag=document.createElement('span');tag.className='related';tag.textContent='Related';tag.title='Similar in meaning, but doesn\u2019t contain the specific words you searched for';node.querySelector('.match-sources').append(tag);}
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
       const indicator=document.createElement('span');indicator.textContent=label;
       indicator.title=label==='On-screen text'?'Text recognized from sampled video pixels; timing is approximate':label==='Audio'?'AI transcription of player audio':label==='Scene'?'A saved image from the video':label==='Transcript'?'Words from video captions':label==='Page text'?'Text saved from a page you read':label==='Search'?'A saved search query':'A title from saved history';node.querySelector('.match-sources').append(indicator);
@@ -121,10 +125,11 @@ async function runSearch() {
   clearTimeout(debounce);
   const seq = ++searchSeq;
   $('search-retry').hidden=true;
+  $('applied-filters').hidden=true;
   const original = q.value.trim();
   const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
   // Refinement belongs to this open popup; reopening starts with an independent query.
-  chrome.storage.session.set({ lastQuery: original, sinceDays }).catch(() => {});
+  chrome.storage.session.set({ lastQuery: original, sinceDays, inferFilters }).catch(() => {});
   if (!original) { showIdle(); return; }
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
@@ -137,7 +142,7 @@ async function runSearch() {
       if(state.error)throw Error(state.error);
       if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
     }
-    return send({ type: 'search', query,videoId, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
+    return send({ type: 'search', query,videoId, sinceDays, inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
   })())
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
@@ -146,6 +151,9 @@ async function runSearch() {
     $('search-retry').hidden=false;
     return;
   }
+  $('applied-filters').textContent=res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
+  $('applied-filters').hidden=!res.appliedFilters?.length;
+  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-checked',String(Number(c.dataset.days)===(res.appliedSinceDays??sinceDays))));
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   if (res.empty) {showIdle();return;}
   if (!res.results.length) {
@@ -157,12 +165,24 @@ async function runSearch() {
     return;
   }
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
+  showTie(res.nearTie === true);
   renderedSeq=seq;
   $('result-pages').hidden = !singleVideo.checked;
   $('page-label').textContent = resultOffset ? `Match ${resultOffset + 1}` : 'Best match';
   $('previous-video').disabled = resultOffset === 0;
   $('next-video').disabled = res.results.length < 2;
 }
+
+// The search engine decides near ties (it knows which scores are comparable); this only shows it.
+function showTie(tie) {
+  $('tie-hint').hidden = !tie;
+  if (!tie) return;
+  $('tie-next').hidden = !singleVideo.checked;
+  $('tie-text').textContent = singleVideo.checked
+    ? 'Another video matches almost as well. Add the channel or a detail to pick one, or'
+    : 'The top videos match almost equally. Add the channel or a detail to pick one.';
+}
+$('tie-next').addEventListener('click', () => $('next-video').click());
 
 let debounce;
 function scheduleSearch() {
@@ -185,6 +205,7 @@ function scheduleSearch() {
 }
 
 q.addEventListener('input', () => {
+  inferFilters = true;
   details.value = '';
   refinePanel.hidden = true;
   refineToggle.setAttribute('aria-expanded', 'false');
@@ -243,6 +264,7 @@ document.querySelectorAll('.chip').forEach((chip) => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(c === chip)));
     sinceDays = Number(chip.dataset.days) || 0;
+    inferFilters = false;
     resultOffset = 0;
     clearTimeout(debounce);
     runSearch();
@@ -384,7 +406,7 @@ $('start-empty').addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 (async () => {
   q.focus();
-  const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays']).catch(() => ({}));
+  const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays', 'inferFilters']).catch(() => ({}));
   await refreshStatus();
   refreshWebPause();
   const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
@@ -393,6 +415,7 @@ $('start-empty').addEventListener('click', async () => {
   await setupIndexNow();
   refreshSpeech();
   send({type:'vision-status'}).then(renderVision).catch(()=>{});
+  inferFilters = saved?.inferFilters !== false;
   if (saved && saved.sinceDays) {
     sinceDays = saved.sinceDays;
     document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.days) === sinceDays)));
