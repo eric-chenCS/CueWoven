@@ -1,12 +1,12 @@
-# Momento v3.3.20 installation
+# WebLapse v3.3.21 installation
 
 ## From the ZIP
 
-Extract `momento-v3.3.20.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `weblapse-v3.3.21.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
-## Open Momento
+## Open WebLapse
 
-Click the toolbar icon or press **Ctrl+Shift+F**. If the shortcut is missing after updating, set Momento's **Activate the extension** entry at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`. See [shortcut availability and conflicts](docs/UPDATE-3.3.10.md).
+Click the toolbar icon or press **Ctrl+Shift+F**. If the shortcut is missing after updating, set WebLapse's **Activate the extension** entry at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`. See [shortcut availability and conflicts](docs/UPDATE-3.3.10.md).
 
 ## From this repository
 
@@ -14,15 +14,15 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Momento extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.20 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the WebLapse extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.21 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.20 starts with YouTube only and saving enabled. Add suggested sites adds the remaining 30 domains after requesting browser access. Existing custom lists, exclusions and intentional pauses remain. See [UPDATE-3.3.20.md](docs/UPDATE-3.3.20.md).
+Version 3.3.21 starts with YouTube only and saving enabled. Add suggested sites adds the remaining 30 domains after requesting browser access. Existing custom lists, exclusions and intentional pauses remain. See [UPDATE-3.3.21.md](docs/UPDATE-3.3.21.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Lite mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 
 Version 3.2 adds cached result paging, larger bounded database reads, protected storage, capture status/logs and optional imported-history retention. Updating from v2.13–v3.1 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Database schema remains 5; updating from v3.1 requires no migration or re-import. Earlier versions receive the normalized-text upgrade documented in UPDATE-3.1.md. See [UPDATE-3.2.md](docs/UPDATE-3.2.md) for measurements and review decisions.
 
-Storage protection adds the `unlimitedStorage` permission; site access remains optional and Momento's own content/image limits remain active. Storage & capture diagnostics shows approximate usage including model caches and the last 100 domain/reason events from this browser session. **Keep imported history** defaults to Forever. Choose 24 hours, 7 days, 4 weeks or 12 months only when you want older imported entries removed by original visit date, including imported transcripts. Export a backup first if you want to keep a separate copy.
+Storage protection adds the `unlimitedStorage` permission; site access remains optional and WebLapse's own content/image limits remain active. Storage & capture diagnostics shows approximate usage including model caches and the last 100 domain/reason events from this browser session. **Keep imported history** defaults to Forever. Choose 24 hours, 7 days, 4 weeks or 12 months only when you want older imported entries removed by original visit date, including imported transcripts. Export a backup first if you want to keep a separate copy.
 
 ## Enable websites and articles
 
@@ -38,7 +38,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates momento-v3.3.20.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates weblapse-v3.3.21.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -46,7 +46,7 @@ A different folder can mean a different extension identity. Export your old libr
 
 New users can choose **Import history** or **Start empty**. Start empty adds no past data and requests no history access. The import option stays in settings for later.
 
-To populate the library from a YouTube account export, use Google Takeout, select YouTube history in JSON format, extract the archive, and choose watch-history.json in Momento. JSON files up to 100 MB are accepted; HTML and ZIP files are not. The file is read locally and is not uploaded.
+To populate the library from a YouTube account export, use Google Takeout, select YouTube history in JSON format, extract the archive, and choose watch-history.json in WebLapse. JSON files up to 100 MB are accepted; HTML and ZIP files are not. The file is read locally and is not uploaded.
 
 The saved titles, channels and watch dates support semantic title search immediately. Duplicate imports skip existing videos. Keep the settings page open while importing; if interrupted, import the same file again to skip completed entries. This does not automatically synchronize your Google account.
 
@@ -68,6 +68,6 @@ Model downloads and thumbnail requests use the network. Transcripts, vectors and
 
 ## New controls
 
-Select **Search this video** on an active video to restrict results; Momento tries Index first if needed. **Copy link** shares its time. Type `rc` plus Space/Tab in the browser address bar to search your saved library. An empty popup offers optional **Try sample videos**; they are original demo clips and do not fetch YouTube.
+Select **Search this video** on an active video to restrict results; WebLapse tries Index first if needed. **Copy link** shares its time. Type `rc` plus Space/Tab in the browser address bar to search your saved library. An empty popup offers optional **Try sample videos**; they are original demo clips and do not fetch YouTube.
 
-**Lite mode** pauses article-image, scene, on-screen text and speech capture together. Expand Speech-to-text in the popup for its manual controls. **Forget recent** in Your data removes whole items using their Momento save date, including recent imports; its confirmation explains the deletion. The suggested last-week chip only changes a filter after you click it. New text is heuristically redacted; captured images are not. Site allowlists and exclusions remain recommended for private browsing contexts.
+**Lite mode** pauses article-image, scene, on-screen text and speech capture together. Expand Speech-to-text in the popup for its manual controls. **Forget recent** in Your data removes whole items using their WebLapse save date, including recent imports; its confirmation explains the deletion. The suggested last-week chip only changes a filter after you click it. New text is heuristically redacted; captured images are not. Site allowlists and exclusions remain recommended for private browsing contexts.

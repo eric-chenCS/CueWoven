@@ -7,6 +7,8 @@ build-meta.json
 !.env.example
 *watch-history*.json
 recall-index-*.json
+momento-index-*.json
+weblapse-index-*.json
 playwright-report/
 test-results/
 *-profile*/
