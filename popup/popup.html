@@ -2,88 +2,113 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v3.3.0</title>
+    <title>Recall v3.3.1</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand">
+      <div class="brand" title="Recall v3.3.1">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v3.3.0</span>
+        <span>Recall</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
 
     <section id="start-choice" class="start-choice" aria-labelledby="start-heading" hidden>
-      <h2 id="start-heading">How would you like to start?</h2>
-      <p>Import past video, browser or search history, or start empty. Website capture is optional.</p>
+      <h2 id="start-heading">Fill your library</h2>
+
       <div class="start-actions">
         <button id="start-import" class="btn small">Import history</button>
         <button id="start-empty" class="btn ghost small">Start empty</button>
-          <button id="start-samples" class="btn ghost small">Try sample videos</button>
+        <button id="start-samples" class="btn ghost small">Try sample videos</button>
       </div>
     </section>
 
-    <p id="capture-indicator" class="scene-hint" role="status"></p>
     <div class="search-row">
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="q" type="search" autocomplete="off" spellcheck="false"
-               placeholder="that article, video or search about black holes…" aria-label="Search your Recall library" />
+               placeholder="Describe what you remember…" aria-label="Search your Recall library" />
       </div>
-      <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add details to your current search" disabled>Refine</button>
+      <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add more details to this search" disabled>Refine</button>
     </div>
     <section id="refine-panel" class="refine-panel" aria-labelledby="refine-label" hidden>
-      <label id="refine-label" for="details">Add details to this search</label>
-      <textarea id="details" rows="2" maxlength="1000" placeholder="e.g. a Minecraft video, explaining how to build a trap" aria-describedby="refine-hint"></textarea>
-      <p id="refine-hint">These clues are combined with the search above. Changing that search or closing Refine clears them.</p>
+      <label id="refine-label" for="details">More details</label>
+      <textarea id="details" rows="2" maxlength="1000" placeholder="e.g. a Minecraft video, explaining how to build a trap" ></textarea>
+
     </section>
 
-    <p id="scene-status" class="scene-hint" role="status" aria-live="polite" hidden></p>
-    <p id="ocr-status" class="scene-hint" role="status" aria-live="polite" hidden></p>
-    <p id="embedding-status" class="scene-hint" role="status" aria-live="polite" hidden></p>
-    <div class="filters" role="radiogroup" aria-label="Watched within">
-      <button class="chip" role="radio" aria-checked="true" data-days="0">Any time</button>
-      <button class="chip" role="radio" aria-checked="false" data-days="1">Today</button>
-      <button class="chip" role="radio" aria-checked="false" data-days="7">7 days</button>
-      <button class="chip" role="radio" aria-checked="false" data-days="30">30 days</button>
+    <div class="filter-row">
+      <div class="filters" role="radiogroup" aria-label="Watched within">
+        <button class="chip" role="radio" aria-checked="true" data-days="0">Any time</button>
+        <button class="chip" role="radio" aria-checked="false" data-days="1">Today</button>
+        <button class="chip" role="radio" aria-checked="false" data-days="7">7 days</button>
+        <button class="chip" role="radio" aria-checked="false" data-days="30">30 days</button>
+      </div>
+      <div class="source-options">
+        <label for="kind-filter" class="visually-hidden">Show</label>
+        <select id="kind-filter" aria-label="Show results from">
+          <option value="all">Everything</option>
+          <option value="video">Videos</option>
+          <option value="page">Pages</option>
+          <option value="search">Searches</option>
+        </select>
+      </div>
     </div>
 
-    <div class="source-options"><label for="kind-filter">Search</label><select id="kind-filter"><option value="all">Everything</option><option value="video">Videos</option><option value="page">Pages</option><option value="search">Searches</option></select><button id="web-pause-popup" class="btn ghost small" hidden>Pause sites</button></div>
-    <label class="view-option"><input id="single-video" type="checkbox" checked /> One result at a time</label>
-    <label id="video-scope-row" class="view-option" hidden><input id="video-scope" type="checkbox" /> Search this video</label>
-    <button id="suggest-week" class="btn ghost small" hidden>Only last week?</button>
-    <button id="search-retry" class="btn small" hidden>Retry</button>
-
-    <div id="index-now" class="index-now" hidden>
-      <span id="index-now-text">Index this video now</span>
-      <button id="index-now-btn" class="btn small">Index</button>
+    <div class="search-extras">
+      <label id="video-scope-row" class="view-option" hidden><input id="video-scope" type="checkbox" /> Search this video</label>
+      <button id="suggest-week" class="link-btn" hidden>Only last week?</button>
     </div>
-
-    <section id="page-capture" class="page-capture" hidden><p id="page-capture-status" role="status"></p><div><button id="page-save-now" class="btn ghost small">Save this page now</button> <button id="page-forget" class="btn ghost small">Forget and block site</button></div></section>
-    <details id="speech" class="speech" hidden>
-      <summary id="speech-heading">Speech-to-text</summary>
-      <p>For videos without usable captions. Starts automatically if caption capture fails. English, on this device. Captures only the player audio you play; no microphone. First use downloads a speech model and uses extra CPU.</p>
-      <div class="speech-actions"><button id="speech-start" class="btn ghost small">Start English transcription</button><button id="speech-stop" class="btn small" hidden>Stop</button></div>
-      <p id="speech-status" role="status" aria-live="polite"></p>
-    </details>
-
-    <div id="model" class="model" hidden>
-      <div class="model-text" id="model-text">Loading the search model…</div>
-      <div class="bar"><div id="model-bar"></div></div>
+    <div class="notices">
+      <button id="search-retry" class="btn small" hidden>Retry</button>
+      <p id="scene-status" class="notice" role="status" aria-live="polite" hidden></p>
+      <p id="ocr-status" class="notice" role="status" aria-live="polite" hidden></p>
+      <p id="embedding-status" class="notice" role="status" aria-live="polite" hidden></p>
+      <div id="model" class="notice model" hidden>
+        <div class="model-text" id="model-text">Loading the search model…</div>
+        <div class="bar"><div id="model-bar"></div></div>
+      </div>
     </div>
 
     <main id="results" class="results" aria-live="polite"></main>
-    <nav id="result-pages" class="result-pages" aria-label="Ranked videos" hidden>
-      <button id="previous-video" class="btn ghost small" aria-label="Previous video" title="Previous video" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
+    <nav id="result-pages" class="result-pages" aria-label="Ranked results" hidden>
+      <button id="previous-video" class="btn ghost small" aria-label="Previous result" title="Previous result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
       <span id="page-label" role="status"></span>
-      <button id="next-video" class="btn small" aria-label="Next closest video" title="Next closest video" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+      <button id="next-video" class="btn ghost small" aria-label="Next closest result" title="Next closest result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
     </nav>
 
+    <section class="tab-tools" aria-label="This tab">
+      <p id="capture-indicator" class="tab-caption" role="status" hidden></p>
+      <div id="index-now" class="tab-item" hidden>
+        <span class="tab-label">This video</span>
+        <span id="index-now-text" class="tab-text"></span>
+        <button id="index-now-btn" class="btn small">Save now</button>
+      </div>
+
+      <section id="page-capture" class="tab-item page-capture" aria-label="This page" hidden>
+        <span class="tab-label">This page</span>
+        <p id="page-capture-status" class="tab-text" role="status"></p>
+        <div class="tab-actions"><button id="page-save-now" class="btn ghost small">Save page</button><button id="page-forget" class="btn ghost small" title="Delete what Recall saved from this site and stop saving it">Forget site</button></div>
+      </section>
+
+      <details id="speech" class="speech" hidden>
+        <summary id="speech-heading">Speech-to-text</summary>
+        <div class="speech-body">
+          <p class="hint">English player audio, on this device. Only played portions are saved. First use downloads a model.</p>
+          <p id="speech-status" role="status" aria-live="polite"></p>
+          <div class="speech-actions"><button id="speech-start" class="btn ghost small">Start English transcription</button><button id="speech-stop" class="btn small" hidden>Stop</button></div>
+        </div>
+      </details>
+    </section>
+
     <footer class="foot">
-      <span>On-device search · local index</span>
-      <a href="#" id="open-library">Library &amp; settings</a>
+      <label class="view-option"><input id="single-video" type="checkbox" checked /> Best match only</label>
+      <span class="foot-actions">
+        <button id="web-pause-popup" class="link-btn" hidden>Pause sites</button>
+        <a href="#" id="open-library">Library &amp; settings</a>
+      </span>
     </footer>
 
     <template id="result-tpl">
@@ -96,7 +121,7 @@
         <div class="body">
           <div class="title"></div>
           <div class="snippet"></div>
-          <div class="match-sources" aria-label="Match evidence"></div>
+          <div class="match-sources" aria-label="Matched in"></div>
           <div class="meta"></div>
         </div>
       </a>

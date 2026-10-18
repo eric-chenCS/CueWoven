@@ -52,7 +52,9 @@ async function loadLibrary() {
   const moments = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
   const stats = $('stats');
   stats.textContent = '';
-  for (const [n, label] of [[videos.length, videos.length === 1 ? 'item' : 'items'], [moments, 'saved text moments'],[videos.reduce((n,v)=>n+(v.sceneCount || 0),0),'saved scenes'],[videos.reduce((n,v)=>n+(v.screenCount||0),0),'on-screen text moments']]) {
+  const screenMoments=videos.reduce((n,v)=>n+(v.screenCount||0),0);
+  stats.title=`${screenMoments} on-screen text moments`;
+  for (const [n,label] of [[videos.length,videos.length===1?'item':'items'],[moments+screenMoments,'moments'],[videos.reduce((n,v)=>n+(v.sceneCount||0),0),'scenes']].filter(([n],i)=>i===0||n>0)) {
     const s = document.createElement('span');
     s.className = 'stat';
     const b = document.createElement('b');
@@ -98,7 +100,8 @@ function renderLibrary() {
     t.textContent = v.title || v.videoId;
     const m = document.createElement('div');
     m.className = 'm';
-    m.textContent = [v.channel, v.method === 'history-title' ? 'Title saved · no transcript' : v.method === 'speech-local' ? `${v.chunkCount} moments · AI speech, played portions only` : `${v.chunkCount} moments`, v.sceneCount ? `${v.sceneCount} scenes` : '',v.screenCount?`${v.screenCount} on-screen text moments`:'', 'indexed ' + new Date(v.indexedAt).toLocaleString()].filter(Boolean).join(' · ');
+    m.textContent=[v.channel,v.method==='history-title'?'Title only':`${v.chunkCount} moments`,v.method==='speech-local'?'AI speech':'',new Date(v.indexedAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})].filter(Boolean).join(' · ');
+    m.title=[v.sceneCount?`${v.sceneCount} scenes`:'',v.screenCount?`${v.screenCount} on-screen text moments`:'',v.method==='speech-local'?'Played portions only':''].filter(Boolean).join(' · ');
     info.append(t, m);
     const actions = document.createElement('div');
     actions.className = 'actions';
@@ -345,7 +348,7 @@ function onBulkProgress(p) {
 function setBulkControls(busy) {
   bulkBusy = busy;
   for (const id of ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'welcome-import', 'history-save', 'history-scan', 'import', 'clear', 'bulk-go']) $(id).disabled = busy || historyImportBusy || libraryBusy();
-  $('bulk-go').textContent = busy ? 'Fetching in background…' : 'Index these videos';
+  $('bulk-go').textContent = busy ? 'Fetching…' : 'Add videos';
   $('bulk-stop').hidden = !busy;
   updateTranscriptButton();
   renderLibrary();

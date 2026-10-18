@@ -88,6 +88,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   // Explicit opt-in is required for queries, including imports.
   const searchItem={kind:'search',url:'https://www.google.com/search?q=coral',title:'coral',watchedAt:Date.now()};
   assert.equal((await f.send({type:'web-import',items:[searchItem]})).imported,0);
+  await f.options.locator('details').filter({has:f.options.locator('#web-searches')}).locator('summary').first().click();
   await f.options.locator('#web-searches').check();
   await f.wait(()=>f.options.evaluate(async()=>(await chrome.storage.local.get('webCapture')).webCapture.searches===true));
   assert.equal((await f.send({type:'web-import',items:[searchItem]})).imported,1);
