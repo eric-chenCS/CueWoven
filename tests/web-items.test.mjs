@@ -50,6 +50,8 @@ test("page links highlight saved words and media links preserve site and playbac
   const video = itemLink({ videoId, url, kind: "video", screenText: true, start: 12 });
   assert.equal(video, "https://example.com/article#recall-time=9");
   assert.equal(itemLink({ videoId, url: "javascript:alert(1)", kind: "page" }), null);
+  assert.ok(itemLink({ videoId, url, kind: "page", pageText: true, text: "Snippet words shown here", anchor: "Other paragraph words" }).includes("recall-text=Snippet"));
+  assert.equal(itemLink({ videoId, url, kind: "page", pageText: true, text: "A red fish", matchSources: ["Image caption"] }), url);
 });
 test("text fragment anchors stay within one captured text block rather than crossing a heading", () => {
   const rows = pagePassages("Coral reefs\nCoral bleaching occurs when warm ocean water drives away the algae that feed the reef.");
