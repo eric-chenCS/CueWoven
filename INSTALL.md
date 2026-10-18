@@ -1,4 +1,8 @@
-# Recall v3.2.1 installation
+# Recall v3.3.0 installation
+
+## From the ZIP
+
+Extract `recall-v3.3.0.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## From this repository
 
@@ -6,9 +10,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.2.1. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.0. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.2.1 improves OCR merging, boxed-overlay recognition and worker cleanup. Updating from v3.2 needs no runtime rebuild, schema migration or history re-import. See [UPDATE-3.2.1.md](docs/UPDATE-3.2.1.md) for the tests and limitations.
+Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Light mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 
 Version 3.2 adds cached result paging, larger bounded database reads, protected storage, capture status/logs and optional imported-history retention. Updating from v2.13–v3.1 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Database schema remains 5; updating from v3.1 requires no migration or re-import. Earlier versions receive the normalized-text upgrade documented in UPDATE-3.1.md. See [UPDATE-3.2.md](docs/UPDATE-3.2.md) for measurements and review decisions.
 
@@ -28,7 +32,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.2.1.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.3.0.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
@@ -40,7 +44,7 @@ To populate the library from a YouTube account export, use Google Takeout, selec
 
 The saved titles, channels and watch dates support semantic title search immediately. Duplicate imports skip existing videos. Keep the settings page open while importing; if interrupted, import the same file again to skip completed entries. This does not automatically synchronize your Google account.
 
-Alternatively, click Find YouTube history to scan this browser profile's saved visits. This requests optional history permission. Add all found videos saves the titles and then attempts their transcripts in the background by default. Uncheck Fetch transcripts when adding all videos for titles only, or select up to 20 videos for a smaller batch. The scan shows up to 500 recent unique videos and cannot recover deleted, incognito, or account-only activity from other devices.
+Alternatively, click Find YouTube history to scan this browser profile's saved visits. This requests optional history permission. Add all found videos saves the titles and then attempts transcripts for the newest 200 missing videos in the background by default. Uncheck Fetch transcripts when adding all videos for titles only, or select up to 20 videos for a smaller batch. The scan shows up to 500 recent unique videos and cannot recover deleted, incognito, or account-only activity from other devices.
 
 ## Transcript limitation
 
@@ -55,3 +59,9 @@ Index backup restore now sends one video or image per request and shows durable 
 With Keep imported history set to Forever, imported history stays protected after background transcript fetching, even when full transcripts are saved. New imports carry their origin; after watching a video, the retention setting applies even if only scenes were captured. Legacy title-only records with scenes also expire; legacy records without origin information or scenes keep the import exemption to avoid deleting old imports. For videos you actually watch, retention applies to the latest watch or indexing date. Rewatching an already indexed video updates recency without re-embedding it. Background Add transcript preserves import protection and does not pretend the video was rewatched today. If v2.11 or an earlier version lost an imported flag, re-import the same Takeout file: an exact original watch-date match repairs a missing flag without replacing transcript text. Explicit watched flags and newer watch dates are not changed; already deleted records cannot be recovered without the source file or a backup.
 
 Model downloads and thumbnail requests use the network. Transcripts, vectors and settings live in the current browser profile. Uninstalling or switching profiles does not transfer that library automatically; export a backup first.
+
+## New controls
+
+Select **Search this video** on an active video to restrict results; Recall tries Index first if needed. **Copy link** shares its time. Type `rc` plus Space/Tab in the browser address bar to search your saved library. An empty popup offers optional **Try sample videos**; they are original demo clips and do not fetch YouTube.
+
+**Light mode** pauses scene, on-screen text and speech capture together. Expand Speech-to-text in the popup for its manual controls. **Forget recent** in Your data removes whole items using their Recall save date, including recent imports; its confirmation explains the deletion. The suggested last-week chip only changes a filter after you click it. New text is heuristically redacted; captured images are not. Site allowlists and exclusions remain recommended for private browsing contexts.

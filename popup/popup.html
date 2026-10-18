@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Recall v3.2.1</title>
+    <title>Recall v3.3.0</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -10,7 +10,7 @@
     <header class="top">
       <div class="brand">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>Recall v3.2.1</span>
+        <span>Recall v3.3.0</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -21,9 +21,11 @@
       <div class="start-actions">
         <button id="start-import" class="btn small">Import history</button>
         <button id="start-empty" class="btn ghost small">Start empty</button>
+          <button id="start-samples" class="btn ghost small">Try sample videos</button>
       </div>
     </section>
 
+    <p id="capture-indicator" class="scene-hint" role="status"></p>
     <div class="search-row">
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -50,6 +52,9 @@
 
     <div class="source-options"><label for="kind-filter">Search</label><select id="kind-filter"><option value="all">Everything</option><option value="video">Videos</option><option value="page">Pages</option><option value="search">Searches</option></select><button id="web-pause-popup" class="btn ghost small" hidden>Pause sites</button></div>
     <label class="view-option"><input id="single-video" type="checkbox" checked /> One result at a time</label>
+    <label id="video-scope-row" class="view-option" hidden><input id="video-scope" type="checkbox" /> Search this video</label>
+    <button id="suggest-week" class="btn ghost small" hidden>Only last week?</button>
+    <button id="search-retry" class="btn small" hidden>Retry</button>
 
     <div id="index-now" class="index-now" hidden>
       <span id="index-now-text">Index this video now</span>
@@ -57,12 +62,12 @@
     </div>
 
     <section id="page-capture" class="page-capture" hidden><p id="page-capture-status" role="status"></p><div><button id="page-save-now" class="btn ghost small">Save this page now</button> <button id="page-forget" class="btn ghost small">Forget and block site</button></div></section>
-    <section id="speech" class="speech" aria-labelledby="speech-heading" hidden>
-      <h2 id="speech-heading">Speech-to-text</h2>
+    <details id="speech" class="speech" hidden>
+      <summary id="speech-heading">Speech-to-text</summary>
       <p>For videos without usable captions. Starts automatically if caption capture fails. English, on this device. Captures only the player audio you play; no microphone. First use downloads a speech model and uses extra CPU.</p>
       <div class="speech-actions"><button id="speech-start" class="btn ghost small">Start English transcription</button><button id="speech-stop" class="btn small" hidden>Stop</button></div>
       <p id="speech-status" role="status" aria-live="polite"></p>
-    </section>
+    </details>
 
     <div id="model" class="model" hidden>
       <div class="model-text" id="model-text">Loading the search model…</div>
@@ -82,6 +87,7 @@
     </footer>
 
     <template id="result-tpl">
+      <div class="result-wrap">
       <a class="result" href="#" tabindex="0">
         <div class="thumb">
           <img alt="" loading="lazy" />
@@ -94,6 +100,8 @@
           <div class="meta"></div>
         </div>
       </a>
+      <button class="copy-link btn ghost small" aria-label="Copy link to this moment" title="Copy link to this moment">Copy link</button>
+      </div>
     </template>
 
     <script type="module" src="popup.js"></script>

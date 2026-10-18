@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.2.1 · Library &amp; settings</title>
+    <title>Recall v3.3.0 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <div class="wrap">
       <header class="head">
-        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.2.1</h1></div>
+        <div class="brand"><img src="../icons/icon48.png" alt="" width="32" height="32" /> <h1>Recall v3.3.0</h1></div>
         <p class="lede">Search videos, pages, articles and past queries. Your index lives only in this browser.</p>
         <div class="stats" id="stats"></div>
       </header>
@@ -37,7 +37,8 @@
         <h2 id="web-capture-heading">Websites &amp; articles</h2>
         <p class="note">Optional: save text from articles and pages you read, plus available captions, sampled scenes and on-screen text from visible playing videos on websites such as Instagram and TikTok. This works in the browser, not native apps. Some protected or cross-origin players cannot expose images, captions or audio. Only grant sites you trust Recall to remember.</p>
         <div class="row"><label for="web-domain">Site domain</label><input id="web-domain" type="text" autocomplete="off" placeholder="wikipedia.org" /><button id="web-allow" class="btn">Allow this site</button><button id="web-all" class="btn ghost">Allow public websites</button></div>
-        <p class="note">Allow public websites requests access to HTTP/HTTPS sites. Email, known financial/health/government sites, private paths, password/editor pages and incognito are excluded. These checks cannot recognize every private or signed-in page; use specific sites for tighter control. Form values are never read. No past pages are fetched.</p>
+        <p class="note">Allow public websites requests access to HTTP/HTTPS sites. Email, known financial/health/government sites, private paths, password/editor pages and incognito are excluded. Visible Sign out controls also stop capture. Text redaction hides recognizable email addresses, formatted phone numbers, SSNs and valid card numbers; images are not redacted. These checks cannot recognize every private or signed-in page; use specific sites for tighter control. Form values are never read. No past pages are fetched.</p>
+        <label class="setting"><span><strong>Save Google search queries</strong><br /><span class="note">Allow live capture and history import of eligible Google queries. Off by default. Obvious medical searches and private addresses are still skipped.</span></span><input id="web-searches" type="checkbox" /></label>
         <label class="setting"><span><strong>Transcribe website video audio</strong><br /><span class="note">When captions are unavailable, try the local English speech model on the audio you play. Off by default; no microphone. Non-English language labels skip automatic transcription. Unknown audio may be misrecognized; the popup has Stop and manual Start.</span></span><input id="web-audio" type="checkbox" /></label>
         <div class="row"><button id="web-pause" class="btn ghost">Pause website capture</button><button id="web-off" class="btn ghost">Turn off website capture</button><button id="web-forget" class="btn danger">Forget and block this site</button></div>
         <p id="web-state" class="note" role="status" aria-live="polite"></p><p id="web-exclusions" class="note"></p><p id="web-msg" class="note" role="status" aria-live="polite"></p>
@@ -47,7 +48,7 @@
       <section class="card" aria-labelledby="takeout-heading">
         <h2 id="takeout-heading">Import from your YouTube account</h2>
         <p class="note">Import your extracted <strong>watch-history.json</strong> from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>. Choose YouTube history in JSON format when exporting. Recall saves video titles, channels and watch dates locally and makes them searchable without fetching captions. The file is not uploaded.</p>
-        <label class="setting"><span><strong>Fetch transcripts after import</strong><br /><span class="note">Fetches captions in a separate minimized Recall window. After titles are saved, you can close settings; keep the browser open. YouTube receives the video requests.</span></span><input id="takeout-transcripts" type="checkbox" checked /></label>
+        <label class="setting"><span><strong>Fetch transcripts after import</strong><br /><span class="note">Fetches captions for the newest 200 missing videos in a separate minimized Recall window. Use Fetch missing transcripts to fetch more. After titles are saved, you can close settings; keep the browser open. YouTube receives the video requests.</span></span><input id="takeout-transcripts" type="checkbox" checked /></label>
         <label class="btn file">Import YouTube history<input id="takeout-import" type="file" accept="application/json,.json" hidden /></label>
         <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
         <p id="history-import-msg" class="note" role="status" aria-live="polite"></p>
@@ -70,7 +71,7 @@
         <p id="history-msg" class="note" role="status" aria-live="polite"></p>
         <div id="history-tools" hidden>
           <input id="history-filter" type="search" aria-label="Search history titles" placeholder="Search video titles…" />
-          <label class="setting"><span><strong>Fetch transcripts when adding all videos</strong><br /><span class="note">Save titles first, then fetch captions in a separate minimized Recall window. You can close settings after titles are saved; keep the browser open. YouTube receives video requests. Unavailable captions leave the title saved.</span></span><input id="browser-transcripts" type="checkbox" checked /></label>
+          <label class="setting"><span><strong>Fetch transcripts when adding all videos</strong><br /><span class="note">Save all titles first, then fetch captions for the newest 200 missing videos in a separate minimized Recall window. You can close settings after titles are saved; keep the browser open. YouTube receives video requests. Unavailable captions leave the title saved.</span></span><input id="browser-transcripts" type="checkbox" checked /></label>
           <p class="note">Or select up to 20 videos per batch. Transcript fetching runs in the background. YouTube may block captions; only successful videos become searchable by what was said.</p>
           <button id="history-index" class="btn" disabled>Index selected videos</button>
           <button id="history-save" class="btn ghost">Add all found videos to Recall</button>
@@ -100,6 +101,7 @@
 
       <section class="card">
         <h2>Settings</h2>
+        <label class="setting"><span><strong>Light mode</strong><br /><span class="note">Keep captions and article text; stop scene capture, on-screen text and speech together. Existing evidence remains searchable. Models can still load when you search saved scenes.</span></span><input id="lightMode" type="checkbox" /></label>
         <label class="setting">
           <input type="checkbox" id="enabled" />
           <span><strong>Index automatically</strong><br /><span class="note">Turn off to pause automatic YouTube and website capture. You can still manually index YouTube from the popup.</span></span>
@@ -149,6 +151,8 @@
 
       <section class="card">
         <h2>Your data</h2>
+        <div class="row"><label for="forget-hours">Forget items saved or updated in the</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
+        <p class="note">Uses when Recall saved the item, including newly imported history. Removes the whole matching item and its evidence. For older backups without a saved date, uses the stored indexing date.</p>
         <p class="note">Export saves your Recall library: video evidence, saved page text, imported addresses and search queries. Treat the JSON backup as private. Import recreates the index on this device.</p>
         <div class="row">
           <button id="export" class="btn ghost">Export index</button>

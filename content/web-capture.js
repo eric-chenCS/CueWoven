@@ -26,6 +26,7 @@
   }
   function privatePage() {
     if (document.querySelector("[data-recall-private]")) return true;
+    if([...document.querySelectorAll('a,button,[role="button"]')].slice(0,300).some(node=>rendered(node)&&/^(?:sign\s*out|log\s*out|logout|cerrar sesi[oó]n|d[eé]connexion|abmelden)$/i.test(node.textContent.trim())))return true;
     if ([...document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[autocomplete="new-password"]')].some(rendered)) return true;
     return [...document.querySelectorAll('[contenteditable]:not([contenteditable="false"]),textarea')].slice(0, 100).some((editor) => {
       if (!rendered(editor)) return false;
@@ -98,7 +99,7 @@
       words += list.length;
       parts.push(list.join(" "));
     }
-    return parts.join("\n").slice(0, 6e4);
+    return P.redactText(parts.join("\n")).slice(0, 6e4);
   }
   async function tick(force = false) {
     if (busy) return;
@@ -134,7 +135,7 @@
           }
           videoInfo = result.video;
           mediaSince = Date.now();
-          const options = { ...settings, dwellSeconds: Math.min(5, Number(settings.dwellSeconds) || 5) };
+          const options = { ...settings,...(settings.lightMode?{scenesEnabled:false,screenTextEnabled:false}:{}), dwellSeconds: Math.min(5, Number(settings.dwellSeconds) || 5) };
           globalThis.__recallScenes?.start(clock, options);
           globalThis.__recallScreen?.start(clock, options);
           const jump = new URLSearchParams(location.hash.slice(1)), time = Number(jump.get("recall-time"));
@@ -159,7 +160,7 @@
         if (segments.length) {
           const result = await send({ type: "web-media", video: videoInfo, segments: segments.slice(0, 16) });
           report(result.error ? "model-error" : result.ok ? "saved" : "hidden");
-        } else if (config.audio && !speechAttempted && ![...selected.textTracks].some((track) => track.cues?.length)) {
+        } else if (!settings.lightMode && config.audio && !speechAttempted && ![...selected.textTracks].some((track) => track.cues?.length)) {
           speechAttempted = true;
           await send({ type: "speech-auto-start" });
         }
@@ -211,7 +212,7 @@
     if (area !== "local") return;
     if (changes.webCapture) config = changes.webCapture.newValue || {};
     if (changes.settings) settings = changes.settings.newValue || {};
-    if (!eligible()) stopMedia();
+    if (!eligible() || changes.settings || changes.webCapture) stopMedia();
   });
   window.addEventListener("pagehide", stopMedia);
   document.addEventListener("seeking", () => revision++, true);

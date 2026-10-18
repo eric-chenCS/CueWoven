@@ -44,7 +44,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);
   await popup.waitForFunction(()=>document.querySelector('#speech-status').textContent.startsWith('Listening'));
   await popup.locator('#speech').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-auto-speech.png')});
-  await popup.locator('#speech-stop').click();await popup.waitForFunction(()=>document.querySelector('#speech-stop').hidden,null,{timeout:120000});
+  await popup.locator('#speech').evaluate(node=>node.open=true);await popup.locator('#speech-stop').click();await popup.waitForFunction(()=>document.querySelector('#speech-stop').hidden,null,{timeout:120000});
   const stopped=await options.evaluate(()=>chrome.runtime.sendMessage({type:'speech-status'}));assert.equal(stopped.status,'idle');
   // A backup retains the partial marker and audio-range metadata after re-embedding.
   const backup=await options.evaluate(()=>chrome.runtime.sendMessage({type:'export'}));
@@ -72,7 +72,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await popup.waitForFunction(async tabId=>(await chrome.tabs.sendMessage(tabId,{type:'speech-context'})).video.audioLanguage==='es',target.id);
   // An actual player end must stop capture without using the popup's Stop button.
   await video.bringToFront();await video.locator('#play').click();
-  await popup.locator('#speech-start').click();
+  await popup.locator('#speech').evaluate(node=>node.open=true);await popup.locator('#speech-start').click();
   await popup.waitForFunction(()=>document.querySelector('#speech-status').textContent.startsWith('Listening'),null,{timeout:120000});
   await waitState('recording');
   await video.evaluate(()=>{const v=document.querySelector('video');v.loop=false;v.currentTime=v.duration-0.2;v.play()});
@@ -81,7 +81,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   // Switching off the setting also stops an active stream immediately.
   await video.evaluate(()=>{const v=document.querySelector('video');v.currentTime=0;v.loop=true});
   await video.locator('#play').click();
-  await popup.locator('#speech-start').click();
+  await popup.locator('#speech').evaluate(node=>node.open=true);await popup.locator('#speech-start').click();
   await popup.waitForFunction(()=>document.querySelector('#speech-status').textContent.startsWith('Listening'),null,{timeout:120000});
   await waitState('recording');
   await options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,speechEnabled:false}}));

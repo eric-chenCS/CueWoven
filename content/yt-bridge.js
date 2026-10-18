@@ -56,7 +56,7 @@
     try {
       const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
       excluded=excludedSite(webCapture);
-      const value=Object.assign({}, DEFAULTS, settings);return {...value,enabled:value.enabled&&!excluded};
+      const value=Object.assign({}, DEFAULTS, settings);return {...value,...(value.lightMode?{speechEnabled:false,scenesEnabled:false,screenTextEnabled:false}:{}),enabled:value.enabled&&!excluded};
     } catch (_) {
       return DEFAULTS;
     }
@@ -207,7 +207,9 @@
   });
 
   chrome.storage.onChanged?.addListener((changes,area)=>{
-    if(area!=='local'||!changes.webCapture)return;
+    if(area!=='local')return;
+    if(changes.settings&&current)settings().then(s=>{globalThis.__recallScenes?.start(speechClock,s);globalThis.__recallScreen?.start(speechClock,s);});
+    if(!changes.webCapture)return;
     const previous=excluded;excluded=excludedSite(changes.webCapture.newValue);
     if(excluded){clearDwell();speechPending=null;globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();globalThis.__recallPageAudio?.stop(undefined,true).catch(()=>{});}
     else if(previous&&current)settings().then(s=>{globalThis.__recallScenes?.start(speechClock,s);globalThis.__recallScreen?.start(speechClock,s);if(s.enabled)startDwell(s.dwellSeconds,current.videoId);});

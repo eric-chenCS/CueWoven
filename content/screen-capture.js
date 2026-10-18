@@ -2,7 +2,7 @@
 (function(){
   let clock,options={},timer,generation=0,busy=false,lastAttempt=0,lastRead=null,seen=new Set();
   const send=async msg=>{try{return await chrome.runtime.sendMessage(msg);}catch(error){return {error:error.message};}};
-  function schedule(delay=1000){clearTimeout(timer);if(clock && options.enabled!==false && options.screenTextEnabled!==false)timer=setTimeout(tick,delay);}
+  function schedule(delay=1000){clearTimeout(timer);if(clock && !options.lightMode && options.enabled!==false && options.screenTextEnabled!==false)timer=setTimeout(tick,delay);}
   async function tick(){
     if(busy){schedule();return;}
     const state=clock?.(),video=globalThis.__recallMediaElement?.()||document.querySelector('video');
@@ -31,7 +31,7 @@
   }
   function start(readClock,settings){generation++;clearTimeout(timer);clock=readClock;options=settings;lastAttempt=0;lastRead=null;seen=new Set();schedule(Math.max(3,Number(settings.dwellSeconds)||0)*1000);}
   function stop(){generation++;clearTimeout(timer);clock=null;lastRead=null;}
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local'||!changes.settings)return;options={...options,...changes.settings.newValue};if(options.enabled===false||options.screenTextEnabled===false){generation++;lastRead=null;clearTimeout(timer);}else schedule();});
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local'||!changes.settings)return;options={...options,...changes.settings.newValue};if(options.lightMode||options.enabled===false||options.screenTextEnabled===false){generation++;lastRead=null;clearTimeout(timer);}else schedule();});
   window.addEventListener('pagehide',stop);document.addEventListener('yt-navigate-start',stop);
   globalThis.__recallScreen={start,stop};
 })();
