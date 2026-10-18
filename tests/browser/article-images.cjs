@@ -65,7 +65,8 @@ if(!process.env.RECALL_MODEL_DIR||!process.env.RECALL_TEST_PHOTO)throw Error('Se
   console.log('BACKUP_DELETE_RACE_PASS');
   const quota=await options.evaluate(async()=>{
    const db=await import('../lib/db.js'),{SCENE_BYTES_TOTAL}=await import('../lib/scenes.js'),video=(await db.listVideos()).find(v=>v.kind==='page');
-   await db.scenes.put({key:video.videoId+':quota',videoId:video.videoId,start:0,image:new Blob([new Uint8Array(SCENE_BYTES_TOTAL+1)],{type:'image/jpeg'}),vec:new Float32Array(512),articleImage:true,indexedAt:Date.now()});
+   const chunk=new Blob([new Uint8Array(1024*1024)]);
+   await db.scenes.put({key:video.videoId+':quota',videoId:video.videoId,start:0,image:new Blob(Array(SCENE_BYTES_TOTAL/(1024*1024)+1).fill(chunk),{type:'image/jpeg'}),vec:new Float32Array(512),articleImage:true,indexedAt:Date.now()});
    return{rows:await db.scenes.vectors(),record:await db.getVideo(video.videoId)};
   });assert.equal(quota.rows.length,0);assert.equal(quota.record.sceneCount,0);
   console.log('VISUAL_STORAGE_BUDGET_PASS');
