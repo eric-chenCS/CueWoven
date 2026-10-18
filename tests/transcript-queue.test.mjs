@@ -75,7 +75,7 @@ test('warmup errors stop the job with a useful message instead of hanging', asyn
   assert.equal(queue.get().completed, 0);
 });
 
-for (const concurrency of [3, 6, undefined]) {
+for (const concurrency of [1, 3, 6, 10, undefined]) {
   test(`queue respects parallel limit ${concurrency ?? 'default 6'}`, async () => {
     let active = 0, peak = 0;
     const queue = createTranscriptQueue({processVideo: async () => {
@@ -89,7 +89,7 @@ for (const concurrency of [3, 6, undefined]) {
 }
 test('invalid concurrency cannot open an unbounded number of tabs', () => {
   const queue = createTranscriptQueue({processVideo: async () => ({status: 'done'})});
-  for (const limit of [0, -1, 1, 8, 12, 13, 1000, Infinity, NaN, '12', null]) {
+  for (const limit of [0, -1, 2, 8, 12, 13, 1000, Infinity, NaN, '12', null]) {
     assert.throws(() => queue.start(ids(25), limit), /parallel videos/);
     assert.equal(queue.get(), null);
   }

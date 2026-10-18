@@ -6,7 +6,7 @@ import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true,lightMode:false };
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 28, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true,lightMode:false };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -424,6 +424,11 @@ $('bulk-go').addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
+function selectRetention(id, days) {
+  const select = $(id), value = String(days);
+  if (![...select.options].some(option => option.value === value)) select.add(new Option(`${days} days (previous setting)`, value));
+  select.value = value;
+}
 async function loadSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   const s = Object.assign({}, DEFAULTS, settings);
@@ -433,11 +438,11 @@ async function loadSettings() {
   $('scenesEnabled').checked = s.scenesEnabled !== false;
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
-  $('maxAgeDays').value = String(s.maxAgeDays);
-  $('importMaxAgeDays').value=String(s.importMaxAgeDays||0);
+  selectRetention('maxAgeDays', s.maxAgeDays);
+  selectRetention('importMaxAgeDays', s.importMaxAgeDays || 0);
   $('perVideo').value = String(s.perVideo);
   for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
-  $('transcriptConcurrency').value = String([3, 6].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
+  $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
 
 let savedTimer;

@@ -1,8 +1,8 @@
-# Recall v3.3.3 installation
+# Recall v3.3.4 installation
 
 ## From the ZIP
 
-Extract `recall-v3.3.3.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `recall-v3.3.4.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## From this repository
 
@@ -10,15 +10,15 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.3 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.4 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.3 adds website access indicators, collapsible moments help and a five-row scrolling library. Capture is renamed Settings, Light mode is named Lite mode, and retention controls are under Your data. The minimal UI, combined YouTube history import, storage, permissions and model runtime are retained. Sidebar sections and expandable rows organize settings; progress opens the relevant row. Manual English speech remains under the popup disclosure. Reload the extension and refresh open extension pages after updating. See [UPDATE-3.3.3.md](docs/UPDATE-3.3.3.md).
+Version 3.3.4 adds Settings → Appearance (System, Light or Dark) for the popup and library, the same retention ranges for watched/read and imported history, and 1/3/6/10 concurrent transcript fetches. Existing preferences are preserved, including older retention choices until you change them. Reload and refresh extension pages. See [UPDATE-3.3.4.md](docs/UPDATE-3.3.4.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Lite mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 
 Version 3.2 adds cached result paging, larger bounded database reads, protected storage, capture status/logs and optional imported-history retention. Updating from v2.13–v3.1 needs no runtime rebuild. Updating from v2.12 or earlier requires `pnpm run setup` for the bundled OCR runtime. The packaged ZIP already includes it. Database schema remains 5; updating from v3.1 requires no migration or re-import. Earlier versions receive the normalized-text upgrade documented in UPDATE-3.1.md. See [UPDATE-3.2.md](docs/UPDATE-3.2.md) for measurements and review decisions.
 
-Storage protection adds the `unlimitedStorage` permission; site access remains optional and Recall's own content/image limits remain active. Storage & capture diagnostics shows approximate usage including model caches and the last 100 domain/reason events from this browser session. **Keep imported history** defaults to Forever. Choose 90 days or 1 year only when you want older imported entries removed by original visit date, including imported transcripts. Export a backup first if you want to keep a separate copy.
+Storage protection adds the `unlimitedStorage` permission; site access remains optional and Recall's own content/image limits remain active. Storage & capture diagnostics shows approximate usage including model caches and the last 100 domain/reason events from this browser session. **Keep imported history** defaults to Forever. Choose 24 hours, 7 days, 4 weeks or 12 months only when you want older imported entries removed by original visit date, including imported transcripts. Export a backup first if you want to keep a separate copy.
 
 ## Enable websites and articles
 
