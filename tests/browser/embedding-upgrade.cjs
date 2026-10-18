@@ -20,7 +20,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   assert.equal(done.total,65);assert.equal(done.updated,65);
   const after=await options.evaluate(async()=>{const db=await import(chrome.runtime.getURL('lib/db.js'));return {video:await db.getVideo('aaaaaaaaaaa'),chunks:await db.chunksOf('aaaaaaaaaaa')}});
   assert.deepEqual(after.video,before.video);for(const key of ['id','videoId','start','text','speechStart','speechEnd'])assert.equal(after.chunks[0][key],before.chunks[0][key]);assert.equal(after.chunks[0].embeddingVersion,'minilm-l6-v2-body-v2');assert.equal(after.chunks[0].vec.length,384);
-  const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);await popup.locator('#q').fill('lithium electrodes losing charge');
+  const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);await popup.locator('#q').fill('lithium electrodes losing charge');await popup.locator('#q').press('Enter');
   await wait(async()=>await popup.locator('.result .match-sources').first().textContent().catch(()=>''));assert.match(await popup.locator('.result .match-sources').first().textContent(),/Audio/);assert.doesNotMatch(await popup.locator('.result .meta').first().textContent(),/%/);assert.match(await popup.locator('.result').first().getAttribute('href'),/t=42s/);
   await popup.screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-accuracy-audio.png'),fullPage:true});
   const races=await options.evaluate(async()=>{

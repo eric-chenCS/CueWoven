@@ -49,7 +49,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await wait(async()=>{const r=await options.evaluate(()=>chrome.runtime.sendMessage({type:'list'}));return r.videos.find(v=>v.videoId==='eeeeeeeeeee'&&v.sceneCount>0)});
   await another.evaluate(()=>document.querySelector('video').pause());
   const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);assert.equal(await popup.locator('#search-mode').count(),0);
-  await popup.locator('#q').fill('two cats sitting on a sofa');
+  await popup.locator('#q').fill('two cats sitting on a sofa');await popup.locator('#q').press('Enter');
   await wait(async()=>await popup.locator('.result .match-sources').first().textContent().catch(()=>''));
   assert.match(await popup.locator('.result .match-sources').first().textContent(),/Scene/);assert.match(await popup.locator('.result').first().getAttribute('href'),/v=aaaaaaaaaaa&t=\d+s/);
   assert.ok((await popup.locator('.result img').first().getAttribute('src')).startsWith('data:image/jpeg'));

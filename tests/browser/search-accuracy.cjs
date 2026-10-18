@@ -75,14 +75,14 @@ if(!models)throw Error('Set RECALL_MODEL_DIR to a folder containing Xenova/all-M
   console.log('SOCIAL_SOURCE_DATE_AND_FALLBACK_PASS');
   // Popup screenshots: a close match, a related match, and a near tie.
   const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);
-  const shoot=async(query,name)=>{await popup.locator('#q').fill(query);await popup.waitForFunction(q=>!document.querySelector('#page-label')||document.querySelector('#page-label').textContent!=='Searching…',query);await popup.waitForTimeout(1500);await popup.screenshot({path:path.join(shots,name+'.png')});
+  const shoot=async(query,name)=>{await popup.locator('#q').fill(query);await popup.locator('#q').press('Enter');await popup.waitForFunction(q=>!document.querySelector('#page-label')||document.querySelector('#page-label').textContent!=='Searching…',query);await popup.waitForTimeout(1500);await popup.screenshot({path:path.join(shots,name+'.png')});
    return popup.evaluate(()=>({tie:!document.querySelector('#tie-hint').hidden,tags:[...document.querySelectorAll('.match-sources span')].map(s=>s.textContent),title:document.querySelector('.result .title')?.textContent}));};
   for(const [query,name] of [['the Motor Explained video on battery degradation','popup-channel'],['battery','popup-generic'],['keeping things cool','popup-related']])console.log(name,JSON.stringify(await shoot(query,name)));
-  await popup.locator('#q').fill('the TikTok about quasar tire rotation last week');
+  await popup.locator('#q').fill('the TikTok about quasar tire rotation last week');await popup.locator('#q').press('Enter');
   await popup.locator('#ignore-inferred').waitFor({state:'visible'});
   await popup.locator('#ignore-inferred').click();
   await popup.locator('#ignore-inferred').waitFor({state:'hidden'});
-  await popup.locator('#q').fill('quasar tire rotation from Reddit');
+  await popup.locator('#q').fill('quasar tire rotation from Reddit');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('#applied-filters').textContent.includes('Showing results without them'));
   console.log('FILTER_POPUP_PASS');
   console.log('page errors:',errors.length?errors:'none');

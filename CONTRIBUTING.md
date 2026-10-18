@@ -1,4 +1,4 @@
-# Working on WebLapse
+# Working on CueWoven
 
 ## Build from source
 
@@ -8,7 +8,7 @@ Use Node.js 22+ and pnpm 11.25.0. Run `pnpm install --frozen-lockfile --ignore-s
 
 Make small changes on a branch, run `pnpm test`, and open a pull request. Check the affected behavior in the browser too: Node tests do not prove live YouTube caption availability. Content scripts require refreshing YouTube tabs after reloading the extension. Rebuild with `pnpm run vendor` after changing `scripts/embedder-entry.js`, `scripts/vendor.mjs`, or the dependency graph.
 
-Keep video metadata, transcript validation, original watch dates, optional history permissions and failed-import recovery intact. Do not commit watch history, WebLapse backups, browser profiles, cookies, credentials, model weights or generated bundles. No personal YouTube API key is required.
+Keep video metadata, transcript validation, original watch dates, optional history permissions and failed-import recovery intact. Do not commit watch history, CueWoven backups, browser profiles, cookies, credentials, model weights or generated bundles. No personal YouTube API key is required.
 
 ## Browser checks
 

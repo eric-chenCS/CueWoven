@@ -1,18 +1,18 @@
-# Using WebLapse
+# Using CueWoven
 
 [Install first](../INSTALL.md), then open the toolbar popup to search. Your library can start empty or with optional original sample videos.
 
-![WebLapse library populated only with five original demo videos](assets/library-demo.png)
+![CueWoven library populated only with five original demo videos](assets/library-demo.png)
 
 *Sample content in an isolated browser profile.*
 
 ## Search what you remember
 
-Describe an idea, phrase, image or scene. Each search is independent; use **Refine** for extra clues. Source/date filters narrow the results. **Best match only** shows one source at a time; use ← and → for the next ranked match. Turn it off for a list. Results per video limits how many moments a video can occupy in that list; it does not limit the search to the first few videos.
+Describe an idea, phrase, image or scene, then press **Enter**. Typing alone does not run a search or show matches. Editing the query or refinement hides old matches until you submit again. Each search is independent; use **Refine** for extra clues. Source/date filters narrow the results. **Best match only** shows one source at a time; use ← and → for the next ranked match. Turn it off for a list. Results per video limits how many moments a video can occupy in that list; it does not limit the search to the first few videos.
 
 A moment is a saved passage or observation at a video time. Indicators identify the evidence: Transcript, Audio, Scene, On-screen text, Article image, Image caption or Title. Title-only results open a source without claiming a matching spoken timestamp. Scores express ranking, not probability.
 
-Press Enter to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed. The `rc` address-bar keyword also searches your library.
+Press Enter once to search; press Enter again to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed. The `rc` address-bar keyword also searches your library.
 
 ## Choose what gets saved
 
@@ -49,6 +49,6 @@ Site allowlists, exclusions, incognito avoidance, sensitive-route filtering and 
 
 Under **Your data**, export/import backups, clear the library, or forget items saved recently. Backups contain your saved content: treat them as private and do not commit them to the repo. Keep settings open during restore; stop speech and pause transcript fetching before restoring. Completed batches remain if a restore is interrupted.
 
-Retention choices are 24 hours, 7 days, 4 weeks, 12 months or Forever. Watched/read content uses the applicable recent capture/watch date. Imported history defaults to Forever; a finite imported-history period uses original visit dates. Watching an imported item makes normal live retention apply. **Forget recent** uses when WebLapse saved/updated an item, including recently imported entries with old visit dates. Export before deleting if you need a copy.
+Retention choices are 24 hours, 7 days, 4 weeks, 12 months or Forever. Watched/read content uses the applicable recent capture/watch date. Imported history defaults to Forever; a finite imported-history period uses original visit dates. Watching an imported item makes normal live retention apply. **Forget recent** uses when CueWoven saved/updated an item, including recently imported entries with old visit dates. Export before deleting if you need a copy.
 
 Visual storage is bounded to 240 MiB of accounted compressed-image/vector payload, up to 20,000 images overall and 240 per video; older visual evidence can be evicted. Full web content has a separate 2,000-item or 64 MiB accounted payload cap, with older items retained as titles. Models, browser storage overhead and other evidence use additional space. This is a searchable memory aid, not a complete archive.

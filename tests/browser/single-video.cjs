@@ -59,7 +59,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
    assert.equal(await page.locator('.result').getAttribute('href'),url);
   };
   assert.equal(await page.locator('#single-video').isChecked(),true,'one-at-a-time is default');
-  await page.locator('#q').fill(query);await hit(ranked[0],'Best match');
+  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await hit(ranked[0],'Best match');
   assert.equal(await page.locator('#previous-video').isDisabled(),true);
   for(let i=1;i<ranked.length;i++){
    await page.locator('#next-video').click();await hit(ranked[i],`Match ${i+1}`);
@@ -68,16 +68,16 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.locator('#previous-video').click();await hit(ranked.at(-2),'Match 13');
   // New query/filters/refinement start at the strongest eligible video.
   const changed=await expected('battery electrodes');
-  await page.locator('#q').fill('battery electrodes');await hit(changed[0],'Best match');
+  await page.locator('#q').fill('battery electrodes');await page.locator('#q').press('Enter');await hit(changed[0],'Best match');
   await page.locator('.chip[data-days="1"]').click();
   const today=await expected('battery electrodes',1);assert.equal(today.length,1);
   await hit(today[0],'Best match');assert.equal(await page.locator('#next-video').isDisabled(),true);
   await page.locator('.chip[data-days="0"]').click();await hit(changed[0],'Best match');
-  await page.locator('#refine-toggle').click();await page.locator('#details').fill('a phone losing energy');
+  await page.locator('#refine-toggle').click();await page.locator('#details').fill('a phone losing energy');await page.locator('#details').press('Enter');
   const refined=await expected('battery electrodes. a phone losing energy');
   await hit(refined[0],'Best match');
   await page.locator('#next-video').click();await hit(refined[1],'Match 2');
-  await page.locator('#details').fill('chemical reactions');
+  await page.locator('#details').fill('chemical reactions');await page.locator('#details').press('Enter');
   const refinedAgain=await expected('battery electrodes. chemical reactions');
   await hit(refinedAgain[0],'Best match');
   // A delayed next page must not overwrite a new query or re-enable stale navigation.
@@ -85,7 +85,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.waitForFunction(()=>!!window.releaseNext);
   assert.equal(await page.locator('#next-video').isDisabled(),true);
   assert.equal(await page.locator('#previous-video').isDisabled(),true);
-  await page.locator('#q').fill(query);await hit(ranked[0],'Best match');
+  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await hit(ranked[0],'Best match');
   await page.evaluate(()=>window.releaseNext());await page.waitForTimeout(300);await hit(ranked[0],'Best match');
   const output=process.env.RECALL_SCREENSHOT_DIR || os.tmpdir();
   for(const colorScheme of ['light','dark']){
@@ -96,7 +96,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.locator('#single-video').uncheck();
   await page.waitForFunction(()=>document.querySelectorAll('.result').length===12);
   assert.equal(await page.locator('#result-pages').isVisible(),false);
-  await page.reload();await page.waitForFunction(()=>document.querySelectorAll('.result').length===12);
+  await page.reload();await page.locator('#q').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.result').length===12);
   assert.equal(await page.locator('#single-video').isChecked(),false,'list preference is remembered');
   await page.locator('#single-video').check();await hit(ranked[0],'Best match');
   await page.locator('#q').fill('');await page.waitForFunction(()=>document.querySelector('.empty'));

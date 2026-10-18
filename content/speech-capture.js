@@ -20,7 +20,7 @@
     await stop();
     const attempt = {id};opening = attempt;
     const video = (globalThis.__recallMediaElement ? globalThis.__recallMediaElement() : document.querySelector('video'));
-    if (!video || typeof video.captureStream !== 'function' || video.paused) throw new Error('Play the video so WebLapse can transcribe its audio.');
+    if (!video || typeof video.captureStream !== 'function' || video.paused) throw new Error('Play the video so CueWoven can transcribe its audio.');
     const stream = video.captureStream();
     for (const track of stream.getVideoTracks()) {stream.removeTrack(track);track.stop();}
     const context = new AudioContext();

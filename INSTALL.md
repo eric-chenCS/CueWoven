@@ -1,24 +1,24 @@
-# Install WebLapse
+# Install CueWoven
 
-WebLapse runs in desktop Chrome and Microsoft Edge (Chromium 116 or newer). It is currently distributed as an unpacked extension.
+CueWoven runs in desktop Chrome and Microsoft Edge (Chromium 116 or newer). It is currently distributed as an unpacked extension.
 
 ## Download and load
 
 1. Open [Releases](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest).
-2. Download **weblapse-v3.3.21.zip** under Assets. Extract it into a permanent folder.
+2. Download **cuewoven-v3.3.22.zip** under Assets. Extract it into a permanent folder.
 3. Open `chrome://extensions` or `edge://extensions`.
 4. Enable **Developer mode**, click **Load unpacked**, and select the extracted folder containing `manifest.json`.
-5. Pin WebLapse in the browser's extensions menu if you want quick toolbar access.
+5. Pin CueWoven in the browser's extensions menu if you want quick toolbar access.
 
 Load the extracted folder, not the ZIP. The release asset includes its runtime; GitHub's automatically generated source ZIP does not. To use a clone or source ZIP, follow [Build from source](CONTRIBUTING.md#build-from-source).
 
 ## First search
 
-Open WebLapse from its toolbar icon and choose **Try sample videos**. The five original demos let you search before collecting any history. Try “why does a phone battery hold less charge as it ages”. Initial model loading requires internet access and may take a little time.
+Open CueWoven from its toolbar icon and choose **Try sample videos**. The five original demos let you search before collecting any history. Try “why does a phone battery hold less charge as it ages”, then press **Enter**. Initial model loading requires internet access and may take a little time.
 
-To start your own library, play a YouTube video. After the watch delay, WebLapse attempts available captions and can collect played speech or visual evidence according to your settings. Open the popup and describe what you remember.
+To start your own library, play a YouTube video. After the watch delay, CueWoven attempts available captions and can collect played speech or visual evidence according to your settings. Open the popup and describe what you remember.
 
-**Ctrl+Shift+F** opens the popup when the browser shortcut is available. If another extension or app claims it, set WebLapse's shortcut at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`, or use the toolbar icon.
+**Ctrl+Shift+F** opens the popup when the browser shortcut is available. If another extension or app claims it, set CueWoven's shortcut at `chrome://extensions/shortcuts` or `edge://extensions/shortcuts`, or use the toolbar icon.
 
 ## Add websites or past history
 

@@ -5,7 +5,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
  try{
   await f.send({type:'clear'});
   const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');
-  await popup.locator('#start-samples').click();
+  await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
   await f.wait(async()=>(await f.send({type:'list'})).videos.length===5);
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
   if(process.env.RECALL_SCREENSHOT_DIR)await popup.locator('body').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'recall-v3.3.0-samples.png')});
@@ -31,7 +31,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    chrome.tabs.query=async()=>[{id:99,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa',title:'Current video'}];
    chrome.tabs.sendMessage=async()=>({video:{videoId:'aaaaaaaaaaa',title:'Current video'}});
   });
-  await popup.reload();await popup.locator('#video-scope').check();await popup.locator('#q').fill('warm ocean algae');
+  await popup.reload();await popup.locator('#video-scope').check();await popup.locator('#q').fill('warm ocean algae');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result')?.href.includes('v=aaaaaaaaaaa'));
   await popup.locator('#single-video').uncheck();
   await popup.waitForFunction(()=>document.querySelectorAll('.result').length===1);
@@ -49,7 +49,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
     return original(msg);
    };
   });
-  await popup.locator('#q').fill('coral bleaching current');
+  await popup.locator('#q').fill('coral bleaching current');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result')?.href.includes('&t=64s'));
   assert.equal(await popup.evaluate(()=>window.autoIndexCalls),1);
   // A hung transport settles into Retry instead of an indefinite spinner.
@@ -57,13 +57,13 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    const original=chrome.runtime.sendMessage.bind(chrome.runtime);
    chrome.runtime.sendMessage=msg=>msg.type==='search'&&msg.query==='hold forever'?new Promise(resolve=>window.finishHeld=resolve):original(msg);
   });
-  await popup.locator('#q').fill('hold forever');
+  await popup.locator('#q').fill('hold forever');await popup.locator('#q').press('Enter');
   await popup.locator('#search-retry').waitFor({state:'visible',timeout:15000});
-  await popup.locator('#q').fill('coral bleaching');
+  await popup.locator('#q').fill('coral bleaching');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result')?.href.includes('v=aaaaaaaaaaa'));
   await popup.evaluate(()=>window.finishHeld({results:[]}));await popup.waitForTimeout(100);
   assert.equal(await popup.locator('.result').count(),1);
-  await popup.locator('#q').fill('coral recently');await popup.locator('#suggest-week').click();
+  await popup.locator('#q').fill('coral recently');await popup.locator('#q').press('Enter');await popup.locator('.chip[data-days="7"]').click();
   assert.equal(await popup.locator('.chip[data-days="7"]').getAttribute('aria-checked'),'true');
   // Light mode preserves individual preferences and immediately gates all media captures.
   await f.options.locator('#lightMode').check();
@@ -101,7 +101,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   const forgotten=await f.send({type:'forget-recent',hours:24});assert.equal(forgotten.removed,1);
   assert.deepEqual((await f.send({type:'list'})).videos.map(row=>row.videoId),['old00000000']);
   assert.equal((await f.send({type:'search',query:'new00000000'})).results.some(hit=>hit.videoId==='new00000000'),false);
-  if(process.env.RECALL_SCREENSHOT_DIR){await popup.locator('#video-scope').uncheck();await popup.locator('#q').fill('saved memory evidence');await popup.locator('.chip[data-days="0"]').click();await popup.locator('.result').waitFor();assert.ok((await popup.locator('.result').boundingBox()).height>50);await popup.locator('body').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'recall-v3.3.0-popup.png')});}
+  if(process.env.RECALL_SCREENSHOT_DIR){await popup.locator('#video-scope').uncheck();await popup.locator('#q').fill('saved memory evidence');await popup.locator('#q').press('Enter');await popup.locator('.chip[data-days="0"]').click();await popup.locator('.result').waitFor();assert.ok((await popup.locator('.result').boundingBox()).height>50);await popup.locator('body').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'recall-v3.3.0-popup.png')});}
   assert.deepEqual(errors,[]);
   console.log('V33_FEATURES_PASS',JSON.stringify({samples:5,playableSamples:true,copyLink:true,scope:true,indexBeforeSearch:true,timeoutAndStaleReply:true,suggestedWeekOptIn:true,lightMode:true,signoutAndRedaction:true,toolbarDot:true,searchConsent:true,forgetBySaveDate:true}));
  }finally{await f.close();}

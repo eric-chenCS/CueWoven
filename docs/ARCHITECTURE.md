@@ -1,6 +1,6 @@
-# How WebLapse works
+# How CueWoven works
 
-WebLapse is a Manifest V3 extension. Its interface, collection scripts and local inference are separated so browsing and searches can continue while background work is queued.
+CueWoven is a Manifest V3 extension. Its interface, collection scripts and local inference are separated so browsing and searches can continue while background work is queued.
 
 ## Data flow
 

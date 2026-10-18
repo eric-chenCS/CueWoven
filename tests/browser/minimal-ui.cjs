@@ -28,7 +28,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   await f.options.locator('#history-import-msg').evaluate(node=>node.textContent='');
   await fold.locator('summary').first().click();
   // Load real local sample data via its first-run button, then show its matched moment.
-  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#start-samples').click();
+  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
   assert.equal(await popup.locator('.copy-link').isVisible(),true);
   assert.equal(await popup.locator('#next-video').isVisible(),true);

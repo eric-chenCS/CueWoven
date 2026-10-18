@@ -1,27 +1,27 @@
-# WebLapse
+# CueWoven
 
 **Find what you watched or read—even when you only remember a detail.**
 
-Browser history remembers URLs. WebLapse helps you remember what was in them. Describe a quote, idea or scene to find a saved video moment or article passage, then jump back to the source.
+Browser history remembers URLs. CueWoven helps you remember what was in them. Describe a quote, idea or scene to find a saved video moment or article passage, then jump back to the source.
 
 Built for SwampHacks XII as a local-first Chrome and Microsoft Edge extension. No personal YouTube API key is required.
 
-[Download WebLapse](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [For developers](CONTRIBUTING.md)
+[Download CueWoven](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [For developers](CONTRIBUTING.md)
 
-<img src="docs/assets/search-demo.png" width="440" alt="WebLapse finds a timestamped battery explanation from a natural-language query, using an original demo video." />
+<img src="docs/assets/search-demo.png" width="440" alt="CueWoven finds a timestamped battery explanation from a natural-language query, using an original demo video." />
 
 *Actual extension UI with original sample content, not personal browsing history.*
 
 ## Install and try it
 
-1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **weblapse-v3.3.21.zip** asset. Extract it to a permanent folder.
+1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.22.zip** asset. Extract it to a permanent folder.
 2. Open `chrome://extensions` or `edge://extensions` and enable **Developer mode**.
 3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
-4. Open WebLapse from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
+4. Open CueWoven from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
 
-Try searching **“why does a phone battery hold less charge as it ages”** with the samples. First use downloads the local search model, so allow time for setup. Click the result to open the matching moment.
+Try searching **“why does a phone battery hold less charge as it ages”** with the samples. Press **Enter** to show matches. First use downloads the local search model, so allow time for setup. Click the result to open the matching moment.
 
-The release ZIP includes the browser runtime. GitHub's **Code → Download ZIP** is source code and needs the [developer build steps](CONTRIBUTING.md#build-from-source) before loading. WebLapse is currently installed as an unpacked extension, not through a browser store.
+The release ZIP includes the browser runtime. GitHub's **Code → Download ZIP** is source code and needs the [developer build steps](CONTRIBUTING.md#build-from-source) before loading. CueWoven is currently installed as an unpacked extension, not through a browser store.
 
 ## What you can find
 
@@ -42,7 +42,7 @@ Semantic search can match related meaning rather than identical words. Rankings 
 
 ## Privacy and practical limits
 
-Your library and search index stay in the current browser profile. WebLapse does not upload your history, queries, transcripts or captured audio to an AI service. Model weights download on first use; websites and YouTube still receive normal content requests. Site access and browser-history access are requested when needed.
+Your library and search index stay in the current browser profile. CueWoven does not upload your history, queries, transcripts or captured audio to an AI service. Model weights download on first use; websites and YouTube still receive normal content requests. Site access and browser-history access are requested when needed.
 
 Pause saving, exclude sites, choose retention periods, export a backup or delete saved items in settings. Google-search capture and website audio transcription start off. Sensitive-page filters and text redaction help, but cannot recognize every private page or redact captured images. [Privacy and data controls →](docs/USAGE.md#privacy-and-data)
 

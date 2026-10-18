@@ -71,7 +71,7 @@ function captureIndicator(tabId,reason){
   const active=['saved','duplicate'].includes(reason);
   chrome.action.setBadgeBackgroundColor({tabId,color:active?'#1f8a4c':'#727778'}).catch(()=>{});
   chrome.action.setBadgeText({tabId,text:'•'}).catch(()=>{});
-  chrome.action.setTitle({tabId,title:'WebLapse · '+captureLabel(reason)}).catch(()=>{});
+  chrome.action.setTitle({tabId,title:'CueWoven · '+captureLabel(reason)}).catch(()=>{});
 }
 function flashBadge(tabId,text){captureIndicator(tabId,text==='✓'?'saved':'captions-unavailable');}
 async function currentCaptureStatus(tabId){
@@ -169,7 +169,7 @@ function settleWaiter(tabId, outcome) {
 // ---------------------------------------------------------------------------
 
 function requirePopup(sender) {
-  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('popup/popup.html')) throw new Error('Use the WebLapse popup to control speech-to-text.');
+  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('popup/popup.html')) throw new Error('Use the CueWoven popup to control speech-to-text.');
 }
 async function speechContext(tabId) {
   const tab = await chrome.tabs.get(tabId);
@@ -179,7 +179,7 @@ async function speechContext(tabId) {
   const id = videoIdFromUrl(tab.url);
   if (!id || !tab.url.startsWith('https://www.youtube.com/watch?') || new URL(tab.url).searchParams.get('recall_index') === '1') throw new Error('Open a normal YouTube video first.');
   const clock = await chrome.tabs.sendMessage(tabId, {type: 'speech-context'});
-  if (clock?.video?.videoId !== id || clock.forced) throw new Error('Refresh the YouTube tab so WebLapse can read its playback timing.');
+  if (clock?.video?.videoId !== id || clock.forced) throw new Error('Refresh the YouTube tab so CueWoven can read its playback timing.');
   return {tab, clock};
 }
 
@@ -479,7 +479,7 @@ chrome.omnibox?.onInputChanged.addListener(async(text,suggest)=>{
   }catch{if(seq===omniboxSeq)suggest([]);}
 });
 chrome.omnibox?.onInputCancelled.addListener(()=>{omniboxSeq++;});
-chrome.omnibox?.onInputStarted.addListener(()=>chrome.omnibox.setDefaultSuggestion({description:'Search your local WebLapse library: <match>%s</match>'}));
+chrome.omnibox?.onInputStarted.addListener(()=>chrome.omnibox.setDefaultSuggestion({description:'Search your local CueWoven library: <match>%s</match>'}));
 chrome.omnibox?.onInputEntered.addListener(async(text,disposition)=>{
   try{
     let url;
@@ -487,5 +487,5 @@ chrome.omnibox?.onInputEntered.addListener(async(text,disposition)=>{
     else{const result=await engine('search',{query:text.slice(0,1000),limit:1,perVideo:1});if(!result.results.length)return;url=resultLink(result.results[0]);}
     if(disposition==='currentTab')await chrome.tabs.update({url});
     else await chrome.tabs.create({url,active:disposition!=='newBackgroundTab'});
-  }catch{chrome.omnibox.setDefaultSuggestion({description:'WebLapse search failed. Open the popup to retry.'});}
+  }catch{chrome.omnibox.setDefaultSuggestion({description:'CueWoven search failed. Open the popup to retry.'});}
 });

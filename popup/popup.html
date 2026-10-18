@@ -2,15 +2,15 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>WebLapse v3.3.21</title>
+    <title>CueWoven v3.3.22</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="WebLapse v3.3.21">
+      <div class="brand" title="CueWoven v3.3.22">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
-        <span>WebLapse</span>
+        <span>CueWoven</span>
       </div>
       <span id="status" class="status" aria-live="polite"></span>
     </header>
@@ -29,13 +29,13 @@
       <div class="search">
         <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input id="q" type="search" autocomplete="off" spellcheck="false"
-               placeholder="Describe what you remember…" aria-label="Search your WebLapse library" />
+               placeholder="Describe a memory, then press Enter" aria-label="Search your CueWoven library" />
       </div>
       <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add more details to this search" disabled>Refine</button>
     </div>
     <section id="refine-panel" class="refine-panel" aria-labelledby="refine-label" hidden>
       <label id="refine-label" for="details">More details</label>
-      <textarea id="details" rows="2" maxlength="1000" placeholder="e.g. a Minecraft video, explaining how to build a trap" ></textarea>
+      <textarea id="details" rows="2" maxlength="1000" placeholder="Add details, then press Enter" ></textarea>
 
     </section>
 
@@ -92,7 +92,7 @@
       <section id="page-capture" class="tab-item page-capture" aria-label="This page" hidden>
         <span class="tab-label">This page</span>
         <p id="page-capture-status" class="tab-text" role="status"></p>
-        <div class="tab-actions"><button id="page-save-now" class="btn ghost small">Save page</button><button id="page-forget" class="btn ghost small" title="Delete what WebLapse saved from this site and stop saving it">Forget site</button></div>
+        <div class="tab-actions"><button id="page-save-now" class="btn ghost small">Save page</button><button id="page-forget" class="btn ghost small" title="Delete what CueWoven saved from this site and stop saving it">Forget site</button></div>
       </section>
 
       <details id="speech" class="speech" hidden>
