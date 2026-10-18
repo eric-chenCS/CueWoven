@@ -16,7 +16,3 @@ for (const msg of document.querySelectorAll('details.fold .msg')) {
   new MutationObserver(() => { if (msg.textContent.trim() && !fold.open) fold.open = true; })
     .observe(msg, { subtree: true, childList: true, characterData: true });
 }
-// Welcome buttons point into a collapsed row: open it and bring it into view.
-const reveal = (inputId) => { const fold = document.getElementById(inputId)?.closest('details'); if (fold) { fold.open = true; fold.scrollIntoView({ block: 'start' }); } };
-document.getElementById('welcome-import')?.addEventListener('click', () => reveal('takeout-import'));
-document.getElementById('welcome-web')?.addEventListener('click', () => reveal('web-history-file'));

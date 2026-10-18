@@ -12,7 +12,7 @@ import {validateScene, rankScenes,SCENES_TOTAL, fuseMatches} from '../lib/scenes
 import { chunkTranscript } from '../lib/chunk.js';
 import { prepareQuery, createPool, addIndex, rankPool, nearTie } from '../lib/search.js';
 import * as db from '../lib/db.js';
-import { validateHistoryBatch } from '../lib/takeout.js';
+import { validateVideoMetadataBatch } from '../lib/video-metadata.js';
 import { shouldForgetVideo } from '../lib/retention.js';
 import {EMBEDDING_VERSION,embeddingText,createEmbeddingMigration} from '../lib/embedding-migration.js';
 import {loadVideoChunks,packIndex} from '../lib/video-index.js';
@@ -101,7 +101,7 @@ async function storeChunks(video, chunks, method, indexedAt) {
 }
 
 async function importHistory({ videos, historyImported=true }) {
-  const batch = validateHistoryBatch(videos).map(cleanVideo);
+  const batch = validateVideoMetadataBatch(videos).map(cleanVideo);
   const pending = [];let repaired=0;
   for (const video of batch) {
     if (!await db.getVideo(video.videoId)) pending.push(video);

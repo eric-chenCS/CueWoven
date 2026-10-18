@@ -304,7 +304,7 @@ $('next-video').addEventListener('click', () => {
 let stats = { videos: 0, chunks: 0 };
 
 function showIdle() {
-  if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, import history or try the samples.']);
+  if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, add a link or try the samples.']);
   else empty('Describe what you remember',[],'Like “the part about why batteries wear out”');
 }
 
@@ -394,7 +394,7 @@ $('open-library').addEventListener('click', (e) => {
   chrome.runtime.openOptionsPage();
 });
 
-$('start-import').addEventListener('click', () => chrome.runtime.openOptionsPage());
+$('start-restore').addEventListener('click', () => chrome.tabs.create({url:chrome.runtime.getURL('options/options.html#sec-data')}));
 $('start-samples').addEventListener('click',async()=>{
   const button=$('start-samples');button.disabled=true;button.textContent='Adding samples…';
   const result=await send({type:'load-samples'}).catch(error=>({error:error.message}));

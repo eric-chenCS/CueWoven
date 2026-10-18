@@ -2,7 +2,6 @@
 // and the offscreen document that holds the model and the index.
 import {resultLink,escapeSuggestion} from './lib/result-link.js';
 import {captureLabel} from './lib/capture-reason.js';
-import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
 import { createCaptureWindow } from './lib/capture-window.js';
 import { createTranscriptQueue } from './lib/transcript-queue.js';
@@ -283,28 +282,6 @@ const handlers = {
   async 'transcript-job-pause'(_msg, sender) {
     requireLibrary(sender);
     return {job: (await getTranscriptJobs()).pause()};
-  },
-  async 'import-history'({ videos }, sender) {
-    if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to import history.');
-    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded. Allow youtube.com before importing its history.');
-    const result = await engine('import-history', { videos });
-    chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
-    return result;
-  },
-  async 'history-videos'({ days = 90 }, sender) {
-    if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) {
-      throw new Error('Open Library & settings to scan history.');
-    }
-    if (![0, 30, 90, 365].includes(days)) throw new Error('Choose a valid history range.');
-    if (!await chrome.permissions.contains({ permissions: ['history'] })) {
-      throw new Error('Allow history access using Find YouTube history first.');
-    }
-    const startTime = days ? Date.now() - days * 864e5 : 0;
-    const groups = await Promise.all(['youtube.com', 'youtu.be'].map(text =>
-      chrome.history.search({ text, startTime, maxResults: 10000 })
-    ));
-    const candidates = historyVideos(groups.flat(), videoIdFromUrl);
-    return { videos: candidates, limited: candidates.length === 500 || groups.some(g => g.length === 10000) };
   },
   // From YouTube tabs
   async 'index-metadata'({video}, sender) {

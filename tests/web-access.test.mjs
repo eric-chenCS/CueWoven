@@ -55,13 +55,10 @@ test("page capture rejects forged URLs, hidden tabs and frame messages before st
   await assert.rejects(f.access.handlers["web-capture"](input, { ...f.sender, frameId: 2 }), /Invalid/);
   assert.equal(f.calls.length, 0);
 });
-test("history and forgetting controls require the library; excluded domains cannot be reimported", async () => {
-  const f = fixture();
-  await assert.rejects(f.access.handlers["web-import"]({ items: [] }, { url: "page" }), /Library/);
-  f.config.blocked = ["example.com"];
-  assert.deepEqual(await f.access.handlers["web-import"]({ items: [{ url: "https://example.com/a" }] }, { url: "library" }), { imported: 0, skipped: 1 });
-  assert.equal(f.calls.length, 0);
+test('website history import and scan routes are absent',()=>{
+ const f=fixture();assert.equal(f.access.handlers['web-import'],undefined);assert.equal(f.access.handlers['web-history'],undefined);
 });
+
 test('popup page status distinguishes paused, excluded, private and missing permission',async()=>{const f=fixture(),sender={url:'library'};await assert.rejects(f.access.handlers['web-page-status']({tabId:1},{url:'page'}),/Library/);f.config.paused=true;assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'paused');f.config.paused=false;f.clock.private=true;assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'private-form');f.clock.private=false;f.config.blocked=['example.com'];assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'blocked-domain');f.config.blocked=[];f.deny();assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'no-permission');});
 test('capture diagnostics reject iframe and forged origins and ignore incognito',async()=>{const f=fixture();await assert.rejects(f.access.handlers['capture-outcome']({}, {...f.sender,frameId:1}),/Invalid/);await assert.rejects(f.access.handlers['capture-outcome']({}, {...f.sender,url:'https://other.example.com/'}),/changed/);f.tab.incognito=true;assert.deepEqual(await f.access.handlers['capture-outcome']({},f.sender),{ok:true});});
 

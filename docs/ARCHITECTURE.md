@@ -6,7 +6,7 @@ CueWoven is a Manifest V3 extension. Its interface, collection scripts and local
 
 Allowed page/player → capture and validation → bounded local inference → IndexedDB → ranked search → source link.
 
-YouTube's main-world script reads player/session information; the isolated bridge validates and forwards it to the service worker. Optional website scripts extract visible page text and compatible player evidence. They respect site permissions, exclusions and capture settings. Imports enter through validated title/history records instead of silently fetching old page bodies.
+YouTube's main-world script reads player/session information; the isolated bridge validates and forwards it to the service worker. Optional website scripts extract visible page text and compatible player evidence. They respect site permissions, exclusions and capture settings. Specific YouTube links request available captions; backup restore validates saved text and images. There is no browser-history scanner or Takeout importer.
 
 The service worker coordinates permissions, capture status, transcript jobs and messages. An offscreen document owns persistent engine operations and delegates inference to workers. Saved metadata, passages, images and vectors live in IndexedDB. The original internal database/protocol names remain for compatibility with earlier installations and backups.
 
@@ -44,6 +44,6 @@ Resident video vectors use 8-bit storage, with recent full-transcript content bo
 
 ## Validation
 
-The current suite has 290 Node tests. Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
+The current suite has 277 Node tests. Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
 
 Historical measurements and evaluations live in [the documentation index](README.md). Read their named versions and fixture limits: synthetic tests and controlled player responses do not prove live transcript availability, universal site support or a general accuracy percentage. No test evidence should be read as a claim that the extension continuously records every page or frame.

@@ -10,23 +10,12 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   const help=f.options.locator('#moments-help');assert.equal(await help.evaluate(node=>node.open),false);
   await help.locator('summary').click();assert.match(await help.innerText(),/timestamp/);await help.locator('summary').click();
   assert.equal(await f.options.locator('#sec-data #maxAgeDays').count(),1);
-  assert.equal(await f.options.locator('#sec-data #importMaxAgeDays').count(),1);
+  assert.equal(await f.options.locator('#importMaxAgeDays').count(),0);
   assert.match(await f.options.locator('label').filter({has:f.options.locator('#lightMode')}).innerText(),/Lite mode/);
-  assert.equal(await f.options.locator('#takeout-import').evaluate(node=>node.closest('details').open),false);
-  const picker=f.options.waitForEvent('filechooser');await f.options.locator('#welcome-import').click();await picker;
-  assert.equal(await f.options.locator('#takeout-import').evaluate(node=>node.closest('details').open),true);
-  const fold=f.options.locator('details').filter({has:f.options.locator('#takeout-import')});
-  assert.equal(await fold.locator('#history-scan').count(),1,'both YouTube import methods share one section');
-  assert.equal(await f.options.locator('#sec-add > .sheet > details').count(),3);
-  assert.equal(await fold.locator('#history-scan').isVisible(),true);
-  await fold.locator('summary').first().click();
-  await f.options.locator('#history-import-msg').evaluate(node=>node.textContent='Adding 1 of 2…');
-  await f.options.waitForFunction(()=>document.querySelector('#takeout-import').closest('details').open,null,{timeout:5000});
-  // File selectors remain native keyboard-focusable controls in the new folds.
-  await f.options.locator('#takeout-import').focus();assert.equal(await f.options.evaluate(()=>document.activeElement.id),'takeout-import');
-  await f.options.locator('#startup-msg').evaluate(node=>node.textContent='');
-  await f.options.locator('#history-import-msg').evaluate(node=>node.textContent='');
-  await fold.locator('summary').first().click();
+  for(const id of ['takeout-import','history-scan','web-history-file','web-history-scan'])assert.equal(await f.options.locator('#'+id).count(),0);
+  assert.equal(await f.options.locator('#sec-add > .sheet > details').count(),1);
+  const picker=f.options.waitForEvent('filechooser');await f.options.locator('#welcome-restore').click();await picker;
+  await f.options.locator('#import').focus();assert.equal(await f.options.evaluate(()=>document.activeElement.id),'import');
   // Load real local sample data via its first-run button, then show its matched moment.
   const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
@@ -68,7 +57,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    await f.options.screenshot({path:path.join(output,'recall-v3.3.8-options-'+width+'.png'),fullPage:true});
   }
   // Library stays at five rows while additional items remain reachable by scrolling.
-  await f.send({type:'import-history',videos:[{videoId:'extra000001',title:'Extra library item',channel:'Fixture',watchedAt:Date.now()}]});
+  await f.send({target:'offscreen',type:'import-history',videos:[{videoId:'extra000001',title:'Extra library item',channel:'Fixture',watchedAt:Date.now()}]});
   await f.options.reload();await f.options.waitForFunction(()=>document.querySelectorAll('#library .vid').length===6);
   for(const width of [320,768,1024,1440]){
    await f.options.setViewportSize({width,height:900});

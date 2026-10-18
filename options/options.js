@@ -1,4 +1,3 @@
-import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
 import {setItemImage} from '../lib/item-image.js';
 import {restoreBackup} from '../lib/backup.js';
 import {DEFAULT_SETTINGS as DEFAULTS, resetPreferences} from '../lib/settings.js';
@@ -9,10 +8,8 @@ import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-let historyCandidates = [];
-const selectedHistory = new Set();
 let bulkBusy = false;
-let historyImportBusy = false;
+let restoreBusy = false;
 let latestJob = null;
 let jobWaiter = null;
 let libraryRefresh;
@@ -20,22 +17,22 @@ let libraryDirty=false;
 function scheduleLibraryRefresh(){
   clearTimeout(libraryRefresh);
   libraryRefresh=setTimeout(()=>{
-    if(libraryBusy()||historyImportBusy)return;
+    if(libraryBusy()||restoreBusy)return;
     libraryDirty=false;loadLibrary().catch(()=>{});
   },500);
 }
 
 function updateTranscriptButton() {
   const count = videos.filter(needsTranscript).length;
-  $('history-transcripts').disabled = bulkBusy || historyImportBusy || libraryBusy() || !count;
-  $('history-transcripts').textContent = count ? `Fetch missing transcripts (${count})` : 'Fetch missing transcripts';
+  $('missing-transcripts').disabled = bulkBusy || restoreBusy || libraryBusy() || !count;
+  $('missing-transcripts').textContent = count ? `Fetch missing transcripts (${count})` : 'Fetch missing transcripts';
 }
 
-$('welcome-import').addEventListener('click', () => $('takeout-import').click());
+$('welcome-restore').addEventListener('click', () => { $('backup-controls').scrollIntoView({block:'center'}); $('import').click(); });
 $('welcome-empty').addEventListener('click', async () => {
   await chrome.storage.local.set({ onboardingComplete: true });
   $('welcome').hidden = true;
-  $('startup-msg').textContent = 'Ready. CueWoven will build your library from new videos. You can import history later.';
+  $('startup-msg').textContent = 'Ready. CueWoven will build your library from new videos. You can restore a backup later.';
 });
 
 // ---------------------------------------------------------------------------
@@ -65,7 +62,6 @@ async function loadLibrary() {
     stats.append(s);
   }
   renderLibrary();
-  renderHistory();
   updateTranscriptButton();
 }
 
@@ -90,7 +86,7 @@ function renderLibrary() {
   if (!list.length) {
     const p = document.createElement('p');
     p.className = 'empty-lib';
-    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube, import history or enable website capture above.';
+    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube, add a video link or enable website capture below.';
     lib.append(p);
     return;
   }
@@ -133,11 +129,11 @@ function renderLibrary() {
       const index = document.createElement('button');
       index.className = 'btn ghost small';
       index.textContent = 'Add transcript';
-      index.disabled = bulkBusy || historyImportBusy || libraryBusy();
+      index.disabled = bulkBusy || restoreBusy || libraryBusy();
       index.addEventListener('click', () => runBulk([v.videoId]));
       actions.prepend(index);
     }
-    del.disabled = historyImportBusy || bulkBusy || libraryBusy();
+    del.disabled = restoreBusy || bulkBusy || libraryBusy();
     row.append(img, info, actions);
     lib.append(row);
   }
@@ -151,7 +147,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (msg.type === 'index-changed') {
     libraryDirty=true;
-    if(!historyImportBusy&&!libraryBusy())scheduleLibraryRefresh();
+    if(!restoreBusy&&!libraryBusy())scheduleLibraryRefresh();
   }
   if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
   if (msg.type === 'model-status' && msg.state.status === 'loading') {
@@ -160,164 +156,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   return false;
 });
 
-async function saveHistoryTitles(entries) {
-  if (historyImportBusy || bulkBusy || libraryBusy()) return;
-  const release=beginLibraryTask();
-  historyImportBusy = true;
-  const controls = ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'history-transcripts', 'welcome-import', 'history-scan', 'history-save', 'history-index', 'bulk-go', 'import', 'clear'];
-  controls.forEach(id => { $(id).disabled = true; });
-  renderLibrary();
-  let imported = 0;
-  let skipped = 0;
-  let processed = 0;
-  let repaired = 0;
-  let complete = false;
-  try {
-    for (let i = 0; i < entries.length; i += 16) {
-      $('history-import-msg').textContent = `Adding history to CueWoven… ${processed} of ${entries.length}. First use may download the search model.`;
-      const batch = entries.slice(i, i + 16);
-      const res = await send({ type: 'import-history', videos: batch });
-      if (!res || res.error) throw new Error(res?.error || 'The import did not respond.');
-      imported += res.imported;
-      skipped += res.skipped;
-      repaired += res.repaired || 0;
-      processed += batch.length;
-    }
-    $('history-import-msg').textContent = `Added ${imported} searchable video titles; ${skipped} already saved. ${repaired ? `Restored history protection for ${repaired} videos. ` : ''}Open CueWoven to search your past videos.`;
-    complete = true;
-  } catch (e) {
-    $('history-import-msg').textContent = `Import stopped after adding ${imported} titles: ${e.message}. Already added videos are saved; re-import to continue.`;
-  } finally {
-    historyImportBusy = false;
-    controls.forEach(id => { $(id).disabled = false; });
-    release();
-    await loadLibrary();
-  }
-  return complete;
-}
-
-async function addHistory(entries, fetchTranscripts) {
-  if (!await saveHistoryTitles(entries)) return false;
-  if (fetchTranscripts) {
-    const importedIds = new Set(entries.map(v => v.videoId));
-    await runBulk(videos.filter(v => needsTranscript(v) && importedIds.has(v.videoId))
-      .sort((a, b) => b.watchedAt - a.watchedAt).slice(0,200).map(v => v.videoId), true);
-  }
-  return true;
-}
-
-$('takeout-import').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  e.target.value = '';
-  if (!file) return;
-  const fetchTranscripts = $('takeout-transcripts').checked;
-  try {
-    validateTakeoutFileSize(file.size);
-    const entries = parseTakeoutHistory(JSON.parse((await file.text()).replace(/^\uFEFF/, '')));
-    await addHistory(entries, fetchTranscripts);
-  } catch (e) {
-    $('history-import-msg').textContent = `Could not import history: ${e.message}`;
-  }
-});
-
-$('history-save').addEventListener('click', async () => {
-  const fetchTranscripts = $('browser-transcripts').checked;
-  try {
-    const complete = await addHistory(historyCandidates.map(v => ({
-      videoId: v.videoId, title: v.title, channel: '', watchedAt: v.lastVisitTime,
-    })), fetchTranscripts);
-    $('history-msg').textContent = complete && fetchTranscripts ? $('bulk-summary').textContent : $('history-import-msg').textContent;
-  } catch (e) {
-    $('history-msg').textContent = `Could not add history: ${e.message}`;
-  }
-});
-
-// ---------------------------------------------------------------------------
-// Existing YouTube visits (optional browser permission)
-// ---------------------------------------------------------------------------
-$('history-transcripts').addEventListener('click', () => runBulk(videos.filter(v => v.method === 'history-title')
-  .sort((a, b) => b.watchedAt - a.watchedAt).map(v => v.videoId), true));
-
-function updateHistorySelection() {
-  $('history-index').disabled = bulkBusy || historyImportBusy || !selectedHistory.size;
-  $('history-index').textContent = selectedHistory.size ? `Index selected videos (${selectedHistory.size}/20)` : 'Index selected videos';
-}
-
-function renderHistory() {
-  const list = $('history-list');
-  list.textContent = '';
-  const indexed = new Set(videos.filter(v => !needsTranscript(v)).map(v => v.videoId));
-  const query = $('history-filter').value.trim().toLowerCase();
-  const matches = historyCandidates.filter(v => (v.title + ' ' + v.videoId).toLowerCase().includes(query));
-  for (const v of matches) {
-    const row = document.createElement('div');
-    row.className = 'history-row';
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.disabled = indexed.has(v.videoId) || bulkBusy || historyImportBusy;
-    if (indexed.has(v.videoId)) selectedHistory.delete(v.videoId);
-    check.checked = selectedHistory.has(v.videoId);
-    check.setAttribute('aria-label', `Select ${v.title}`);
-    check.addEventListener('change', () => {
-      if (check.checked && selectedHistory.size >= 20) {
-        check.checked = false;
-        $('history-msg').textContent = 'Select at most 20 videos for each batch.';
-        return;
-      }
-      if (check.checked) selectedHistory.add(v.videoId);
-      else selectedHistory.delete(v.videoId);
-      updateHistorySelection();
-    });
-    const link = document.createElement('a');
-    link.href = `https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    link.textContent = v.title;
-    const note = document.createElement('span');
-    note.className = 'note';
-    note.textContent = indexed.has(v.videoId) ? 'Indexed' : `Visited ${new Date(v.lastVisitTime).toLocaleDateString()}`;
-    row.append(check, link, note);
-    list.append(row);
-  }
-  if (historyCandidates.length && !matches.length) list.textContent = 'No titles match. Try different words.';
-  updateHistorySelection();
-}
-
-$('history-filter').addEventListener('input', renderHistory);
-$('history-scan').addEventListener('click', async () => {
-  const button = $('history-scan');
-  button.disabled = true;
-  try {
-    // Request directly in this click handler to preserve the browser's user gesture.
-    if (!await chrome.permissions.request({ permissions: ['history'] })) {
-      $('history-msg').textContent = 'History access was not granted. You can still paste YouTube links below.';
-      return;
-    }
-    $('history-msg').textContent = 'Looking for YouTube videos…';
-    const res = await send({ type: 'history-videos', days: Number($('history-days').value) });
-    if (!res || res.error) throw new Error(res?.error || 'History scan did not respond.');
-    historyCandidates = res.videos;
-    selectedHistory.clear();
-    $('history-tools').hidden = !historyCandidates.length;
-    $('history-msg').textContent = `${historyCandidates.length} unique YouTube videos found.${res.limited ? ' Showing up to 500 recent videos; choose a shorter range to narrow the scan.' : ''} Titles can be searched now; indexing is needed to search spoken content.`;
-    renderHistory();
-  } catch (e) {
-    $('history-msg').textContent = `Could not read history: ${e.message}`;
-  } finally {
-    button.disabled = bulkBusy;
-  }
-});
-
-$('history-index').addEventListener('click', async () => {
-  const ids = Array.from(selectedHistory).slice(0, 20);
-  if (!ids.length) return;
-  const res = await runBulk(ids);
-  for (const result of res?.results || []) {
-    if (result.status === 'done' || result.status === 'skipped') selectedHistory.delete(result.videoId);
-  }
-  $('history-msg').textContent = $('bulk-summary').textContent;
-  renderHistory();
-});
+$('missing-transcripts').addEventListener('click', () => runBulk(videos.filter(needsTranscript).sort((a,b)=>(b.watchedAt||0)-(a.watchedAt||0)).map(v=>v.videoId),true));
 
 // ---------------------------------------------------------------------------
 // Bulk pre-load
@@ -357,12 +196,11 @@ function onBulkProgress(p) {
 
 function setBulkControls(busy) {
   bulkBusy = busy;
-  for (const id of ['takeout-import', 'takeout-transcripts', 'browser-transcripts', 'welcome-import', 'history-save', 'history-scan', 'import', 'clear', 'bulk-go']) $(id).disabled = busy || historyImportBusy || libraryBusy();
+  for (const id of ['welcome-restore', 'import', 'export', 'clear', 'bulk-go']) $(id).disabled = busy || restoreBusy || libraryBusy();
   $('bulk-go').textContent = busy ? 'Fetching…' : 'Add videos';
   $('bulk-stop').hidden = !busy;
   updateTranscriptButton();
   renderLibrary();
-  renderHistory();
 }
 
 function applyTranscriptJob(job) {
@@ -388,7 +226,7 @@ function applyTranscriptJob(job) {
 }
 
 async function runBulk(urls, all = false) {
-  if (bulkBusy || historyImportBusy || libraryBusy()) return;
+  if (bulkBusy || restoreBusy || libraryBusy()) return;
   if (!urls.length) { $('bulk-summary').textContent = all ? 'No missing transcripts for these videos.' : 'Paste at least one YouTube link.'; return; }
   setBulkControls(true);
   $('bulk-summary').scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -467,7 +305,6 @@ async function loadSettings() {
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   selectRetention('maxAgeDays', s.maxAgeDays);
-  selectRetention('importMaxAgeDays', s.importMaxAgeDays || 0);
   $('perVideo').value = String(s.perVideo);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
@@ -475,7 +312,9 @@ async function loadSettings() {
 
 let savedTimer;
 async function saveSettings(event) {
+  const {settings:stored={}}=await chrome.storage.local.get('settings');
   const settings = {
+    ...stored,
     enabled: $('enabled').checked,
     lightMode:$('lightMode').checked,
     speechEnabled: $('speechEnabled').checked,
@@ -484,7 +323,6 @@ async function saveSettings(event) {
     screenTextEnabled:$('screenTextEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
-    importMaxAgeDays:Number($('importMaxAgeDays').value),
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
@@ -497,7 +335,7 @@ async function saveSettings(event) {
   savedTimer = setTimeout(() => (status.textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
@@ -518,9 +356,9 @@ $('import').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  if(historyImportBusy || bulkBusy || libraryBusy())return;
+  if(restoreBusy || bulkBusy || libraryBusy())return;
   const release=beginLibraryTask();
-  historyImportBusy=true;setBulkControls(bulkBusy);
+  restoreBusy=true;setBulkControls(bulkBusy);
   $('data-msg').textContent='Reading file…';
   try {
     let data;try{data=JSON.parse(await file.text());}catch{throw Error('That file isn’t valid JSON.');}
@@ -528,7 +366,7 @@ $('import').addEventListener('change', async (e) => {
     const res=await restoreBackup(data,send,({done,total})=>{$('data-msg').textContent=`Restoring… ${done}/${total} items. Keep this page open.`;});
     $('data-msg').textContent=`Imported ${res.imported} ${data.items?.length?'items':'videos'}.`;
   }catch(error){$('data-msg').textContent=error.message;}
-  finally{historyImportBusy=false;release();setBulkControls(bulkBusy);loadLibrary();}
+  finally{restoreBusy=false;release();setBulkControls(bulkBusy);loadLibrary();}
 });
 
 $('clear').addEventListener('click', async () => {
@@ -546,7 +384,7 @@ loadLibrary();
 send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(response?.job)).catch(() => {});
 
 $('forget-recent').addEventListener('click',async()=>{
-  if(libraryBusy()||historyImportBusy)return;
+  if(libraryBusy()||restoreBusy)return;
   const hours=Number($('forget-hours').value);
   if(!confirm('Forget items CueWoven saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.'))return;
   const release=beginLibraryTask();

@@ -1,10 +1,9 @@
-import { parseWebHistory, policy } from "../lib/web-items.js";
-import { beginLibraryTask, libraryBusy, onLibraryBusy } from "../lib/library-busy.js";
+import { policy } from "../lib/web-items.js";
 import {setItemImage} from "../lib/item-image.js";
 import { DEFAULT_DOMAINS, SUGGESTED_SITES, siteGroup, siteOrigins, initialSiteSettings } from "../lib/web-sites.js";
 const $ = (id) => document.getElementById(id), send = (msg) => chrome.runtime.sendMessage(msg);
 const ALL_ORIGINS = ["https://*/*", "http://*/*"];
-let settings = { enabled: false, paused: false, domains: [...DEFAULT_DOMAINS], blocked: [] }, missing = [], busy = false, stopping = false, refreshId = 0;
+let settings = { enabled: false, paused: false, domains: [...DEFAULT_DOMAINS], blocked: [] }, missing = [], refreshId = 0;
 
 // The switch represents website saving; global auto-save and browser access are reported separately.
 const isOn = () => settings.enabled === true && !settings.paused;
@@ -188,97 +187,9 @@ $("web-all").addEventListener("change", (event) => run(async () => {
 $("web-searches").addEventListener("change", (event) => run(() => save({ searches: event.target.checked }, event.target.checked ? "Google searches will be saved." : "Google searches won't be saved.")));
 $("web-audio").addEventListener("change", (event) => run(() => save({ audio: event.target.checked })));
 
-action("welcome-web", async () => $("web-history-file").click());
-function action(id, fn) {
-  $(id).addEventListener("click", async () => {
-    try {
-      await fn();
-    } catch (error) {
-      $("web-import-msg").textContent = error.message;
-    }
-  });
-}
-async function importItems(items, description = "", videos = []) {
-  if (busy || libraryBusy()) return;
-  const release = beginLibraryTask();
-  busy = true;
-  stopping = false;
-  $("web-history-stop").hidden = false;
-  $("web-history-stop").textContent = "Pause after this batch";
-  let imported = 0, skipped = 0, processed = 0, total = items.length + videos.length;
-  try {
-    const blocked = settings.blocked || [];
-    if (policy.matches("www.youtube.com", blocked) || policy.matches("youtu.be", blocked)) videos = [];
-    const entries = [...videos.map((video) => ({ video })), ...items.filter((item) => !policy.matches(new URL(item.url).hostname, blocked)).map((item) => ({ item }))];
-    total = entries.length;
-    for (let i = 0; i < entries.length && !stopping; i += 16) {
-      $("web-import-msg").textContent = `Importing ${processed}/${total} titles and queries… Keep this page open. First use downloads the search model.`;
-      const batch = entries.slice(i, i + 16), youtube = batch.filter((row) => row.video).map((row) => row.video), web = batch.filter((row) => row.item).map((row) => row.item);
-      const results = [];
-      if (youtube.length) results.push(await send({ type: "import-history", videos: youtube }));
-      if (web.length) results.push(await send({ type: "web-import", items: web }));
-      const failure = results.find((result2) => result2.error);
-      if (failure) throw Error(failure.error);
-      const result = { imported: results.reduce((n, row) => n + row.imported, 0), skipped: results.reduce((n, row) => n + row.skipped, 0) };
-      if (result.error) throw Error(result.error);
-      imported += result.imported;
-      skipped += result.skipped;
-      processed += batch.length;
-    }
-    $("web-import-msg").textContent = `${stopping ? "Paused" : "Done"}: ${imported} saved; ${skipped} already present. ${processed}/${total} processed. ${description} Past page bodies and video media are not fetched. Re-importing safely resumes.`;
-    await chrome.storage.local.set({ onboardingComplete: true });
-    chrome.runtime.sendMessage({ type: "index-changed" }).catch(() => {
-    });
-  } catch (error) {
-    $("web-import-msg").textContent = `Stopped after ${processed}/${total}; completed items remain saved. ${error.message}`;
-  } finally {
-    busy = false;
-    $("web-history-stop").hidden = true;
-    release();
-  }
-}
-$("web-history-file").addEventListener("change", async (event) => {
-  const file = event.target.files[0];
-  event.target.value = "";
-  if (!file || busy) return;
-  try {
-    if (file.size > 100 * 1024 * 1024) throw Error("Choose an extracted JSON file up to 100 MB.");
-    let json;
-    try {
-      json = JSON.parse(await file.text());
-    } catch {
-      throw Error("Choose JSON, not HTML, in Google Takeout.");
-    }
-    const parsed = parseWebHistory(json);
-    if (!parsed.items.length && !parsed.videos.length) throw Error("No eligible page, video or search records found.");
-    await importItems(parsed.items, `${parsed.skipped} unsupported/sensitive records skipped; YouTube titles are included. Use Fetch missing transcripts for their captions.`, parsed.videos);
-  } catch (error) {
-    $("web-import-msg").textContent = error.message;
-  }
-});
-$("web-history-scan").addEventListener("click", async () => {
-  if (busy) return;
-  try {
-    const granted = await chrome.permissions.request({ permissions: ["history"] });
-    if (!granted) throw Error("History access was not granted.");
-    $("web-import-msg").textContent = "Reading local browser history…";
-    const result = await send({ type: "web-history", days: Number($("web-history-days").value) });
-    if (result.error) throw Error(result.error);
-    await importItems(result.items, result.limited ? "Only the most recent 100,000 browser records were returned. Use Takeout for older records." : "", result.videos);
-  } catch (error) {
-    $("web-import-msg").textContent = error.message;
-  }
-});
-$("web-history-stop").addEventListener("click", () => {
-  stopping = true;
-  $("web-history-stop").textContent = "Finishing this batch…";
-});
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "local" && (changes.webCapture || changes.settings)) refresh().catch(() => {
   });
-});
-onLibraryBusy(() => {
-  for (const id of ["web-history-file", "web-history-scan", "welcome-web"]) $(id).disabled = libraryBusy();
 });
 (async () => {
   const {webCapture} = await chrome.storage.local.get('webCapture');

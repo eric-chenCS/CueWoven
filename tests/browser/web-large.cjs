@@ -51,7 +51,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     assert.ok((await f.send(key)).results.every((row) => row.videoId !== removed), "deleted result is absent from the cached query");
     const exact = { ...key, query: '"Unique cobalt demonstration"' };
     assert.equal((await f.send(exact)).results.length, 0);
-    await f.send({ type: "web-import", items: [{ kind: "page", url: "https://example.com/new-cached-query", title: "Unique cobalt demonstration", watchedAt: Date.now() }] });
+    await f.send({ target:'offscreen',type: "web-import", items: [{ kind: "page", url: "https://example.com/new-cached-query", title: "Unique cobalt demonstration", watchedAt: Date.now() }] });
     assert.equal((await f.send(exact)).results[0].title, "Unique cobalt demonstration", "new import invalidates an empty query cache");
     if (process.env.RECALL_PERF_CHECK !== "0") {
       assert.ok(report.p95Ms < Number(process.env.RECALL_SEARCH_BUDGET_MS || 1e3), "new-query p95 exceeded the calibrated 1-second budget");

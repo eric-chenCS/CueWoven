@@ -24,31 +24,8 @@ const request = (msg, sender = { id: 'x', tab: { id: 1 }, url: 'options/options.
   new Promise(resolve => assert.equal(onMessage(msg, sender, resolve), true));
 test('incognito YouTube requests stop before any indexing or model access',async()=>{const result=await request({type:'should-index',videoId:'aaaaaaaaaaa'},{id:'x',tab:{id:7,incognito:true},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.equal(result.index,false);assert.match(result.reason,/Incognito/);});
 
-test('history scanning requires the library page, permission and a valid range', async () => {
-  let reads = 0;
-  chrome.history = { search: async () => { reads++; return []; } };
-  chrome.permissions = { contains: async () => false };
-  assert.match((await request({ type: 'history-videos', days: 90 })).error, /Allow history/);
-  assert.match((await request({ type: 'history-videos', days: -1 })).error, /valid history range/);
-  assert.match((await request({ type: 'history-videos' }, { id: 'x', tab: { id: 1 }, url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })).error, /Library/);
-  assert.match((await request({ type: 'history-videos' }, { id: 'x', url: 'popup/popup.html' })).error, /Library/);
-  assert.equal(reads, 0);
-});
-
-test('history scanning filters URL hosts and merges duplicate visits without returning unrelated data', async () => {
-  const queries = [];
-  chrome.permissions = { contains: async () => true };
-  chrome.history = { search: async query => {
-    queries.push(query);
-    return query.text === 'youtube.com' ? [
-      {url:'https://www.youtube.com/watch?v=dQw4w9WgXcQ', title:'A video - YouTube',lastVisitTime:10, extra:'private'},
-      {url:'https://example.com/?youtube.com',title:'Not YouTube',lastVisitTime:20},
-    ] : [{url:'https://youtu.be/dQw4w9WgXcQ',title:'Latest title - YouTube',lastVisitTime:30}];
-  } };
-  const result = await request({type:'history-videos',days:0});
-  assert.deepEqual(result, {videos:[{videoId:'dQw4w9WgXcQ',title:'Latest title',lastVisitTime:30}],limited:false});
-  assert.deepEqual(queries.map(q=>q.startTime),[0,0]);
-  assert.ok(queries.every(q=>q.maxResults===10000));
+test('removed history import and scan messages have no public handler',()=>{
+ for(const type of ['history-videos','import-history','web-history','web-import'])assert.equal(onMessage({type},{id:'x',url:'options/options.html'},()=>{throw Error('Removed handler replied');}),false,type);
 });
 
 test('default settings match the spec', () => {
@@ -171,7 +148,7 @@ test('on-screen text verifies active playback, timing revision and off switches'
 test('excluding YouTube blocks its imports, manual indexing, new jobs and live scene saves',async()=>{
  chrome.storage.local.get=async()=>({settings:{enabled:true},webCapture:{blocked:['youtube.com']}});
  assert.deepEqual(await request({type:'should-index',videoId:'aaaaaaaaaaa',manual:true}),{index:false,reason:'YouTube is excluded.'});
- for(const message of [{type:'import-history',videos:[]},{type:'transcript-job-start',urls:['aaaaaaaaaaa']},{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
+ for(const message of [{type:'transcript-job-start',urls:['aaaaaaaaaaa']},{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
  assert.deepEqual(await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
  assert.deepEqual(await request({type:'speech-pcm',id:'excluded',pcm:[0],clock:{}},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
 });

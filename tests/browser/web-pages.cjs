@@ -7,16 +7,9 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
       const url = new URL(route.request().url()), privatePage2 = url.pathname === "/password";
       return route.fulfill({ contentType: "text/html", body: `<!doctype html><title>${privatePage2 ? "Private sample" : "Coral reef science"}</title><article>Short unrelated teaser.</article><article><h1>Coral reefs</h1><p id="body">Coral bleaching occurs when warm ocean water drives away symbiotic algae. The loss of these algae turns the coral white and deprives it of food. Restoring cooler water helps the reef recover.</p><p style="display:none">HIDDEN_SECRET_BODY</p><form><p>FORM_SECRET_BODY</p><input value="FORM_SECRET_VALUE" />${privatePage2 ? '<input type="password" value="PASSWORD_SECRET" />' : '<div style="display:none"><input type="password" value="HIDDEN_PASSWORD_SECRET" /></div>'}</form><div contenteditable="true" style="width:200px;height:40px">COMMENT_SECRET_BODY</div></article>` });
     });
-    const chromeHistory = { "Browser History": [{ url: "https://articles.example.com/reef", title: "Coral reef science", time_usec: 17e14 }, { url: "https://bank.example.com/account", title: "PRIVATE_BANK_TITLE", time_usec: 17e14 }, { url: "https://www.youtube.com/watch?v=aaaaaaaaaaa", title: "A YouTube video", time_usec: 17e14 }] };
-    await options.locator("#web-history-file").setInputFiles({ name: "BrowserHistory.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(chromeHistory)) });
-    await options.waitForFunction(() => document.querySelector("#web-import-msg").textContent.startsWith("Done:"));
-    assert.equal((await send({ type: "list" })).videos.find((row) => row.videoId === "aaaaaaaaaaa")?.title, "A YouTube video");
-    await options.locator("details").filter({has:options.locator("#web-searches")}).locator("summary").first().click();
-    await options.locator("#web-searches").check();
-    await options.waitForTimeout(300);
-    const searches = [{ title: "Has buscado coral bleaching", titleUrl: "https://www.google.com/search?q=coral+bleaching", time: "2020-01-01T12:00:00Z" }];
-    await options.locator("#web-history-file").setInputFiles({ name: "MyActivity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(searches)) });
-    await wait(async () => (await send({ type: "list" })).videos.some((row) => row.kind === "search"));
+    await send({type:'warmup'});
+    await send({target:'offscreen',type:'import-history',videos:[{videoId:'aaaaaaaaaaa',title:'Legacy YouTube title',watchedAt:Date.now()}]});
+    await send({target:'offscreen',type:'web-import',items:[{kind:'page',url:'https://articles.example.com/reef',title:'Coral reef science',watchedAt:Date.now()},{kind:'search',url:'https://www.google.com/search?q=coral+bleaching',title:'coral bleaching',watchedAt:Date.now()}]});
     assert.equal((await send({ type: "search", query: "coral reef science", kind: "page" })).results[0].matchSources[0], "Title");
     assert.equal((await send({ type: "search", query: "coral bleaching", kind: "search" })).results[0].matchSources[0], "Search");
     const page = await context.newPage();
@@ -49,7 +42,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const popup = await context.newPage();
     await popup.goto(`${base}/popup/popup.html`);
     await popup.locator("#kind-filter").selectOption("page");
-    await popup.locator("#q").fill("why corals turn white in warm seas");
+    await popup.locator("#q").fill("why corals turn white in warm seas");await popup.locator("#q").press("Enter");
     await wait(async () => await popup.locator(".result").count());
     const href = await popup.locator(".result").first().getAttribute("href");
     assert.match(href, /^https:\/\/articles\.example\.com\/reef#:~:text=/);
@@ -61,7 +54,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
       await popup.screenshot({ path: path.join(process.env.RECALL_SCREENSHOT_DIR, "recall-v3-web-dark.png"), fullPage: true });
     }
     await popup.locator("#kind-filter").selectOption("search");
-    await popup.locator("#q").fill("coral bleaching");
+    await popup.locator("#q").fill("coral bleaching");await popup.locator("#q").press("Enter");
     await wait(async () => await popup.locator(".result .match-sources").first().textContent().then((text) => text === "Search").catch(() => false));
     await send({ type: "clear" });
     const imported = await send({ type: "import", data: backup });
@@ -78,7 +71,6 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await send({ type: "import", data: backup });
     const forgotten=await send({type:"web-forget",domain:"example.com"});assert.equal(forgotten.error,undefined);
     assert.equal((await send({ type: "list" })).videos.some((row) => row.url?.includes("example.com")), false);
-    assert.equal((await send({ type: "web-import", items: [{ kind: "page", url: "https://articles.example.com/reef", title: "Coral reef science", watchedAt: Date.now() }] })).imported, 0);
     const layouts = [];
     for (const width of [320, 768, 1024, 1440]) {
       await options.setViewportSize({ width, height: 900 });
@@ -86,7 +78,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     }
     assert.ok(layouts.every((row) => !row.overflow));
     assert.deepEqual(errors, []);
-    console.log("WEB_PAGES_PASS", JSON.stringify({ sources: ["Chrome JSON", "Google Search JSON", "live article text"], semanticTop: semantic.results[0].title, fragment: href, privateAndFormExclusions: true, backup: true, captureClearRace: true, forgetAndBlock: true, layouts }));
+    console.log("WEB_PAGES_PASS", JSON.stringify({ sources: ["legacy saved metadata", "live article text"], semanticTop: semantic.results[0].title, fragment: href, privateAndFormExclusions: true, backup: true, captureClearRace: true, forgetAndBlock: true, layouts }));
   } finally {
     await f.close();
   }

@@ -15,9 +15,8 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.waitForFunction(()=>document.querySelector('#web-msg').textContent.startsWith('Removed instagram.com'));
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#web-site-count').textContent==='30');
  assert.equal(await f.options.locator('#web-sites [aria-label="Remove instagram.com"]').count(),0,'reload cannot restore an excluded starter site');
- assert.equal((await f.send({type:'web-import',items:[{kind:'page',url:'https://instagram.com/p/public',title:'Excluded post',watchedAt:Date.now()}]})).imported,0);
- const added=await f.send({type:'web-import',items:[{kind:'page',url:'https://articles.example.com/one',title:'Coral reef science article one',watchedAt:Date.now()},{kind:'page',url:'https://articles.example.com/two',title:'Coral reef science article two',watchedAt:Date.now()}]});assert.equal(added.imported,2);
- const video=await f.send({type:'import-history',videos:[{videoId:'iconTest001',title:'Coral reef science video',channel:'Fixture',watchedAt:Date.now()}]});assert.equal(video.error,undefined);
+ const added=await f.send({target:'offscreen',type:'web-import',items:[{kind:'page',url:'https://articles.example.com/one',title:'Coral reef science article one',watchedAt:Date.now()},{kind:'page',url:'https://articles.example.com/two',title:'Coral reef science article two',watchedAt:Date.now()}]});assert.equal(added.imported,2);
+ const video=await f.send({target:'offscreen',type:'import-history',videos:[{videoId:'iconTest001',title:'Coral reef science video',channel:'Fixture',watchedAt:Date.now()}]});assert.equal(video.error,undefined);
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelectorAll('#library .vid').length===3);
  await f.options.waitForFunction(()=>[...document.querySelectorAll('#library img.website-icon')].length===2&&[...document.querySelectorAll('#library img.website-icon')].every(img=>img.complete&&img.naturalWidth>0));
  // An unavailable browser icon gets a real local image instead of a broken-image box.
@@ -29,5 +28,5 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  assert.equal(await popup.locator('#next-video').isDisabled(),true);assert.equal(await popup.locator('body').evaluate(node=>node.scrollWidth),440);
  await popup.screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-v3.3.7-match.png')});
  assert.equal(await f.options.locator('#web-forget-domain').count(),0);
- assert.deepEqual(errors,[]);console.log('ICONS_MATCHES_PASS: browser icons load, local fallback loads, starter sites initialize once, exclusions survive reload/import, mixed page/video Match 2/3 navigation.');
+ assert.deepEqual(errors,[]);console.log('ICONS_MATCHES_PASS: browser icons load, local fallback loads, starter sites initialize once, exclusions survive reload, mixed page/video Match 2/3 navigation.');
 }finally{await f.close();}})().catch(error=>{console.error(error);process.exitCode=1;});
