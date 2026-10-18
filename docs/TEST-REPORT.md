@@ -1,4 +1,8 @@
-# Recall test report
+# WebLapse test report
+
+## Current baseline — v3.3.21
+
+All 290 Node tests pass. The isolated Chromium branding check verifies popup/settings names, existing IndexedDB identity, saved titles/settings, legacy backup roundtrip, search and download names. Earlier versioned reports below are historical, with narrower fixtures and different test counts. See [architecture and validation scope](ARCHITECTURE.md#validation).
 
 ## Version 3.3.7 update
 

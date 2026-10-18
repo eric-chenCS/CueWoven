@@ -1,16 +1,54 @@
-# WebLapse — SwampHacks XII
+# WebLapse
 
-WebLapse helps you find something you watched or read from a vague memory. Version **3.3.21** starts with **YouTube only**, with saving enabled. **Add suggested sites (30)** adds the remaining news, reference and social sites after requesting browser access. Custom sites request access when added, even while saving is paused. Existing choices and exclusions are preserved. Short videos now save title and post metadata before captions or scenes; see [the short-video fixes](docs/UPDATE-3.3.9.md). See [the starter-site update](docs/UPDATE-3.3.8.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+**Find what you watched or read—even when you only remember a detail.**
 
-Allowed article pages now save up to three visible images, with local visual search and searchable captions. Compressed copies share the existing 240 MB visual store; Settings can disable capture. [Article-image update and tests](docs/UPDATE-3.3.14.md). [Larger visual storage](docs/UPDATE-3.3.15.md). [Theme readability update](docs/UPDATE-3.3.17.md). [Website icon fix](docs/UPDATE-3.3.18.md). [Gray surfaces with colored controls](docs/UPDATE-3.3.19.md). [WebLapse rename](docs/UPDATE-3.3.21.md).
+Browser history remembers URLs. WebLapse helps you remember what was in them. Describe a quote, idea or scene to find a saved video moment or article passage, then jump back to the source.
 
-Search now matches common English word endings and written numbers, and recognizes explicit site/date context such as “the TikTok about cooking last week”. [Search update and measurements](docs/UPDATE-3.3.13.md).
+Built for SwampHacks XII as a local-first Chrome and Microsoft Edge extension. No personal YouTube API key is required.
 
-Open WebLapse by clicking its toolbar icon or pressing **Ctrl+Shift+F** in Chrome/Edge (Windows/Linux). The shortcut can conflict with DevTools, Sheets, or other extensions; see [shortcut setup](docs/UPDATE-3.3.10.md).
+[Download WebLapse](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [For developers](CONTRIBUTING.md)
 
-## Team setup
+<img src="docs/assets/search-demo.png" width="440" alt="WebLapse finds a timestamped battery explanation from a natural-language query, using an original demo video." />
 
-Install Node.js 22 or newer and pnpm **11.25.0**, then:
+*Actual extension UI with original sample content, not personal browsing history.*
+
+## Install and try it
+
+1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **weblapse-v3.3.21.zip** asset. Extract it to a permanent folder.
+2. Open `chrome://extensions` or `edge://extensions` and enable **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
+4. Open WebLapse from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
+
+Try searching **“why does a phone battery hold less charge as it ages”** with the samples. First use downloads the local search model, so allow time for setup. Click the result to open the matching moment.
+
+The release ZIP includes the browser runtime. GitHub's **Code → Download ZIP** is source code and needs the [developer build steps](CONTRIBUTING.md#build-from-source) before loading. WebLapse is currently installed as an unpacked extension, not through a browser store.
+
+## What you can find
+
+- **Video moments:** search captions, played English speech, sampled scenes and on-screen text. Open a timestamp link or copy it to share.
+- **Articles and pages:** search saved text, visible images and image captions on websites you allow. Open a matching passage where text highlighting is supported.
+- **Past history:** import Google Takeout YouTube/Chrome history or scan this browser's saved visits. Titles are searchable immediately; available YouTube transcripts can be fetched afterward.
+- **More precise results:** refine a query, filter by source or date, search inside the current YouTube video, and use ← / → to browse ranked matches.
+
+YouTube is the only default site. Under **Library & settings → Websites**, add suggested sites or individual domains and grant browser access. Compatible browser video players on other sites can contribute content; native mobile apps, login walls and protected players are not supported.
+
+## How it works
+
+1. **Capture:** allowed pages and videos contribute text and selected visual evidence while you browse. Optional history imports start with titles and visit dates.
+2. **Index on your device:** MiniLM turns passages into semantic vectors; exact words, titles and context also contribute to ranking. Whisper handles English speech fallback, CLIP compares images and scenes, and Tesseract reads on-screen text.
+3. **Recall the source:** your description is compared with saved evidence. Results show why they matched and link to a video moment or page passage.
+
+Semantic search can match related meaning rather than identical words. Rankings are estimates, not probabilities or guaranteed identification. [Architecture and model details →](docs/ARCHITECTURE.md)
+
+## Privacy and practical limits
+
+Your library and search index stay in the current browser profile. WebLapse does not upload your history, queries, transcripts or captured audio to an AI service. Model weights download on first use; websites and YouTube still receive normal content requests. Site access and browser-history access are requested when needed.
+
+Pause saving, exclude sites, choose retention periods, export a backup or delete saved items in settings. Google-search capture and website audio transcription start off. Sensitive-page filters and text redaction help, but cannot recognize every private page or redact captured images. [Privacy and data controls →](docs/USAGE.md#privacy-and-data)
+
+Live capture covers played or read portions. It cannot recover unwatched audio, guarantee every brief scene, or retrieve captions that YouTube does not provide. Old page bodies are not downloaded during history import. Models use CPU and memory; **Lite mode** keeps text capture while pausing new image, scene, OCR and speech capture.
+
+## Build and contribute
 
 ```sh
 git clone https://github.com/eric-chenCS/SwampHacks-XII.git
@@ -20,85 +58,6 @@ pnpm run vendor
 pnpm test
 ```
 
-Setup installs the locked dependencies with install scripts disabled, then builds the browser runtime into `vendor/`. That generated directory is excluded from Git; **build it before loading the extension**.
+Requires Node.js 22+ and pnpm 11.25.0. Load this folder as an unpacked extension after building. See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, browser tests and packaging.
 
-Open `edge://extensions` or `chrome://extensions`, enable Developer mode, click **Load unpacked**, and select this repository's root folder (the folder with `manifest.json`). No personal YouTube API key is needed.
-
-If switching from a different installed folder, export your library first and import that backup into the new installation. A new folder can create a separate extension identity. Avoid enabling two copies on YouTube at once.
-
-## Use
-
-- Open **Library & settings → Websites & articles**. New setups start with YouTube only and saving enabled. Click **Add suggested sites (30)** for the remaining standard list, or enter your own domain and click **Add site**. Added websites request optional browser access; denied access leaves the list unchanged. Existing grants may need no prompt. Refresh existing tabs after granting access. WebLapse saves visible text from allowed pages, up to the first 2,000 words. Use × to exclude future capture/import while keeping saved memories, or the popup's **Forget and block site** to remove that site's saved items too. Broader public-website access is available under More options.
-- Import extracted Takeout **Chrome/BrowserHistory.json** or **My Activity/Search** JSON through the general-history card, or scan this browser's saved history. Imported pages save titles and visits; Google queries are included only when **Save Google search queries** is enabled (off by default). YouTube links save video titles. Imports do not retrieve old page bodies or video audio. Use the existing YouTube transcript tools for imported YouTube videos. Files stay local; keep settings open during import. A visit does not establish that you read or watched something.
-- On allowed sites, compatible visible HTML video players can contribute played native captions, sampled scenes and burned-in text. Enable **Transcribe website video audio** separately to try local English speech recognition when usable captions are unavailable. It starts off to limit CPU use and runs on one player at a time. Instagram/TikTok browser pages may work when they expose a usable player; login walls, protected or cross-origin media, embedded frames and native mobile apps are not covered. Feed links may reopen the feed rather than the exact clip. These are sampled played portions, not complete downloads.
-- Use **Everything / Videos / Pages / Searches** above the results to narrow the shared search. Page matches open a text-fragment link where supported and where the passage still exists. Website video timestamps require the allowed WebLapse page script and a matching usable player.
-- The popup shows the current website's capture status, **Save this page now** and **Forget and block site**. Library & settings includes approximate storage usage and a session-only log of the last 100 domains/reason codes. It records no full URLs or page/query text. **Keep imported history** defaults to Forever; choosing 24 hours, 7 days, 4 weeks or 12 months removes older imports using their original visit dates. Export a backup first if you want a copy.
-- Watch a YouTube video. WebLapse tries captions after the configured watch delay; if that fails, it automatically starts English speech-to-text on the playing video's audio. Known non-English audio and mixed uploaded subtitle languages skip the English-only automatic fallback. The popup’s Start English transcription button can override incorrect language metadata. No recording button or microphone permission is needed. First use downloads another model and uses extra CPU. The popup shows progress, **Stop**, and an optional retry. Disable automatic speech-to-text in settings.
-- Describe what you remember in the popup. By default, WebLapse shows the strongest matching video and its matching moment. Use **→** and **←** to browse different videos in ranked order across the whole matching library. Uncheck **One video at a time** for the list view, which shows up to 12 results with the configured maximum per video. The view choice is remembered. Press Enter in the search box to open the shown match; if the query changed, WebLapse searches it first and opens the fresh match. Ctrl/Cmd+Enter opens it in the background.
-- The same search also checks sampled video images, even if nobody describes the scene aloud. Result indicators show **Article image**, **Image caption**, **Scene**, **Transcript**, **Audio**, **On-screen text**, or **Title**; nearby scene/transcript evidence can appear together. Audio means AI transcription of player audio. Scene matches show the saved image and link to its timestamp. There is no separate scene-search mode.
-- Searches are independent by default. Click **Refine** beside the search box to add more clues to the current query. Edit those clues to build on the original search. Changing the main query, closing Refine, or reopening the popup clears extra clues.
-- Optionally import the extracted Google Takeout `watch-history.json`, up to 100 MB. WebLapse saves all titles first, then attempts available transcripts for the newest 200 missing videos in a separate minimized WebLapse window. Use **Fetch missing transcripts** to fetch more manually. Uncheck **Fetch transcripts after import** for titles only.
-- Use **Fetch missing transcripts** for already imported titles. Fetching runs in the background with six muted videos at once in that separate minimized window (choose three in Settings → Parallel videos to reduce load). Once the titles are saved and fetching starts, you can close settings; keep the browser open. Return to settings for progress or **Pause after active videos**. Large or blocked histories can still take time.
-- **Find videos visited in this browser** scans this browser profile's history. **Add all found videos to WebLapse** attempts available transcripts for the newest 200 missing videos automatically, unless its transcript checkbox is unchecked. Videos already indexed are skipped; failures keep their titles.
-
-- On a current video, choose **Search this video** to restrict all result indicators to that video. If its captions are not indexed, WebLapse first tries **Index**. Caption failure shows a retry message; live audio/OCR still require playback and their usual settings.
-- **Copy link** copies the result's exact video time or article passage. Enter `rc`, then Space/Tab, in the address bar to search WebLapse; selecting a suggestion opens that saved source.
-- An empty popup offers **Try sample videos**: five small, original, silent animated videos with authored captions, labelled WebLapse samples. They play locally with timestamp links, can be deleted or exported, and are never automatically added. First sample indexing still needs the text model download.
-- The toolbar dot and popup explain capture status. **Lite mode** in Settings stops article-image/scene/OCR/speech capture together while keeping captions and articles. Existing scene evidence is still searchable and can load its model. Expand **Speech-to-text** in the popup for manual controls.
-- **Your data → Forget recent** removes whole items saved or updated by WebLapse in the last hour, day or week, including newly imported history with old visit dates. A suggested **Only last week?** chip changes search dates only when you click it.
-- Queries use a separate local worker and pass background work at four-text batch boundaries. The text worker unloads after five minutes idle; the popup preloads it for an existing library. Searches show **Retry** after ten seconds. Saves can finish from an existing snapshot; delete, clear, site forget, retention cleanup and restore invalidate snapshots strictly.
-
-The resident video matrix uses 8-bit vectors, up to 100,000 caption/title rows from recent content (up to 1,000 full-transcript videos), plus the existing bounded OCR rows. Older transcripts remain on disk and are searched in bounded batches when necessary, so very large video libraries can take longer. Title bundles accelerate website history reads without limiting exact-word matches to a semantic shortlist. The database upgrades automatically from v3.2.1; keep the same extension folder and export a backup before switching installations.
-
-Website capture blocks known personal services and private entry routes, including messaging, grades, payslips, orders and vaults. Visible Sign out controls stop capture. Recognizable emails, formatted phone numbers, SSNs and checksum-valid card numbers are redacted from newly saved text; URLs containing those patterns are skipped. Query capture/import is separately off by default, and obvious medical Google queries remain excluded. These heuristics cannot identify every private page or redact video images. Use a site allowlist for tighter control; existing saved items are not silently rewritten by the new privacy rules.
-
-YouTube may not provide captions for every video or session. The automatic speech fallback saves only audio played after it starts; it cannot recover unwatched portions or past audio from history. It runs for one normal watched video at a time, independently of the background caption-import queue. Results are labeled **AI speech · played portions**, with approximate timestamps and possible recognition errors. Full captions replace partial speech results if later retrieved. Unsupported or protected players may block audio capture. Imported videos still attempt captions only; unavailable captions keep the title searchable. See [UPDATE-2.8.md](docs/UPDATE-2.8.md) and [the test report](docs/TEST-REPORT.md).
-
-The MiniLM search model and Whisper tiny.en speech model run locally using the bundled Transformers.js runtime. First use downloads weights from Hugging Face. Video audio is processed in memory, never uploaded or saved as an audio file. Captions and thumbnails come from YouTube; transcript fetching sends video requests to YouTube. The transcript text, index and settings stay in your browser profile. With the default Forever setting, imported entries stay protected after background captions are fetched, regardless of whether they have transcripts. Watching them, or saving a scene-only entry, makes them subject to watched-video retention alongside transcripts and partial speech.
-
-Scene capture is on by default and can be switched off with **Save scene snapshots** in settings. After the watch delay, it checks a tiny version of the visible playing video twice a second. Noticeable changes can trigger extra small JPEG snapshots; quiet footage stretches routine snapshots from about 20 to 60 seconds. Detected ads, pauses, hidden players and background history-capture tabs are excluded. Processing is bounded: one request and one waiting frame per player, at least two seconds between requests, and up to six extra processing attempts per rolling minute across WebLapse. Busy work can delay or drop frames. This samples watched portions, so very brief/small events, actions between checks and protected media can still be missed. Existing history has no scenes until you watch those videos. CLIP compares English visual descriptions to the snapshots locally; its first use downloads weights and adds CPU/memory work. Images stay on this device, capped at 240 per video, 20,000 total, and a 240 MiB compressed-image/vector budget; oldest images are removed first. Active footage can reach these limits sooner. Search reads vectors without decoding every image. Retention and deletion include snapshots; backups preserve extra frames and their original timestamps. See [UPDATE-2.15.md](docs/UPDATE-2.15.md).
-
-**Read on-screen text** is also on by default, with its own setting. It samples a temporary JPEG up to 1280 × 720 about every five seconds of visible playback, reads English subtitles and other text in the pixels using bundled Tesseract OCR, then discards the sharp image. Words join the same MiniLM search with an **On-screen text** indicator and an approximate sample timestamp. Low-confidence fragments and exact repeated nearby lines are filtered, including persistent watermarks alongside new captions. Changes in numbers, negation or word order remain searchable. Playback links open three seconds before an OCR observation, while the original sample timestamp remains stored. This uses extra CPU; one frame runs at a time, unchanged sharp pixels skip one recognition cycle but are rechecked within 10 seconds, busy frames are skipped, and the OCR worker releases after 60 seconds idle. Brief, small, stylized, low-contrast or non-English text can be missed or misread. It does not backfill old snapshots or imported history. Saved OCR text is capped at 720 moments per video and 10,000 total, follows retention, and is included in backups. No external OCR service, API key, microphone or new browser permission is used.
-
-Transcript fetching uses YouTube's normal player/session in one separate minimized window, keeping its capture tabs out of your main tab bar. The window must stay open while fetching; it closes after completion or pause. Closing it yourself pauses new work. It remains visible in the taskbar and can be restored; browsers do not support a closed window that keeps running. Existing YouTube restrictions still apply. Reloading the extension or restarting the browser can interrupt a job; retry **Fetch missing transcripts** afterward. See [UPDATE-2.7.md](docs/UPDATE-2.7.md).
-
-Backup restores send one video or image per request and up to 16 OCR text moments per batch with progress and hold live visual capture while waiting for in-flight frames, searches and warmup; keep the settings page open. Stop active speech-to-text and pause transcript fetching before restoring or deleting data. Concurrent library mutations are refused until the current action finishes. Indexing completion/failure rows show the video title when available and fade after five seconds; overall job counts remain. If an older release lost import protection, re-import the original Takeout file to repair matching watch dates without replacing transcripts. Release notes, model comparisons and live-test reports are in [`docs/`](docs/).
-
-## Edit and share changes
-
-On the first use after updating from an older release, WebLapse improves existing text embeddings in background batches. The popup shows progress and search stays available. It preserves transcripts, dates, audio ranges and scene images; no re-import is needed. Passage vectors now describe the actual spoken text, with title/channel context ranked separately. Exact phrases and Unicode word matching supplement semantic similarity. Result scores are ranking signals, not probabilities, so the popup shows evidence indicators instead of percentages. The fixed 31-query synthetic comparison improved correct first moments from 29 to 31; this is a regression check, not a general accuracy guarantee. Larger BGE and Whisper base models tied the existing models on the narrow fixtures, so MiniLM, Whisper tiny.en and CLIP remain the shipped models.
-
-Use a branch and pull request for team changes:
-
-```sh
-git pull --ff-only
-git switch -c your-change
-# Edit the source files.
-pnpm test
-git add .
-git commit -m "Describe the change"
-git push -u origin your-change
-```
-
-Open a pull request on GitHub. After it is merged, teammates pull the latest code and reload WebLapse. Refresh YouTube and allowed website tabs after content-script changes. Run `pnpm run setup` again after dependency or runtime-build changes.
-
-GitHub changes do not automatically update installed extensions. Load your checkout directly for development, keep its folder path stable, and reload after editing. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Project layout
-
-| Path | Purpose |
-| --- | --- |
-| `manifest.json`, `background.js` | Extension configuration and service worker |
-| `content/` | YouTube and optional website text, video captions, playback timing, audio and sampled frames |
-| `offscreen/`, `lib/` | Local search/speech/vision models, bounded queues, IndexedDB and evidence ranking |
-| `popup/`, `options/`, `styles/` | Search popup and library/settings interface |
-| `scripts/` | Runtime build and ZIP packaging |
-| `tests/` | Unit tests and isolated browser regressions |
-| `docs/` | Release notes, reviews, evaluations and live-test reports |
-| `licenses/` | Third-party runtime license notices |
-
-Run `pnpm run zip` after setup to make a loadable `weblapse-v3.3.21.zip` including the generated runtime. ZIP files, dependencies, downloaded Hugging Face model caches, history exports, browser profiles and build metadata should not be committed.
-
-Website capture skips incognito, visible password fields, pages dominated by editors, known sensitive domains, private entry routes, and blocked domains. Ordinary deep article/code paths, hidden login forms and small comment boxes no longer block a public page; form/editor contents are excluded. This is a conservative filter, not universal detection of signed-in or private content; prefer specific allowed domains. Website audio remains off until enabled. Old pages are never fetched to fill history. Web vectors use 8-bit storage and searches scan bounded batches with cached normalized text. Automatic recapture waits at least 60 seconds and reuses unchanged passage vectors. Full web content is capped at 2,000 items or 64 MiB of accounted text, normalized text and vector payload; older content falls back to its searchable title. Imported metadata uses the separate Keep imported history setting until read live, after which normal retention applies. These budgets do not include all browser database overhead or model memory.
-
-Third-party notices are included. Existing native Node dependency audit findings and their browser-bundle reachability limits are documented in [TEST-REPORT.md](docs/TEST-REPORT.md); the dependency graph is not audit-clean. No project-wide open-source license has been selected.
+The current unit suite has **290 tests**. Isolated browser checks cover search, capture, imports, backups, permissions and the interface. Controlled fixtures are regression checks, not a guarantee of real-world retrieval accuracy. [Validation and technical documentation →](docs/README.md)
