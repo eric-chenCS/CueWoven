@@ -22,7 +22,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const page = await context.newPage();
     await page.goto("https://articles.example.com/reef");
     await page.waitForTimeout(6e3);
-    assert.equal((await send({ type: "list" })).videos.find((row) => row.kind === "page").chunkCount, 0, "capture starts off even with test-pregranted permission");
+    assert.equal((await send({ type: "list" })).videos.find((row) => row.kind === "page").chunkCount, 0, "unlisted sites are not captured even with test-pregranted permission");
     await enable();
     await page.reload();
     await wait(async () => (await send({ type: "list" })).videos.find((row) => row.kind === "page" && row.chunkCount > 0));

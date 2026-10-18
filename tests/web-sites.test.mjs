@@ -9,11 +9,14 @@ test('suggested sites are unique public domains with the correct display groups'
  assert.deepEqual(siteOrigins(['example.com']),['https://*.example.com/*','http://*.example.com/*']);
 });
 
-test('starter sites include YouTube and Instagram once, without restoring exclusions or broadening an active empty scope',()=>{
- const fresh=initialSiteSettings();assert.equal(fresh.enabled,false);assert.ok(fresh.domains.includes('youtube.com'));assert.ok(fresh.domains.includes('instagram.com'));
- assert.equal(initialSiteSettings({...fresh,domains:[],blocked:['youtube.com','instagram.com']}),null);
- const custom=initialSiteSettings({enabled:false,domains:['example.com'],blocked:['youtube.com']});assert.deepEqual(custom.domains,['example.com']);
- const seeded=initialSiteSettings({enabled:true,domains:[],blocked:['instagram.com']});assert.equal(seeded.enabled,false);assert.equal(seeded.paused,true);assert.ok(!seeded.domains.includes('instagram.com'));
- const full=initialSiteSettings({enabled:true,allSites:true,domains:[]});assert.equal(full.enabled,true);
+test('new setups save automatically with YouTube only and keep explicit pauses, custom lists and exclusions',()=>{
+ const fresh=initialSiteSettings();assert.equal(fresh.enabled,true);assert.deepEqual(fresh.domains,['youtube.com']);assert.equal(fresh.siteDefaultsVersion,2);
+ assert.equal(initialSiteSettings({...fresh,domains:[],blocked:['youtube.com']}),null);
+ const excluded=initialSiteSettings({blocked:['youtube.com']});assert.deepEqual(excluded.domains,[]);
+ const custom=initialSiteSettings({enabled:false,domains:['example.com'],blocked:['youtube.com']});assert.deepEqual(custom.domains,['example.com']);assert.equal(custom.enabled,false);
+ const paused=initialSiteSettings({enabled:true,paused:true,domains:['youtube.com']});assert.equal(paused.paused,true);
+ const untouched=initialSiteSettings({siteDefaultsInitialized:true,enabled:false,paused:false,domains:[...DEFAULT_DOMAINS]});assert.equal(untouched.enabled,true);assert.deepEqual(untouched.domains,['youtube.com']);
+ const selected=initialSiteSettings({siteDefaultsInitialized:true,enabled:true,domains:[...DEFAULT_DOMAINS]});assert.deepEqual(selected.domains,DEFAULT_DOMAINS);
+ assert.equal(initialSiteSettings({enabled:true,allSites:true,domains:[]}).allSites,true);
  assert.deepEqual(siteOrigins(['youtube.com']),[]);
 });

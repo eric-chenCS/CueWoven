@@ -79,6 +79,7 @@ async function refresh() {
   $("web-site-count").textContent = String(hosts.length);
   const missingDefaults = DEFAULT_DOMAINS.filter((site) => !settings.domains.includes(site) && !policy.matches(site, settings.blocked || []));
   $("web-restore").hidden = !missingDefaults.length;
+  $("web-restore").textContent = `Add suggested sites (${missingDefaults.length})`;
   if (!hosts.length) {
     const empty = document.createElement("p");
     empty.className = "hint";
@@ -88,7 +89,8 @@ async function refresh() {
 
   // Chrome access: only worth mentioning while saving is on.
   missing = on ? (settings.allSites ? (allAccess ? [] : ["every website"]) : hosts.filter((_, index) => !siteAccess[index])) : [];
-  if (on && !scripting) missing = settings.allSites ? ["every website"] : hosts;
+  if (on && !scripting) missing = settings.allSites ? ["every website"] : hosts.filter(host => siteOrigins([host]).length);
+  if (on && autoSave && missing.length) $("web-state").textContent = "Ready to save. Give browser access below to start on the remaining sites.";
   $("web-access-row").hidden = !missing.length;
   $("web-access").textContent = missing.length ? `The browser hasn't given Recall access to ${missing.length > 3 ? missing.length + " of these sites" : missing.join(", ")} yet.` : "";
 
@@ -122,6 +124,7 @@ async function run(fn) {
 
 // Ask Chrome for access. This must be the first await in a click handler.
 async function requestAccess(origins) {
+  if (!origins.length) return; // YouTube already has its built-in video access.
   const granted = await chrome.permissions.request({ permissions: ["scripting"], origins });
   if (!granted) throw Error("The browser didn't give access, so nothing changed.");
 }
@@ -140,7 +143,7 @@ async function allowSite(host) {
   const blockers = (settings.blocked || []).filter(site => site !== host);
   const parent = blockers.find(site => policy.matches(host, [site]));
   if (parent) throw Error(`Allow ${parent} again first; it also excludes ${host}.`);
-  if (isOn() && !settings.allSites) await requestAccess(siteOrigins([host]));
+  await requestAccess(siteOrigins([host]));
   await save({ domains: [...new Set([...settings.domains, host])], blocked: blockers }, `${host} can be saved again.`);
 }
 
@@ -159,7 +162,7 @@ $("web-add").addEventListener("submit", (event) => {
     const parent = (settings.blocked || []).find(blocked => blocked !== host && policy.matches(host, [blocked]));
     if (parent) throw Error(`Allow ${parent} again first; it also excludes ${host}.`);
     if (settings.domains.includes(host) && !policy.matches(host, settings.blocked || [])) throw Error(`${host} is already in the list.`);
-    if (isOn() && !settings.allSites) await requestAccess(siteOrigins([host]));
+    await requestAccess(siteOrigins([host]));
     await save({ domains: [...new Set([...settings.domains, host])], blocked: (settings.blocked || []).filter((blocked) => blocked !== host) }, `Added ${host}.`);
     $("web-domain").value = "";
   });
@@ -167,7 +170,7 @@ $("web-add").addEventListener("submit", (event) => {
 
 $("web-restore").addEventListener("click", () => run(async () => {
   const add = DEFAULT_DOMAINS.filter((site) => !settings.domains.includes(site) && !policy.matches(site, settings.blocked || []));
-  if (isOn() && !settings.allSites) await requestAccess(siteOrigins(add));
+  await requestAccess(siteOrigins(add));
   await save({ domains: [...settings.domains, ...add] }, `Added ${add.length} suggested ${add.length === 1 ? "site" : "sites"}.`);
 }));
 

@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.7 · Library &amp; settings</title>
+    <title>Recall v3.3.8 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.7</span>
+        <span class="version">v3.3.8</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -126,14 +126,14 @@
               <input id="web-enabled" type="checkbox" role="switch" class="switch" />
             </label>
             <div class="block">
-              <p class="hint site-scope">Sites include their subdomains. Website saving starts off; YouTube video saving follows Settings.</p>
+              <p class="hint site-scope">YouTube is included by default. Add suggested sites or your own below. Each added website needs browser access.</p>
               <p id="web-scope-note" class="hint site-scope" hidden>All-public-site mode also includes sites outside this list. Removing a listed site excludes it from saving.</p>
               <details id="web-site-list" class="more" open><summary>Websites (<span id="web-site-count">0</span>)</summary><div id="web-sites" class="site-groups"></div></details>
               <form id="web-add" class="row add-site">
                 <label for="web-domain" class="visually-hidden">Add a site</label>
                 <input id="web-domain" type="text" autocomplete="off" spellcheck="false" placeholder="Add a site, like example.com" />
                 <button id="web-allow" class="btn ghost" type="submit">Add site</button>
-                <button id="web-restore" class="link-btn" type="button" hidden>Add the suggested sites back</button>
+                <button id="web-restore" class="link-btn" type="button" hidden>Add suggested sites</button>
               </form>
               <div id="web-access-row" class="access-warning" hidden>
                 <p id="web-access" role="status"></p>
