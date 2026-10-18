@@ -282,6 +282,7 @@ input.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 
 .vid img.website-icon { object-fit: contain; padding: 12px; }
 .site img { width: 16px; height: 16px; object-fit: contain; flex: none; margin-right: 4px; }
+.site img[src*="/icons/sites/"] { background: #fff; border-radius: 3px; }
 #web-site-list { margin: 0; }
 #web-site-list > .site-groups { margin-top: 12px; }
 
