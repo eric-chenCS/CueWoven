@@ -15,7 +15,7 @@ test('backup restore sends one video or image per durable request, in dependency
 });
 test('restore stops after a failed batch without claiming completed data was lost',async()=>{
  let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{},{},{}]},async()=>++calls===2?{error:'offline'}:{imported:1}),/1\/3.*offline.*remain saved/);assert.equal(calls,2);
- await assert.rejects(restoreBackup({videos:[]},async()=>{throw Error('must not send')}),/Not a WebLapse/);
+ await assert.rejects(restoreBackup({videos:[]},async()=>{throw Error('must not send')}),/Not a CueWoven/);
 });
 
 test('restore reports saved progress even when the message transport rejects',async()=>{

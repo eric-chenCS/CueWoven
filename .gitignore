@@ -9,6 +9,7 @@ build-meta.json
 recall-index-*.json
 momento-index-*.json
 weblapse-index-*.json
+cuewoven-index-*.json
 playwright-report/
 test-results/
 *-profile*/

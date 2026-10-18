@@ -23,6 +23,8 @@ let renderedSeq = -1;
 let currentTab = null;
 let currentMedia = null;
 let resultOffset = 0;
+let submittedQuery = null;
+const searchText = () => [q.value.trim(), !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
 
 const send = (msg) => chrome.runtime.sendMessage(msg);
 
@@ -92,7 +94,7 @@ function render(results, query) {
     node.querySelector('.title').textContent = (r.sample&&sampleFor(r.videoId)?.title) || r.title || r.videoId;
     highlight(node.querySelector('.snippet'),r.articleImage?(r.caption||'An image from this article.'):r.scene?'A scene you watched.':r.titleOnly?'Matched the title.':'“'+r.text+'”',terms);
     const meta=node.querySelector('.meta');
-    meta.textContent=[r.sample?'WebLapse demo':r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
+    meta.textContent=[r.sample?'CueWoven demo':r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
     meta.title=r.articleImage?'Image saved from this article':r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
     // Like Microsoft Recall: results that share the meaning but not your specific words say so.
     if(r.match==='related'){const tag=document.createElement('span');tag.className='related';tag.textContent='Related';tag.title='Similar in meaning, but doesn\u2019t contain the specific words you searched for';node.querySelector('.match-sources').append(tag);}
@@ -123,13 +125,16 @@ function openResult(url, background) {
 // Search
 // ---------------------------------------------------------------------------
 async function runSearch() {
-  clearTimeout(debounce);
   const seq = ++searchSeq;
   $('search-retry').hidden=true;
   $('applied-filters').hidden=true;
   $('ignore-inferred').hidden=true;
   const original = q.value.trim();
-  const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
+  const query = searchText();
+  if (query !== submittedQuery) {
+    if (original) empty('Press Enter to search'); else showIdle();
+    return;
+  }
   // Refinement belongs to this open popup; reopening starts with an independent query.
   chrome.storage.session.set({ lastQuery: original, sinceDays, inferFilters }).catch(() => {});
   if (!original) { showIdle(); return; }
@@ -189,8 +194,11 @@ function showTie(tie) {
 $('ignore-inferred').addEventListener('click',()=>{inferFilters=false;resultOffset=0;runSearch();q.focus();});
 $('tie-next').addEventListener('click', () => $('next-video').click());
 
-let debounce;
-function scheduleSearch() {
+function prepareSearch() {
+  submittedQuery = null;
+  renderedSeq = -1;
+  $('applied-filters').hidden = true;
+  $('ignore-inferred').hidden = true;
   resultOffset = 0;
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
@@ -198,13 +206,12 @@ function scheduleSearch() {
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
-  clearTimeout(debounce);
   if (!q.value.trim()) {
     chrome.storage.session.set({ lastQuery: '', sinceDays }).catch(() => {});
     showIdle();
     return;
   }
-  debounce = setTimeout(runSearch, 250);
+  empty('Press Enter to search');
 }
 
 q.addEventListener('input', () => {
@@ -213,32 +220,32 @@ q.addEventListener('input', () => {
   refinePanel.hidden = true;
   refineToggle.setAttribute('aria-expanded', 'false');
   refineToggle.disabled = !q.value.trim();
-  scheduleSearch();
+  prepareSearch();
 });
 
-details.addEventListener('input', scheduleSearch);
+details.addEventListener('input', prepareSearch);
 details.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
-    clearTimeout(debounce);
     resultOffset = 0;
+    submittedQuery = searchText();
     runSearch();
   }
 });
 
 refineToggle.addEventListener('click', () => {
   resultOffset = 0;
-  clearTimeout(debounce);
   const open = refinePanel.hidden;
   refinePanel.hidden = !open;
   refineToggle.setAttribute('aria-expanded', String(open));
   if (open) {
     details.focus();
   } else {
+    const hadDetails = !!details.value.trim();
     details.value = '';
+    if (hadDetails) prepareSearch();
     q.focus();
   }
-  runSearch();
 });
 
 q.addEventListener('keydown', async (e) => {
@@ -249,16 +256,14 @@ q.addEventListener('keydown', async (e) => {
     activeIndex = (activeIndex + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
     items[activeIndex].scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'Enter') {
+  } else if (e.key === 'Enter' && !e.isComposing) {
     e.preventDefault();
-    clearTimeout(debounce);
     const target = items[activeIndex >= 0 ? activeIndex : 0];
     if (target && renderedSeq===searchSeq && (activeIndex>=0 || singleVideo.checked)) openResult(target.href, e.ctrlKey || e.metaKey);
     else {
-      if(!singleVideo.checked)resultOffset=0;
-      const requested=searchSeq+1;await runSearch();
-      const fresh=resultsEl.querySelector('.result');
-      if(singleVideo.checked && fresh && renderedSeq===requested && searchSeq===requested)openResult(fresh.href,e.ctrlKey||e.metaKey);
+      resultOffset=0;
+      submittedQuery=searchText();
+      await runSearch();
     }
   }
 });
@@ -269,7 +274,6 @@ document.querySelectorAll('.chip').forEach((chip) => {
     sinceDays = Number(chip.dataset.days) || 0;
     inferFilters = false;
     resultOffset = 0;
-    clearTimeout(debounce);
     runSearch();
     q.focus();
   });
@@ -284,7 +288,7 @@ $('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('search-retry').addEventListener('click',runSearch);
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
-async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'WebLapse is saving pages you read on your sites. Click to stop.':'WebLapse isn\u2019t saving websites right now. Click to start again.';}
+async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'CueWoven is saving pages you read on your sites. Click to stop.':'CueWoven isn\u2019t saving websites right now. Click to start again.';}
 $('previous-video').addEventListener('click', () => {
   resultOffset = Math.max(0, resultOffset - 1);
   runSearch();
@@ -396,7 +400,7 @@ $('start-samples').addEventListener('click',async()=>{
   const result=await send({type:'load-samples'}).catch(error=>({error:error.message}));
   button.disabled=false;button.textContent='Try sample videos';
   if(result.error){empty('Could not load samples',[result.error]);return;}
-  await refreshStatus();q.value='why do batteries wear out';runSearch();
+  await refreshStatus();q.value='why do batteries wear out';refineToggle.disabled=false;prepareSearch();q.focus();
 });
 $('start-empty').addEventListener('click', async () => {
   await chrome.storage.local.set({ onboardingComplete: true });
@@ -426,7 +430,7 @@ $('start-empty').addEventListener('click', async () => {
     q.value = saved.lastQuery;
     refineToggle.disabled = !q.value.trim();
     q.select();
-    runSearch();
+    prepareSearch();
   } else {
     showIdle();
   }

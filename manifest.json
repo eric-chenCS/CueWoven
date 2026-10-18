@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "WebLapse v3.3.21 \u2013 Search Your History",
-  "short_name": "WebLapse v3.3.21",
-  "version": "3.3.21",
+  "name": "CueWoven v3.3.22 \u2013 Search Your History",
+  "short_name": "CueWoven v3.3.22",
+  "version": "3.3.22",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -12,7 +12,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "WebLapse",
+    "default_title": "CueWoven",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

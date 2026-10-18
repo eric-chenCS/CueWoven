@@ -36,7 +36,7 @@ if(!process.env.RECALL_MODEL_DIR||!process.env.RECALL_TEST_PHOTO)throw Error('Se
   console.log('REAL_CLIP_VISUAL_SEARCH_PASS',JSON.stringify({coldTextThenWarmMs:timings}));
   const caption=await send({type:'search',query:'quasar marmalade',singleVideo:true});assert.equal(caption.results[0].videoId,alpha.videoId);
   const popup=await context.newPage();await popup.goto(f.base+'/popup/popup.html');
-  await popup.locator('#q').fill('two cats resting together on furniture');
+  await popup.locator('#q').fill('two cats resting together on furniture');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>[...document.querySelectorAll('.match-sources span')].some(s=>s.textContent==='Article image'));
   assert.equal(await popup.locator('.result').first().getAttribute('href'),alpha.url);
   assert.equal(await popup.locator('.result img').first().getAttribute('alt'),'Quasar marmalade');
