@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {rankScenes,fuseMatches,validateScene,SCENES_TOTAL,SCENES_PER_VIDEO} from '../lib/scenes.js';
+import {rankScenes,fuseMatches,validateScene,SCENES_TOTAL,SCENES_PER_VIDEO,SCENE_BYTES_TOTAL,IMAGES_PER_PAGE} from '../lib/scenes.js';
 const hit=(videoId,start,score,extra={})=>({videoId,start,score,title:videoId,...extra});
 test('fusion includes visual-only matches without comparing raw cosine scales',()=>{
   const out=fuseMatches([hit('weak-title',0,0.3,{titleOnly:true})],[hit('cats',20,0.27,{scene:true})],{perVideo:1});
@@ -36,7 +36,7 @@ test('scene input rejects external images, oversized data, decompression bombs a
   assert.equal(validateScene(good).key,'aaaaaaaaaaa:1');
   const early=validateScene({...good,start:21,adaptive:true}),late=validateScene({...good,start:27,adaptive:true});assert.notEqual(early.key,late.key);assert.notEqual(early.key,validateScene({...good,start:21}).key);assert.equal(late.adaptive,true);
   jpeg[9]=255;assert.throws(()=>validateScene({...good,image:'data:image/jpeg;base64,'+jpeg.toString('base64')}),/320/);
-  assert.equal(SCENES_TOTAL,2000);assert.equal(SCENES_PER_VIDEO,240);
+  assert.equal(SCENES_TOTAL,20000);assert.equal(SCENE_BYTES_TOTAL,240*1024*1024);assert.equal(SCENES_PER_VIDEO,240);assert.equal(IMAGES_PER_PAGE,3);
 });
 
 test('noise-floor scene hits cannot displace eligible transcripts',()=>{
