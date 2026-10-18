@@ -5,6 +5,7 @@ let settings = {}, busy = false, stopping = false;
 async function refresh() {
   settings = { enabled: false, paused: false, domains: [], blocked: [], ...(await chrome.storage.local.get("webCapture")).webCapture };
   $("web-audio").checked = !!settings.audio;
+  $("web-searches").checked=settings.searches===true;
   $("web-pause").disabled = !settings.enabled;
   $("web-pause").textContent = settings.paused ? "Resume website capture" : "Pause website capture";
   $("web-off").disabled = !settings.enabled;
@@ -136,3 +137,5 @@ onLibraryBusy(() => {
   for (const id of ["web-history-file", "web-history-scan", "web-forget", "welcome-web"]) $(id).disabled = libraryBusy();
 });
 refresh().catch((error) => $("web-msg").textContent = error.message);
+
+$("web-searches").addEventListener("change",()=>save({searches:$("web-searches").checked}).catch(error=>$("web-msg").textContent=error.message));

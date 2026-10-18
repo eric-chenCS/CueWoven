@@ -8,7 +8,7 @@ if (!runtime.every(file=>existsSync('vendor/'+file))) {
   console.error('Run "pnpm run setup" first so vendor/ exists.');
   process.exit(1);
 }
-const items = ['manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses', 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];
+const items = ['samples', 'manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses', 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];
 const archive = `recall-v${JSON.parse(readFileSync('manifest.json','utf8')).version}.zip`;
 if (existsSync(archive)) unlinkSync(archive);
 if (process.platform === 'win32') {

@@ -1,6 +1,9 @@
-import { formatTime, deepLink, queryTerms,playbackStart } from '../lib/search.js';
-import {itemLink,policy} from '../lib/web-items.js';
+import { formatTime, queryTerms,playbackStart } from '../lib/search.js';
+import {policy} from '../lib/web-items.js';
 import {captureLabel} from '../lib/capture-reason.js';
+import {withTimeout} from '../lib/request-timeout.js';
+import {resultLink} from '../lib/result-link.js';
+import {videoIdFromUrl} from '../lib/video.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -75,16 +78,16 @@ function render(results, query) {
   const terms = queryTerms(query);
   const tpl = $('result-tpl');
   for (const r of results) {
-    const node = tpl.content.firstElementChild.cloneNode(true);
-    const url = itemLink(r)||(r.titleOnly ? `https://www.youtube.com/watch?v=${encodeURIComponent(r.videoId)}` : deepLink(r.videoId, playbackStart(r)));
+    const wrap = tpl.content.firstElementChild.cloneNode(true),node=wrap.querySelector('.result');
+    const url = resultLink(r);
     node.href = url;
-    node.querySelector('img').src = r.image || (r.kind?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`);
+    node.querySelector('img').src = r.image || (r.kind||r.sample?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`);
     if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
     node.querySelector('.title').textContent = r.title || r.videoId;
     highlight(node.querySelector('.snippet'), r.scene ? 'Saved scene from the portion you watched.' : r.titleOnly ? r.kind?'From your history · title match. Read this page with website capture enabled to save its text.':'From your history · title match. Add a transcript to search what was said.' : '“' + r.text + '”', terms);
-    node.querySelector('.meta').textContent = [r.channel, r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : r.pageText?'Saved page text':r.kind==='search'?'Saved search query':'Spoken-content match']
+    node.querySelector('.meta').textContent = [r.channel, r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt || r.indexedAt), r.speechGenerated && 'AI speech · played portions', r.screenText?'On-screen text · sampled frames':r.scene ? 'Visual match' : r.titleOnly ? 'Title match' : r.pageText?'Saved page text':r.kind==='search'?'Saved search query':r.sample?'Authored sample captions':'Spoken-content match']
       .filter(Boolean)
       .join(' · ');
     for (const label of r.matchSources || [r.titleOnly?'Title':r.speechGenerated?'Audio':'Transcript']) {
@@ -95,7 +98,13 @@ function render(results, query) {
       e.preventDefault();
       openResult(url, e.ctrlKey || e.metaKey);
     });
-    resultsEl.append(node);
+    const copy=wrap.querySelector('.copy-link');
+    copy.addEventListener('click',async()=>{
+      try{await navigator.clipboard.writeText(url);copy.textContent='Copied';}
+      catch{copy.textContent='Copy failed';}
+      setTimeout(()=>{copy.textContent='Copy link';},2000);
+    });
+    resultsEl.append(wrap);
   }
 }
 
@@ -110,6 +119,7 @@ function openResult(url, background) {
 async function runSearch() {
   clearTimeout(debounce);
   const seq = ++searchSeq;
+  $('search-retry').hidden=true;
   const original = q.value.trim();
   const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
   // Refinement belongs to this open popup; reopening starts with an independent query.
@@ -119,11 +129,20 @@ async function runSearch() {
   $('next-video').disabled = true;
   $('page-label').textContent = 'Searching…';
   $('result-pages').hidden = !singleVideo.checked;
-  const res = await send({ type: 'search', query, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value })
+  const res = await withTimeout((async()=>{
+    const videoId=$('video-scope').checked?currentMedia?.videoId:undefined;
+    if(videoId){
+      const state=await send({type:'video-status',videoId});
+      if(state.error)throw Error(state.error);
+      if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
+    }
+    return send({ type: 'search', query,videoId, sinceDays, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
+  })())
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
     empty('Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
+    $('search-retry').hidden=false;
     return;
   }
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
@@ -149,6 +168,8 @@ function scheduleSearch() {
   resultOffset = 0;
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
+  $('search-retry').hidden=true;
+  $('suggest-week').hidden=true;
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
@@ -159,6 +180,7 @@ function scheduleSearch() {
     return;
   }
   debounce = setTimeout(runSearch, 250);
+  $('suggest-week').hidden=sinceDays===7||!/(?:last|past) week|recent(?:ly)?/i.test(q.value);
 }
 
 q.addEventListener('input', () => {
@@ -233,6 +255,9 @@ singleVideo.addEventListener('change', () => {
   runSearch();
 });
 $('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
+$('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
+$('search-retry').addEventListener('click',runSearch);
+$('suggest-week').addEventListener('click',()=>{document.querySelector('.chip[data-days="7"]').click();$('suggest-week').hidden=true;});
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
 async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;$('web-pause-popup').textContent=webCapture.paused?'Resume sites':'Pause sites';}
 $('previous-video').addEventListener('click', () => {
@@ -300,15 +325,20 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------------------------------------------------------------------------
 async function setupIndexNow() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if(currentTab)send({type:'capture-status',tabId:currentTab.id}).then(state=>{$('capture-indicator').textContent='This tab: '+captureLabel(state.reason);}).catch(()=>{});
   if(currentTab&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
   if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
   $('index-now').hidden = false;
   try {
     const { video } = await chrome.tabs.sendMessage(currentTab.id, { type: 'get-video' });
     currentMedia=video;
+    if(!currentMedia&&videoIdFromUrl(currentTab.url))currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};
+    $('video-scope-row').hidden=!currentMedia;
     if(!currentTab.url.startsWith('https://www.youtube.com/'))$('index-now').hidden=!video;
     if (video && video.title) $('index-now-text').textContent = `Index “${video.title}”`;
-  } catch (_) { /* tab needs a reload; handled on click */ }
+  } catch (_) {
+    if(videoIdFromUrl(currentTab.url)){currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};$('video-scope-row').hidden=false;}
+  }
 }
 
 $('index-now-btn').addEventListener('click', async () => {
@@ -342,6 +372,13 @@ $('open-library').addEventListener('click', (e) => {
 });
 
 $('start-import').addEventListener('click', () => chrome.runtime.openOptionsPage());
+$('start-samples').addEventListener('click',async()=>{
+  const button=$('start-samples');button.disabled=true;button.textContent='Adding samples…';
+  const result=await send({type:'load-samples'}).catch(error=>({error:error.message}));
+  button.disabled=false;button.textContent='Try sample videos';
+  if(result.error){empty('Could not load samples',[result.error]);return;}
+  await refreshStatus();q.value='why do batteries wear out';runSearch();
+});
 $('start-empty').addEventListener('click', async () => {
   await chrome.storage.local.set({ onboardingComplete: true });
   $('start-choice').hidden = true;
@@ -389,6 +426,7 @@ function renderSpeech(state = {}) {
   const active = ['preparing', 'recording', 'stopping'].includes(state.status);
   const videoTab = !!currentMedia || !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');
   $('speech').hidden = !active && !videoTab;
+  $('speech-heading').textContent=state.status==='recording'?'Speech-to-text · listening':state.status==='preparing'?'Speech-to-text · loading model':'Speech-to-text';
   $('speech-start').disabled = active || !videoTab;
   $('speech-stop').hidden = !active;$('speech-stop').disabled = state.status === 'stopping';
   const label = state.video?.title ? '“' + state.video.title + '”' : 'this video';

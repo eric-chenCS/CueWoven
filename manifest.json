@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v3.2.1 – Search Your History",
-  "short_name": "Recall v3.2.1",
-  "version": "3.2.1",
+  "name": "Recall v3.3.0 \u2013 Search Your History",
+  "short_name": "Recall v3.3.0",
+  "version": "3.3.0",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -34,7 +34,10 @@
     "history",
     "scripting"
   ],
-  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "host_permissions": [
     "https://www.youtube.com/*"
   ],
@@ -82,8 +85,12 @@
       ],
       "use_dynamic_url": true,
       "matches": [
-        "https://*/*", "http://*/*"
+        "https://*/*",
+        "http://*/*"
       ]
     }
-  ]
+  ],
+  "omnibox": {
+    "keyword": "rc"
+  }
 }

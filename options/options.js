@@ -1,12 +1,12 @@
 import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
 import {restoreBackup} from '../lib/backup.js';
-import {itemLink} from '../lib/web-items.js';
+import {resultLink} from '../lib/result-link.js';
 import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true };
+const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true,lightMode:false };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -90,7 +90,7 @@ function renderLibrary() {
     const img = document.createElement('img');
     img.loading = 'lazy';
     img.alt = '';
-    img.src = v.kind?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/mqdefault.jpg`;
+    img.src = v.kind||v.sample?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/mqdefault.jpg`;
     const info = document.createElement('div');
     info.className = 'info';
     const t = document.createElement('div');
@@ -104,7 +104,7 @@ function renderLibrary() {
     actions.className = 'actions';
     const open = document.createElement('a');
     open.className = 'btn ghost small';
-    open.href = itemLink({...v,titleOnly:true})||`https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`;
+    open.href = resultLink({...v,start:0,titleOnly:true});
     open.target = '_blank';
     open.rel = 'noopener';
     open.textContent = 'Open';
@@ -188,7 +188,7 @@ async function addHistory(entries, fetchTranscripts) {
   if (fetchTranscripts) {
     const importedIds = new Set(entries.map(v => v.videoId));
     await runBulk(videos.filter(v => needsTranscript(v) && importedIds.has(v.videoId))
-      .sort((a, b) => b.watchedAt - a.watchedAt).map(v => v.videoId), true);
+      .sort((a, b) => b.watchedAt - a.watchedAt).slice(0,200).map(v => v.videoId), true);
   }
   return true;
 }
@@ -417,6 +417,7 @@ async function loadSettings() {
   const { settings } = await chrome.storage.local.get('settings');
   const s = Object.assign({}, DEFAULTS, settings);
   $('enabled').checked = !!s.enabled;
+  $('lightMode').checked=!!s.lightMode;
   $('speechEnabled').checked = s.speechEnabled !== false;
   $('scenesEnabled').checked = s.scenesEnabled !== false;
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
@@ -424,6 +425,7 @@ async function loadSettings() {
   $('maxAgeDays').value = String(s.maxAgeDays);
   $('importMaxAgeDays').value=String(s.importMaxAgeDays||0);
   $('perVideo').value = String(s.perVideo);
+  for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([3, 6].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
 
@@ -431,6 +433,7 @@ let savedTimer;
 async function saveSettings() {
   const settings = {
     enabled: $('enabled').checked,
+    lightMode:$('lightMode').checked,
     speechEnabled: $('speechEnabled').checked,
     scenesEnabled: $('scenesEnabled').checked,
     screenTextEnabled:$('screenTextEnabled').checked,
@@ -440,13 +443,14 @@ async function saveSettings() {
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
+  for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
   await chrome.storage.local.set({ settings });
   $('saved').textContent = 'Saved';
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays','importMaxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
@@ -493,3 +497,13 @@ loadSettings();
 loadLibrary();
 
 send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(response?.job)).catch(() => {});
+
+$('forget-recent').addEventListener('click',async()=>{
+  if(libraryBusy()||historyImportBusy)return;
+  const hours=Number($('forget-hours').value);
+  if(!confirm('Forget items Recall saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.'))return;
+  const release=beginLibraryTask();
+  try{const result=await send({type:'forget-recent',hours});if(result.error)throw Error(result.error);$('data-msg').textContent='Forgot '+result.removed+' recently saved items.';await loadLibrary();}
+  catch(error){$('data-msg').textContent=error.message;}
+  finally{release();}
+});

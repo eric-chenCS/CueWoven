@@ -1,5 +1,7 @@
 // Service worker: routes messages between YouTube tabs, the popup/library pages
 // and the offscreen document that holds the model and the index.
+import {resultLink,escapeSuggestion} from './lib/result-link.js';
+import {captureLabel} from './lib/capture-reason.js';
 import { historyVideos } from './lib/history.js';
 import { videoIdFromUrl } from './lib/video.js';
 import { createCaptureWindow } from './lib/capture-window.js';
@@ -10,7 +12,7 @@ import {policy} from './lib/web-items.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true };
+export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 30, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true, lightMode:false };
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -56,20 +58,33 @@ async function engine(type, payload = {}) {
 
 async function getSettings() {
   const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
-  return Object.assign({}, DEFAULT_SETTINGS, settings,{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
+  return Object.assign({}, DEFAULT_SETTINGS, settings,settings?.lightMode?{speechEnabled:false,scenesEnabled:false,screenTextEnabled:false}:{},{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
 }
 
 // ---------------------------------------------------------------------------
 // Toolbar badge feedback
 // ---------------------------------------------------------------------------
 let speechBadgeTab = null;
-function flashBadge(tabId, text, color) {
-  if (tabId === speechBadgeTab) return;
-  if (tabId == null) return;
-  chrome.action.setBadgeBackgroundColor({ tabId, color }).catch(() => {});
-  chrome.action.setBadgeText({ tabId, text }).catch(() => {});
-  setTimeout(() => {if (tabId !== speechBadgeTab) chrome.action.setBadgeText({ tabId, text: '' }).catch(() => {});}, 4000);
+function captureIndicator(tabId,reason){
+  if(tabId==null||tabId===speechBadgeTab)return;
+  const active=['saved','duplicate'].includes(reason);
+  chrome.action.setBadgeBackgroundColor({tabId,color:active?'#1f8a4c':'#727778'}).catch(()=>{});
+  chrome.action.setBadgeText({tabId,text:'•'}).catch(()=>{});
+  chrome.action.setTitle({tabId,title:'Recall · '+captureLabel(reason)}).catch(()=>{});
 }
+function flashBadge(tabId,text){captureIndicator(tabId,text==='✓'?'saved':'captions-unavailable');}
+async function currentCaptureStatus(tabId){
+  const tab=await chrome.tabs.get(tabId);
+  if(tab.incognito)return {reason:'blocked-domain'};
+  const id=videoIdFromUrl(tab.url);
+  if(id){
+    const settings=await getSettings();
+    if(!settings.enabled||settings.youtubeBlocked)return {reason:settings.youtubeBlocked?'blocked-domain':'paused'};
+    const saved=await engine('has',{videoId:id});return {reason:saved.content?'saved':'waiting'};
+  }
+  return webAccess.pageStatus(tabId);
+}
+async function refreshIndicator(tabId){const status=await currentCaptureStatus(tabId).catch(()=>({reason:'no-permission'}));captureIndicator(tabId,status.reason);}
 
 // ---------------------------------------------------------------------------
 // Bulk pre-loading (the demo "insurance policy")
@@ -323,13 +338,18 @@ const handlers = {
   },
 
   // From the popup / library page
-  async search({ query, sinceDays, singleVideo, offset = 0,kind }) {
+  'capture-status':({tabId},sender)=>{requirePopup(sender);return currentCaptureStatus(tabId);},
+  'video-status':({videoId},sender)=>{requirePopup(sender);return engine('has',{videoId});},
+  'load-samples':(_data,sender)=>{requirePopup(sender);return engine('load-samples');},
+  'forget-recent':async({hours},sender)=>{requireLibrary(sender);if(![1,24,168].includes(hours))throw Error('Invalid recent range.');const jobs=await getTranscriptJobs();jobs.pause();await jobs.wait();await engine('speech-stop',{reason:'Forgetting recent items.'});const result=await engine('forget-recent',{hours});chrome.runtime.sendMessage({type:'index-changed'}).catch(()=>{});return result;},
+  async search({ query, sinceDays, singleVideo, offset = 0,kind,videoId }) {
     const s = await getSettings();
+    if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
     if (singleVideo === true) {
       if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid search position.');
-      return engine('search', { query, sinceDays, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
+      return engine('search', { query, sinceDays,videoId, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
     }
-    return engine('search', { query, sinceDays, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
+    return engine('search', { query, sinceDays,videoId, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
   },
   status: () => engine('status'),
   warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),
@@ -363,8 +383,10 @@ const handlers = {
   },
   prune: async () => {const s=await getSettings();return engine('prune',{maxAgeDays:s.maxAgeDays,importMaxAgeDays:s.importMaxAgeDays});},
 };
-const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,requirePopup,beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
+const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,requirePopup,onCapture:(tabId,reason)=>captureIndicator(tabId,reason),beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
 Object.assign(handlers,webAccess.handlers);
+chrome.tabs?.onActivated?.addListener(({tabId})=>refreshIndicator(tabId));
+chrome.tabs?.onUpdated?.addListener((tabId,change)=>{if(change.status==='complete'||change.url)refreshIndicator(tabId);});
 chrome.permissions?.onAdded?.addListener(()=>webAccess.sync().catch(()=>{}));
 chrome.permissions?.onRemoved?.addListener(async removed=>{if(removed.origins?.length||removed.permissions?.includes('scripting')){const settings=await webAccess.config();await chrome.storage.local.set({webCapture:{...settings,paused:true}});}webAccess.sync().catch(()=>{});});
 chrome.runtime.onStartup?.addListener(()=>webAccess.sync().catch(()=>{}));
@@ -423,7 +445,29 @@ chrome.tabs?.onRemoved?.addListener((tabId, info) => {
 chrome.storage?.onChanged?.addListener((changes, area) => {
   if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
   const settings = changes.settings?.newValue;
-  if (area === 'local' && settings && (settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
-  if (area === 'local' && settings && (settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
-  if (area === 'local' && settings && (settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});
+  if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
+  if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
+  if (area === 'local' && settings && (settings.lightMode || settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});
+});
+
+let omniboxSeq=0;
+chrome.omnibox?.onInputChanged.addListener(async(text,suggest)=>{
+  const seq=++omniboxSeq,query=text.trim().slice(0,1000);
+  if(!query){suggest([]);return;}
+  try{
+    const result=await engine('search',{query,limit:5,perVideo:1});
+    if(seq!==omniboxSeq)return;
+    suggest(result.results.map(hit=>({content:resultLink(hit),description:'<match>'+escapeSuggestion(hit.title)+'</match> — '+escapeSuggestion(String(hit.text||'').slice(0,120))})));
+  }catch{if(seq===omniboxSeq)suggest([]);}
+});
+chrome.omnibox?.onInputCancelled.addListener(()=>{omniboxSeq++;});
+chrome.omnibox?.onInputStarted.addListener(()=>chrome.omnibox.setDefaultSuggestion({description:'Search your local Recall library: <match>%s</match>'}));
+chrome.omnibox?.onInputEntered.addListener(async(text,disposition)=>{
+  try{
+    let url;
+    if(text.startsWith(chrome.runtime.getURL('samples/player.html'))||policy.safeUrl(text))url=text;
+    else{const result=await engine('search',{query:text.slice(0,1000),limit:1,perVideo:1});if(!result.results.length)return;url=resultLink(result.results[0]);}
+    if(disposition==='currentTab')await chrome.tabs.update({url});
+    else await chrome.tabs.create({url,active:disposition!=='newBackgroundTab'});
+  }catch{chrome.omnibox.setDefaultSuggestion({description:'Recall search failed. Open the popup to retry.'});}
 });
