@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v3.3.6 \u2013 Search Your History",
-  "short_name": "Recall v3.3.6",
-  "version": "3.3.6",
+  "name": "Recall v3.3.7 \u2013 Search Your History",
+  "short_name": "Recall v3.3.7",
+  "version": "3.3.7",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -26,6 +26,7 @@
   },
   "permissions": [
     "offscreen",
+    "favicon",
     "unlimitedStorage",
     "storage",
     "alarms"

@@ -173,4 +173,5 @@ test('excluding YouTube blocks its imports, manual indexing, new jobs and live s
  assert.deepEqual(await request({type:'should-index',videoId:'aaaaaaaaaaa',manual:true}),{index:false,reason:'YouTube is excluded.'});
  for(const message of [{type:'import-history',videos:[]},{type:'transcript-job-start',urls:['aaaaaaaaaaa']},{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
  assert.deepEqual(await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
+ assert.deepEqual(await request({type:'speech-pcm',id:'excluded',pcm:[0],clock:{}},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
 });

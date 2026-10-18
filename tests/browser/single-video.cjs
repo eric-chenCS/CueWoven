@@ -62,10 +62,10 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.locator('#q').fill(query);await hit(ranked[0],'Best match');
   assert.equal(await page.locator('#previous-video').isDisabled(),true);
   for(let i=1;i<ranked.length;i++){
-   await page.locator('#next-video').click();await hit(ranked[i],`Video ${i+1}`);
+   await page.locator('#next-video').click();await hit(ranked[i],`Match ${i+1}`);
   }
   assert.equal(await page.locator('#next-video').isDisabled(),true);
-  await page.locator('#previous-video').click();await hit(ranked.at(-2),'Video 13');
+  await page.locator('#previous-video').click();await hit(ranked.at(-2),'Match 13');
   // New query/filters/refinement start at the strongest eligible video.
   const changed=await expected('battery electrodes');
   await page.locator('#q').fill('battery electrodes');await hit(changed[0],'Best match');
@@ -76,7 +76,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await page.locator('#refine-toggle').click();await page.locator('#details').fill('a phone losing energy');
   const refined=await expected('battery electrodes. a phone losing energy');
   await hit(refined[0],'Best match');
-  await page.locator('#next-video').click();await hit(refined[1],'Video 2');
+  await page.locator('#next-video').click();await hit(refined[1],'Match 2');
   await page.locator('#details').fill('chemical reactions');
   const refinedAgain=await expected('battery electrodes. chemical reactions');
   await hit(refinedAgain[0],'Best match');

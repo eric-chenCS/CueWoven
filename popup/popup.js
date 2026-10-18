@@ -1,5 +1,6 @@
 import { formatTime, queryTerms,playbackStart } from '../lib/search.js';
 import {policy} from '../lib/web-items.js';
+import {setItemImage} from '../lib/item-image.js';
 import {captureLabel} from '../lib/capture-reason.js';
 import {withTimeout} from '../lib/request-timeout.js';
 import {resultLink} from '../lib/result-link.js';
@@ -81,7 +82,7 @@ function render(results, query) {
     const wrap = tpl.content.firstElementChild.cloneNode(true),node=wrap.querySelector('.result');
     const url = resultLink(r);
     node.href = url;
-    node.querySelector('img').src = r.image || (r.kind||r.sample?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(r.videoId)}/mqdefault.jpg`);
+    setItemImage(node.querySelector('img'), r);
     if (r.image) node.querySelector('img').alt = 'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
@@ -158,7 +159,7 @@ async function runSearch() {
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
   renderedSeq=seq;
   $('result-pages').hidden = !singleVideo.checked;
-  $('page-label').textContent = resultOffset ? `Video ${resultOffset + 1}` : 'Best match';
+  $('page-label').textContent = resultOffset ? `Match ${resultOffset + 1}` : 'Best match';
   $('previous-video').disabled = resultOffset === 0;
   $('next-video').disabled = res.results.length < 2;
 }

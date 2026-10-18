@@ -1,4 +1,5 @@
 import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
+import {setItemImage} from '../lib/item-image.js';
 import {restoreBackup} from '../lib/backup.js';
 import {DEFAULT_SETTINGS as DEFAULTS, resetPreferences} from '../lib/settings.js';
 import {resultLink} from '../lib/result-link.js';
@@ -98,7 +99,7 @@ function renderLibrary() {
     const img = document.createElement('img');
     img.loading = 'lazy';
     img.alt = '';
-    img.src = v.kind||v.sample?'../icons/web.svg':`https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/mqdefault.jpg`;
+    setItemImage(img, v);
     const info = document.createElement('div');
     info.className = 'info';
     const t = document.createElement('div');

@@ -1,6 +1,7 @@
 import { parseWebHistory, policy } from "../lib/web-items.js";
 import { beginLibraryTask, libraryBusy, onLibraryBusy } from "../lib/library-busy.js";
-import { DEFAULT_DOMAINS, SUGGESTED_SITES, siteGroup, siteOrigins } from "../lib/web-sites.js";
+import {setItemImage} from "../lib/item-image.js";
+import { DEFAULT_DOMAINS, SUGGESTED_SITES, siteGroup, siteOrigins, initialSiteSettings } from "../lib/web-sites.js";
 const $ = (id) => document.getElementById(id), send = (msg) => chrome.runtime.sendMessage(msg);
 const ALL_ORIGINS = ["https://*/*", "http://*/*"];
 let settings = { enabled: false, paused: false, domains: [...DEFAULT_DOMAINS], blocked: [] }, missing = [], busy = false, stopping = false, refreshId = 0;
@@ -12,6 +13,10 @@ const listed = () => (settings.domains || []).filter((host) => !policy.matches(h
 function siteChip(host, label, onClick) {
   const item = document.createElement("li");
   item.className = "site";
+  const icon = document.createElement("img");
+  icon.alt = "";
+  icon.width = icon.height = 16;
+  setItemImage(icon, {kind:"page",url:`https://${host}/`});
   const name = document.createElement("span");
   name.textContent = host;
   const button = document.createElement("button");
@@ -21,7 +26,7 @@ function siteChip(host, label, onClick) {
   button.setAttribute("aria-label", `${label} ${host}`);
   button.title = `${label} ${host}`;
   button.addEventListener("click", () => run(onClick));
-  item.append(name, button);
+  item.append(icon, name, button);
   return item;
 }
 
@@ -50,7 +55,7 @@ async function refresh() {
   const [scripting, allAccess, ...siteAccess] = await Promise.all([
     chrome.permissions.contains({ permissions: ["scripting"] }),
     chrome.permissions.contains({ origins: ALL_ORIGINS }),
-    ...hosts.map(async host => (await Promise.all(["https", "http"].map(scheme => chrome.permissions.contains({ origins: [`${scheme}://*.${host}/*`] })))).some(Boolean)),
+    ...hosts.map(async host => host === "youtube.com" || host.endsWith(".youtube.com") || (await Promise.all(["https", "http"].map(scheme => chrome.permissions.contains({ origins: [`${scheme}://*.${host}/*`] })))).some(Boolean)),
   ]);
   if (request !== refreshId) return;
   settings = current;
@@ -71,6 +76,7 @@ async function refresh() {
   for (const host of hosts) groups.get(siteGroup(host)).push(host);
   renderGroups($("web-sites"), groups, "Remove", removeSite);
   $("web-scope-note").hidden = !settings.allSites;
+  $("web-site-count").textContent = String(hosts.length);
   const missingDefaults = DEFAULT_DOMAINS.filter((site) => !settings.domains.includes(site) && !policy.matches(site, settings.blocked || []));
   $("web-restore").hidden = !missingDefaults.length;
   if (!hosts.length) {
@@ -88,10 +94,11 @@ async function refresh() {
 
   // Sites the user forgot: blocked until unblocked here.
   const blocked = settings.blocked || [];
+  $("web-exclusions-help").hidden = !blocked.length;
   renderGroups($("web-exclusions"), new Map([["Excluded sites", blocked]]), "Allow again", allowSite);
 
   const extras = [settings.allSites && "all public sites", settings.searches && "searches", settings.audio && (stored.settings?.lightMode ? "video audio (paused by Lite mode)" : "video audio")].filter(Boolean);
-  $("web-options-summary").textContent = extras.length ? "Selected: " + extras.join(", ") : "Every site, searches, video audio, forget a site";
+  $("web-options-summary").textContent = extras.length ? "Selected: " + extras.join(", ") : "Every site, searches, video audio";
 }
 
 async function save(patch, message = "Saved.") {
@@ -126,8 +133,8 @@ function normalizeSite(value) {
 }
 async function removeSite(host) {
   const patch = { domains: settings.domains.filter(site => site !== host) };
-  if (settings.allSites) patch.blocked = [...new Set([...(settings.blocked || []), host])];
-  await save(patch, `Removed ${host}. Recall won't save new pages from it. Saved items are kept.`);
+  patch.blocked = [...new Set([...(settings.blocked || []), host])];
+  await save(patch, `Removed ${host}. It is excluded from future capture and imports. Saved items are kept.`);
 }
 async function allowSite(host) {
   const blockers = (settings.blocked || []).filter(site => site !== host);
@@ -176,17 +183,6 @@ $("web-all").addEventListener("change", (event) => run(async () => {
 }));
 $("web-searches").addEventListener("change", (event) => run(() => save({ searches: event.target.checked }, event.target.checked ? "Google searches will be saved." : "Google searches won't be saved.")));
 $("web-audio").addEventListener("change", (event) => run(() => save({ audio: event.target.checked })));
-
-$("web-forget").addEventListener("click", () => run(async () => {
-  const domain = normalizeSite($("web-forget-domain").value);
-  if (!domain) throw Error("Type the site's address, like example.com.");
-  const result = await send({ type: "web-forget", domain });
-  if (result.error) throw Error(result.error);
-  $("web-forget-domain").value = "";
-  await refresh();
-  $("web-msg").textContent = `Deleted ${result.removed} saved ${result.removed === 1 ? "item" : "items"} from ${domain}. Recall won't save from it again.`;
-  chrome.runtime.sendMessage({ type: "index-changed" }).catch(() => {});
-}));
 
 action("welcome-web", async () => $("web-history-file").click());
 function action(id, fn) {
@@ -278,9 +274,14 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
 onLibraryBusy(() => {
-  for (const id of ["web-history-file", "web-history-scan", "web-forget", "welcome-web"]) $(id).disabled = libraryBusy();
+  for (const id of ["web-history-file", "web-history-scan", "welcome-web"]) $(id).disabled = libraryBusy();
 });
-refresh().catch((error) => $("web-msg").textContent = error.message);
+(async () => {
+  const {webCapture} = await chrome.storage.local.get('webCapture');
+  const initial = initialSiteSettings(webCapture);
+  if (initial) await chrome.storage.local.set({webCapture:initial});
+  await refresh();
+})().catch(error => $("web-msg").textContent = error.message);
 
 
 for (const event of [chrome.permissions.onAdded, chrome.permissions.onRemoved]) event.addListener(() => refresh().catch(error => $("web-msg").textContent = error.message));

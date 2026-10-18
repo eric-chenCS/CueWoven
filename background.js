@@ -244,6 +244,7 @@ const handlers = {
   },
   async 'speech-pcm'({id, pcm, clock}, sender) {
     if (!sender.tab || !sender.url?.startsWith('https://www.youtube.com/watch?')&&!policy.safeUrl(sender.url)) throw new Error('Invalid speech audio source.');
+    if(sender.url.startsWith('https://www.youtube.com/watch?')&&(await getSettings()).youtubeBlocked)return {disabled:true};
     if(!sender.url.startsWith('https://www.youtube.com/watch?')){const {clock:current}=await webAccess.context(sender.tab.id);if(current.video.videoId!==clock?.video?.videoId)return {ignored:true};}
     return engine('speech-pcm', {id, tabId: sender.tab.id, pcm, clock});
   },
@@ -445,6 +446,13 @@ chrome.tabs?.onRemoved?.addListener((tabId, info) => {
 
 chrome.storage?.onChanged?.addListener((changes, area) => {
   if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
+  if (area === 'local' && changes.webCapture) {
+    const blocked = changes.webCapture.newValue?.blocked || [];
+    if (policy.matches('www.youtube.com', blocked) || policy.matches('youtu.be', blocked)) {
+      jobsReady?.then(jobs => jobs.pause()).catch(() => {});
+      for (const tabId of captureTabs.keys()) settleWaiter(tabId, {ok:false,reason:'YouTube is excluded.'});
+    }
+  }
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});

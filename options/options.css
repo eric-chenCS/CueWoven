@@ -258,7 +258,6 @@ input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2
 
 .add-site { margin-top: 16px; }
 #web-domain { width: 260px; max-width: 100%; }
-#web-forget-domain { width: 200px; max-width: 100%; }
 .link-btn { appearance: none; border: 0; background: none; padding: 0; color: var(--action); font: 500 13px var(--font); cursor: pointer; }
 .link-btn:hover { text-decoration: underline; }
 
@@ -268,7 +267,7 @@ input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2
 .access-warning .btn { background: var(--marker-ink); border-color: var(--marker-ink); color: var(--marker); }
 @media (max-width: 560px) {
   .access-warning { flex-direction: column; align-items: flex-start; }
-  #web-domain, #web-forget-domain { width: 100%; }
+  #web-domain { width: 100%; }
 }
 @media (max-width: 560px) { .fold[open] > summary .fold-sub { display: none; } }
 
@@ -276,8 +275,12 @@ input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2
 .site > span { overflow-wrap: anywhere; min-width: 0; }
 .site-remove { flex: none; }
 .site-scope { margin: 0 0 12px; }
-.block > .more + h3 { margin-top: 20px; }
 
 .setting:has(select) { flex-wrap: wrap; }
 .setting:has(select) .setting-text { flex: 1 1 160px; }
 .setting select { max-width: 100%; }
+
+.vid img.website-icon { object-fit: contain; padding: 12px; }
+.site img { width: 16px; height: 16px; object-fit: contain; flex: none; margin-right: 4px; }
+#web-site-list { margin: 0; }
+#web-site-list > .site-groups { margin-top: 12px; }
