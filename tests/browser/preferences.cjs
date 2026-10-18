@@ -15,7 +15,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
   for(const page of [f.options,popup]){
    await page.waitForFunction(theme=>document.documentElement.dataset.theme===theme,theme);
    assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),theme);
-   assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),theme==='dark'?'rgb(15, 20, 27)':'rgb(246, 247, 249)');
+   assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),theme==='dark'?'rgb(61, 61, 61)':'rgb(226, 226, 226)');
   }
   await f.options.reload();await f.options.waitForFunction(theme=>document.querySelector('#theme').value===theme,theme);
   await f.options.screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-v3.3.4-theme-'+theme+'.png')});

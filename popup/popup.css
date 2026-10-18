@@ -19,14 +19,14 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
   background: var(--surface); color: var(--ink); font: 14px/1.3 var(--font); outline: none;
 }
 #q::placeholder { color: var(--ink-3); }
-#q:focus { border-color: var(--action); box-shadow: 0 0 0 3px var(--action-soft); }
+#q:focus { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
 #refine-toggle { height: 40px; border-radius: var(--r-md); }
 #refine-toggle[aria-expanded="true"] { border-color: var(--action); background: var(--action-soft); color: var(--ink); }
 
 .refine-panel { margin: 8px 16px 0; }
 .refine-panel label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
 #details { width: 100%; resize: vertical; min-height: 56px; max-height: 120px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: 13px/1.4 var(--font); background: var(--surface); color: var(--ink); }
-#details:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--action-soft); }
+#details:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
 .refine-panel p { margin: 4px 0 0; color: var(--ink-3); font-size: 11.5px; }
 
 /* Filters: one segmented time control plus the source picker, on one line. */
@@ -57,7 +57,7 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
   color: inherit; text-decoration: none; outline: none;
 }
 .result:hover, .result.active { background: var(--surface); box-shadow: 0 0 0 1px var(--line); text-decoration: none; }
-.result:focus-visible { background: var(--surface); box-shadow: 0 0 0 2px var(--action); }
+.result:focus-visible { background: var(--surface); box-shadow: 0 0 0 2px var(--focus); }
 .thumb { position: relative; flex: 0 0 120px; height: 68px; border-radius: var(--r-sm); overflow: hidden; background: var(--sunken); }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumb img[src$="web.svg"] { object-fit: contain; padding: 18px; }
