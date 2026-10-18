@@ -1,8 +1,8 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.11** starts with **YouTube only**, with saving enabled. **Add suggested sites (30)** adds the remaining news, reference and social sites after requesting browser access. Custom sites request access when added, even while saving is paused. Existing choices and exclusions are preserved. Short videos now save title and post metadata before captions or scenes; see [the short-video fixes](docs/UPDATE-3.3.9.md). See [the starter-site update](docs/UPDATE-3.3.8.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.12** starts with **YouTube only**, with saving enabled. **Add suggested sites (30)** adds the remaining news, reference and social sites after requesting browser access. Custom sites request access when added, even while saving is paused. Existing choices and exclusions are preserved. Short videos now save title and post metadata before captions or scenes; see [the short-video fixes](docs/UPDATE-3.3.9.md). See [the starter-site update](docs/UPDATE-3.3.8.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
-Search now matches common English word endings and written numbers, and recognizes explicit site/date context such as “the TikTok about cooking last week”. [Search update and measurements](docs/UPDATE-3.3.11.md).
+Search now matches common English word endings and written numbers, and recognizes explicit site/date context such as “the TikTok about cooking last week”. [Search update and measurements](docs/UPDATE-3.3.12.md).
 
 Open Recall by clicking its toolbar icon or pressing **Ctrl+Shift+F** in Chrome/Edge (Windows/Linux). The shortcut can conflict with DevTools, Sheets, or other extensions; see [shortcut setup](docs/UPDATE-3.3.10.md).
 
