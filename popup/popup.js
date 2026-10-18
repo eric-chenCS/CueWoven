@@ -4,6 +4,7 @@ import {setItemImage} from '../lib/item-image.js';
 import {captureLabel} from '../lib/capture-reason.js';
 import {withTimeout} from '../lib/request-timeout.js';
 import {resultLink} from '../lib/result-link.js';
+import {sampleFor} from '../lib/samples.js';
 import {videoIdFromUrl} from '../lib/video.js';
 
 const $ = (id) => document.getElementById(id);
@@ -88,10 +89,10 @@ function render(results, query) {
     if (r.image) node.querySelector('img').alt = r.articleImage?(r.caption||'Saved article image'):'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
     node.querySelector('.time').textContent = r.kind==='search'?'Search':r.kind==='page'||r.pageText?'Page':r.titleOnly ? 'Video' : formatTime(r.start);
     if(r.screenText)node.querySelector('.time').title='Text observed at '+formatTime(r.start)+'. Playback starts at '+formatTime(playbackStart(r))+'.';
-    node.querySelector('.title').textContent = r.title || r.videoId;
+    node.querySelector('.title').textContent = (r.sample&&sampleFor(r.videoId)?.title) || r.title || r.videoId;
     highlight(node.querySelector('.snippet'),r.articleImage?(r.caption||'An image from this article.'):r.scene?'A scene you watched.':r.titleOnly?'Matched the title.':'“'+r.text+'”',terms);
     const meta=node.querySelector('.meta');
-    meta.textContent=[r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
+    meta.textContent=[r.sample?'Momento demo':r.channel,r.kind?ago(r.watchedAt||r.indexedAt).replace(/^watched/,'visited'):ago(r.watchedAt||r.indexedAt)].filter(Boolean).join(' · ');
     meta.title=r.articleImage?'Image saved from this article':r.speechGenerated?'AI speech · played portions':r.screenText?'On-screen text · sampled frames':r.scene?'Visual match':r.titleOnly?'Title match':r.pageText?'Saved page text':r.sample?'Authored sample captions':'Spoken-content match';
     // Like Microsoft Recall: results that share the meaning but not your specific words say so.
     if(r.match==='related'){const tag=document.createElement('span');tag.className='related';tag.textContent='Related';tag.title='Similar in meaning, but doesn\u2019t contain the specific words you searched for';node.querySelector('.match-sources').append(tag);}
@@ -283,7 +284,7 @@ $('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('search-retry').addEventListener('click',runSearch);
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
-async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'Recall is saving pages you read on your sites. Click to stop.':'Recall isn\u2019t saving websites right now. Click to start again.';}
+async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'Momento is saving pages you read on your sites. Click to stop.':'Momento isn\u2019t saving websites right now. Click to start again.';}
 $('previous-video').addEventListener('click', () => {
   resultOffset = Math.max(0, resultOffset - 1);
   runSearch();

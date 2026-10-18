@@ -53,7 +53,7 @@ const SUGGESTED=31;
   // A listed site Chrome hasn't allowed yet shows one clear warning with a fix button.
   await o.evaluate(()=>chrome.storage.local.get('webCapture').then(({webCapture})=>chrome.storage.local.set({webCapture:{...webCapture,domains:[...webCapture.domains,'ungranted.test']}})));
   await o.waitForFunction(()=>!document.querySelector('#web-access-row').hidden);
-  assert.match(await o.locator('#web-access').innerText(),/hasn't given Recall access to ungranted\.test/);
+  assert.match(await o.locator('#web-access').innerText(),/hasn't given Momento access to ungranted\.test/);
   assert.equal(await o.locator('#web-fix').isVisible(),true);
   // Turn it off: pages stay saved, status says so.
   await o.locator('#web-enabled').uncheck();await msg('Turned off');

@@ -1,6 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {restoreBackup} from '../lib/backup.js';
+import {SCENES_TOTAL} from '../lib/scenes.js';
+
+test('restore retains the full expanded visual capacity instead of truncating to the old cap',async()=>{
+ const scenes=Array.from({length:SCENES_TOTAL+1},(_,i)=>({videoId:'fixture',image:String(i)}));let count=0,first,last;
+ await restoreBackup({format:'recall-export',videos:[],scenes},async message=>{const scene=message.data.scenes[0];first??=scene;last=scene;count++;return{imported:0}});
+ assert.equal(count,SCENES_TOTAL);assert.equal(first.image,'1');assert.equal(last.image,String(SCENES_TOTAL));
+});
 test('backup restore sends one video or image per durable request, in dependency order',async()=>{
  const calls=[],progress=[],videos=Array.from({length:53},(_,i)=>({videoId:String(i),chunks:[{text:'words'}]})),scenes=[{videoId:'0',image:'fixture'}];
  const result=await restoreBackup({format:'recall-export',videos,scenes},async message=>{calls.push(message);return {imported:message.data.videos.length}},state=>progress.push(state));
@@ -8,7 +15,7 @@ test('backup restore sends one video or image per durable request, in dependency
 });
 test('restore stops after a failed batch without claiming completed data was lost',async()=>{
  let calls=0;await assert.rejects(restoreBackup({format:'recall-export',videos:[{},{},{}]},async()=>++calls===2?{error:'offline'}:{imported:1}),/1\/3.*offline.*remain saved/);assert.equal(calls,2);
- await assert.rejects(restoreBackup({videos:[]},async()=>{throw Error('must not send')}),/Not a Recall/);
+ await assert.rejects(restoreBackup({videos:[]},async()=>{throw Error('must not send')}),/Not a Momento/);
 });
 
 test('restore reports saved progress even when the message transport rejects',async()=>{
