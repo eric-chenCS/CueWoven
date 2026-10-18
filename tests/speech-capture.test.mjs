@@ -17,7 +17,7 @@ function fixture(reply = () => ({ok: true}), loadModule = async () => {}) {
     AudioWorkletNode: class {constructor() {node = this;}port = {};connect() {}disconnect() {}},
   });
   vm.runInContext(code, context);
-  return {api: context.__recallPageAudio, events, messages, counts: () => ({stopped, closed}), packet: () => node.port.onmessage({data: new Int16Array(16000)})};
+  return {context,api: context.__recallPageAudio, events, messages, counts: () => ({stopped, closed}), packet: () => node.port.onmessage({data: new Int16Array(16000)})};
 }
 for (const event of ['ended', 'pagehide', 'yt-navigate-start']) test(`${event} stops player audio and notifies the controller`, async () => {
   const f = fixture();await f.api.start('session', () => ({}));
@@ -41,4 +41,10 @@ test('cancelling while the audio module loads cannot open a stream afterward', a
   await f.api.stop('cancelled');resume();
   await assert.rejects(starting, /cancelled/);assert.deepEqual(f.counts(), {stopped:1,closed:1});
   assert.equal(f.events.size, 0);
+});
+
+test('an empty active-video selection never falls back to a preloaded neighbour',async()=>{
+  const f=fixture();f.context.__recallMediaElement=()=>null;
+  await assert.rejects(f.api.start('session',()=>({})),/Play the video/);
+  assert.deepEqual(f.counts(),{stopped:0,closed:0});
 });

@@ -37,22 +37,25 @@
   const eligible = () => settings.enabled !== false && P.allowed(location.href, config) && !privatePage();
   function visible(video) {
     const rect = video.getBoundingClientRect();
-    return rect.width > 40 && rect.height > 30 && rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth && getComputedStyle(video).visibility !== "hidden";
+    return rendered(video) && rect.width > 40 && rect.height > 30 && rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
   }
   function choose() {
     return [...document.querySelectorAll("video")].slice(0, 30).filter((v) => !v.paused && !v.ended && v.readyState >= 2 && visible(v)).sort((a, b) => {
       const area = (v) => {
         const r = v.getBoundingClientRect();
-        return Math.min(r.right, innerWidth) - Math.max(r.left, 0) > 0 ? (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) * Math.min(r.width, innerWidth) : 0;
+        return Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0));
       };
       return area(b) - area(a);
     })[0] || null;
   }
   function clock() {
-    const current = eligible(), same = selected && selected.currentSrc === selectedSrc;
+    const current = eligible(), same = sameMedia();
     return { reason: skipReason() || lastReason, private: !current, video: current && same ? videoInfo : null, time: selected?.currentTime, paused: !current || !same || !selected || selected.paused, visible: current && !document.hidden && (!selected || visible(selected)), seeking: !!selected?.seeking, rate: selected?.playbackRate || 1, ad: !!selected?.closest('.ad-showing,.ad-interrupting,[data-ad="true"]'), revision, forced: false };
   }
-  globalThis.__recallMediaElement = () => selected;
+  function sameMedia() {
+    return selected && selected.currentSrc === selectedSrc && choose() === selected && mediaAddress(selected).url === videoInfo?.url;
+  }
+  globalThis.__recallMediaElement = () => sameMedia() ? selected : null;
   function stopMedia() {
     revision++;
     globalThis.__recallScenes?.stop();
@@ -66,10 +69,15 @@
     speechAttempted = false;
   }
   function mediaAddress(video) {
-    const post = video.closest('article,[data-e2e="feed-video"]'), links = post ? [...post.querySelectorAll("a[href]")].slice(0, 100) : [];
+    const captionSelector = '[data-e2e="video-desc"],[data-e2e="browse-video-desc"],[data-ad-preview="message"],[data-testid="tweetText"],[slot="text-body"],h1,h2,h3';
+    let post = video.closest('article,[data-testid="tweet"],shreddit-post,[data-e2e="feed-video"],[data-e2e="recommend-list-item-container"], [data-e2e="user-post-item"]');
+    if (!post) for (let node=video.parentElement; node && node!==document.body; node=node.parentElement) {
+      if (node.querySelectorAll('video').length>1) break;
+      if (node.querySelector(captionSelector)) {post=node;break;}
+    }
+    const links = post ? [...post.querySelectorAll("a[href]")].slice(0, 100) : [];
     const direct = links.map((a) => P.safeUrl(a.href)).find((url2) => url2?.hostname === location.hostname && /\/(?:reels?|p|video|videos|status)\/[\w-]+/.test(url2.pathname));
-    const canonical = P.safeUrl(document.querySelector('link[rel="canonical"]')?.href || "");
-    const url = direct || (canonical?.hostname === location.hostname && /\/(?:reels?|p|video|videos|status)\/[\w-]+/.test(canonical.pathname) ? canonical : P.safeUrl(location.href));
+    const url = direct || P.safeUrl(location.href);
     const stable = /\/(?:reels?|p|video|videos|status)\/[\w-]+/.test(url.pathname);
     let sourceHint = "";
     if (!stable) {
@@ -80,7 +88,9 @@
         sourceHint = video.currentSrc.slice(0, 4096);
       }
     }
-    return { url: url.href, sourceHint, title: (video.getAttribute("aria-label") || post?.querySelector("h1,h2,h3")?.textContent || document.querySelector('meta[property="og:title"]')?.content || document.title || location.hostname).trim().slice(0, 300) };
+    const caption = post?.querySelector(captionSelector)?.textContent || (stable && url.pathname===location.pathname ? document.querySelector('meta[property="og:description"]')?.content : '') || '';
+    const text = P.redactText(caption).trim().slice(0, 4000);
+    return { url: url.href, sourceHint, text, title: (video.getAttribute("aria-label") || text || document.querySelector('meta[property="og:title"]')?.content || document.title || location.hostname).trim().slice(0, 300) };
   }
   function pageText() {
     const candidates = [...document.querySelectorAll('article,main,[role="main"]')].slice(0, 16).filter(rendered);
@@ -121,7 +131,7 @@
         return;
       }
       const video = choose();
-      if (video !== selected || video && video.currentSrc !== selectedSrc) {
+      if (video !== selected || video && (video.currentSrc !== selectedSrc || mediaAddress(video).url !== videoInfo?.url)) {
         stopMedia();
         if (video) {
           selected = video;
@@ -134,6 +144,8 @@
             return;
           }
           videoInfo = result.video;
+          // Queue metadata without waiting for captions or pixel capture.
+          send({type:'web-metadata', video:videoInfo, text:address.text}).then(result => report(result.error ? 'model-error' : result.ok ? 'saved' : 'hidden'));
           mediaSince = Date.now();
           const options = { ...settings,...(settings.lightMode?{scenesEnabled:false,screenTextEnabled:false}:{}), dwellSeconds: Math.min(5, Number(settings.dwellSeconds) || 5) };
           globalThis.__recallScenes?.start(clock, options);

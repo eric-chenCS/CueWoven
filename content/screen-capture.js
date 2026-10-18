@@ -5,7 +5,7 @@
   function schedule(delay=1000){clearTimeout(timer);if(clock && !options.lightMode && options.enabled!==false && options.screenTextEnabled!==false)timer=setTimeout(tick,delay);}
   async function tick(){
     if(busy){schedule();return;}
-    const state=clock?.(),video=globalThis.__recallMediaElement?.()||document.querySelector('video');
+    const state=clock?.(),video=(globalThis.__recallMediaElement ? globalThis.__recallMediaElement() : document.querySelector('video'));
     if(!state?.video || state.forced)return;
     if(!state.visible || state.paused || state.seeking || state.ad || !video || video.readyState<2 || !video.videoWidth || !video.videoHeight){schedule();return;}
     const bucket=Math.floor(state.time/5);

@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const tick = () => new Promise(resolve => setImmediate(resolve));
 async function fixture({forced=false,paused=false,captions=false,language=null}={}) {
-  const messages=[],events=new Map(),media={paused,currentTime:100,playbackRate:1};let listener, browserWindow;
+  const messages=[],events=new Map(),media={paused,currentTime:100,playbackRate:1,readyState:4,getBoundingClientRect:()=>({width:640,height:360,top:0,left:0,right:640,bottom:360}),closest:()=>null};let listener, browserWindow;
   const location=new URL(`https://www.youtube.com/watch?v=aaaaaaaaaaa${forced?'&recall_index=1':''}`);
   const add=(name,fn)=>{if(!events.has(name))events.set(name,[]);events.get(name).push(fn)};
-  const ctx={URLSearchParams,location,Date,
+  const ctx={URLSearchParams,location,Date,innerWidth:1000,innerHeight:800,
     setTimeout:(fn,ms)=>{const timer=setTimeout(fn,ms);timer.unref();return timer},clearTimeout,
-    document:{hidden:false,querySelector:selector=>selector==='video'?media:null,addEventListener:add,removeEventListener(){}},
+    document:{hidden:false,querySelectorAll:selector=>selector==='video'?[media]:[],querySelector:selector=>selector==='video'?media:null,addEventListener:add,removeEventListener(){}},
     chrome:{storage:{local:{get:async()=>({settings:{enabled:true,dwellSeconds:3600}})}},runtime:{
       onMessage:{addListener:fn=>listener=fn},sendMessage:async msg=>{messages.push(msg);return msg.type==='should-index'?{index:true}:{ok:true}},
     }},addEventListener:add,

@@ -80,13 +80,12 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   function currentVideoId() {
-    if (location.pathname !== '/watch') return null;
-    return new URLSearchParams(location.search).get('v');
+    const id = location.pathname === '/watch' ? new URLSearchParams(location.search).get('v') : location.pathname.match(/^\/(?:shorts|live)\/([\w-]{11})\/?$/)?.[1];
+    return /^[\w-]{11}$/.test(id || '') ? id : null;
   }
 
   function playerResponseFor(videoId) {
-    try {
-      const player = document.getElementById('movie_player');
+    for (const player of document.querySelectorAll('#shorts-player, #movie_player')) try {
       const pr = player && typeof player.getPlayerResponse === 'function' && player.getPlayerResponse();
       if (pr && pr.videoDetails && pr.videoDetails.videoId === videoId) return pr;
     } catch (_) { /* ignore */ }
@@ -112,12 +111,14 @@
   let lastAnnounced = null;
   async function announce(force) {
     const videoId = currentVideoId();
-    if (!videoId) {lastAnnounced=null;post({type:'video-reset'});return;}
-    if (!force && videoId === lastAnnounced) return;
-    lastAnnounced = videoId;
-    const pr = await waitForPlayerResponse(videoId);
+    if (!videoId) {if(lastAnnounced!==null)post({type:'video-reset'});lastAnnounced=null;return;}
+    // Announce immediately: player metadata can arrive after a short has ended.
+    const pr = playerResponseFor(videoId);
     if (currentVideoId() !== videoId) return; // navigated away meanwhile
     const d = (pr && pr.videoDetails) || {};
+    const signature = JSON.stringify([videoId, d.title || document.title, d.author, d.lengthSeconds, P.speechLanguage(pr)]);
+    if (!force && signature === lastAnnounced) return;
+    lastAnnounced = signature;
     post({
       type: 'video',
       video: {
@@ -126,11 +127,14 @@
         channel: d.author || '',
         lengthSeconds: Number(d.lengthSeconds) || 0,
         audioLanguage: P.speechLanguage(pr),
+        shortForm: location.pathname.startsWith('/shorts/'),
       },
     });
   }
 
   document.addEventListener('yt-navigate-finish', () => announce(false));
+  document.addEventListener('yt-navigate-start', () => {lastAnnounced=null;post({type:'video-reset'});});
+  setInterval(() => announce(false), 500);
   window.addEventListener('popstate', () => setTimeout(() => announce(false), 300));
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => announce(false));
@@ -166,7 +170,10 @@
 
   async function fromPlayerRequest(videoId) {
     if (currentVideoId() !== videoId) return [];
-    const button = document.querySelector('.ytp-subtitles-button');
+    const player = [...document.querySelectorAll('#shorts-player, #movie_player')].find(player => {
+      try { return player.getPlayerResponse?.()?.videoDetails?.videoId === videoId; } catch (_) { return false; }
+    }) || (location.pathname === '/watch' ? document.getElementById('movie_player') : document.querySelector('ytd-reel-video-renderer[is-active] #shorts-player'));
+    const button = player?.querySelector('.ytp-subtitles-button');
     const pressed = button && button.getAttribute('aria-pressed');
     if (!button || !['true', 'false'].includes(pressed) || button.getAttribute('aria-disabled') === 'true') return [];
     let userChanged = false;

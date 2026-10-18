@@ -20,6 +20,7 @@
   const excludedSite=config=>(config?.blocked||[]).some(site=>['www.youtube.com','youtu.be'].some(host=>host===site||host.endsWith('.'+site)));
   let speechPending = null;
   let dwellTimer = null;
+  let dwellVisibility = null;
   let reqCounter = 0;
   const pending = new Map(); // reqId -> resolve
 
@@ -65,6 +66,8 @@
   function clearDwell() {
     if (dwellTimer) clearTimeout(dwellTimer);
     dwellTimer = null;
+    if (dwellVisibility) document.removeEventListener('visibilitychange', dwellVisibility);
+    dwellVisibility = null;
   }
 
   // Only count time while the tab is actually visible.
@@ -89,7 +92,8 @@
       }
       if (document.hidden) {
         remaining -= Date.now() - startedAt;
-        clearDwell();
+        if (dwellTimer) clearTimeout(dwellTimer);
+        dwellTimer = null;
       } else if (remaining > 0 && !dwellTimer) {
         startedAt = Date.now();
         tick();
@@ -99,6 +103,7 @@
       }
     };
     document.addEventListener('visibilitychange', onVis);
+    dwellVisibility = onVis;
     if (!document.hidden) tick();
   }
 
@@ -106,7 +111,12 @@
   async function onVideo(video) {
     if (!video || typeof video.videoId !== 'string' || !/^[\w-]{6,20}$/.test(video.videoId)) return;
     if (current && current.videoId === video.videoId) {
+      const wasShort = current.shortForm || current.lengthSeconds > 0 && current.lengthSeconds < 180;
       current = Object.assign({}, current, video);
+      if (!wasShort && video.lengthSeconds > 0 && video.lengthSeconds < 180 && dwellTimer) {
+        const s = await settings();
+        if (s.enabled && current?.videoId === video.videoId && dwellTimer) {startVisual(s);startDwell(dwellSeconds(s, video), video.videoId);}
+      }
       return;
     }
     current = video;
@@ -117,15 +127,37 @@
       return;
     }
     const s = await settings();
-    globalThis.__recallScenes?.start(speechClock, s);
-    globalThis.__recallScreen?.start(speechClock, s);
+    if (current?.videoId !== video.videoId) return;
+    startVisual(s);
     if (!s.enabled) {logCapture(excluded?'blocked-domain':'paused');return;}
-    startDwell(Math.max(0, Number(s.dwellSeconds) || 0), video.videoId);
+    startDwell(dwellSeconds(s, video), video.videoId);
   }
 
+  function dwellSeconds(s, video) {
+    const seconds = Math.max(0, Number(s.dwellSeconds) || 0);
+    return video.shortForm || video.lengthSeconds > 0 && video.lengthSeconds < 180 ? Math.min(seconds, 5) : seconds;
+  }
+
+  function startVisual(s) {
+    const options = {...s, dwellSeconds:dwellSeconds(s, current || {})};
+    globalThis.__recallScenes?.start(speechClock, options);
+    globalThis.__recallScreen?.start(speechClock, options);
+  }
+
+  function activeMedia() {
+    return [...document.querySelectorAll('video')].slice(0, 30).filter(video => {
+      const r = video.getBoundingClientRect();
+      return !video.ended && video.readyState >= 2 && r.width > 40 && r.height > 30 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth && video.checkVisibility?.({checkOpacity:true,checkVisibilityCSS:true}) !== false;
+    }).sort((a, b) => {
+      const area = video => { const r = video.getBoundingClientRect(); return Math.max(0, Math.min(r.right, innerWidth) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)); };
+      return Number(a.paused) - Number(b.paused) || area(b) - area(a);
+    })[0] || null;
+  }
+  globalThis.__recallMediaElement = activeMedia;
+
   function speechClock() {
-    const media = document.querySelector('video');
-    return {video: current, time: media?.currentTime, paused: excluded || !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!document.querySelector('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !excluded && !document.hidden};
+    const media = activeMedia();
+    return {video: current, time: media?.currentTime, paused: excluded || !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!media?.closest('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !excluded && !document.hidden};
   }
 
   async function trySpeech() {
@@ -140,33 +172,37 @@
   }
   for (const event of ['play', 'playing', 'visibilitychange']) document.addEventListener(event, trySpeech, true);
 
-  let running = null;
+  const running = new Map();
   async function run(manual) {
-    if (running) return running;
-    running = (async () => {
+    const id = current?.videoId;
+    if (running.has(id)) return running.get(id);
+    const task = (async () => {
       if (!current) return { ok: false, reason: 'Open a YouTube video first.' };
       const video = Object.assign({}, current, { watchedAt: isForcedIndex() ? undefined : Date.now() });
       const check = await send({ type: 'should-index', videoId: video.videoId, manual, watchedAt: video.watchedAt });
       if (check && check.error) return { ok: false, reason: check.error };
       if(!check||!check.index){logCapture(check?.reason==='Indexing is paused'?'paused':'duplicate');return {ok:true,skipped:true,reason:check&&check.reason};}
 
+      const metadata = send({type:'index-metadata', video});
       const t = await requestTranscript(video.videoId, manual);
       const segments = (t.segments || []).slice(0, MAX_SEGMENTS);
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
         logCapture('captions-unavailable');
-        await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason });
+        const saved = await metadata;
+        await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason, metadataSaved: !saved?.error });
         if (!isForcedIndex() && current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
-        return { ok: false, reason };
+        return { ok: !saved?.error, titleOnly: !saved?.error, reason: saved?.error || reason };
       }
       const res = await send({ type: 'index-video', video, segments, method: t.method });
       if (!res || res.error) return { ok: false, reason: (res && res.error) || 'Indexing failed' };
       logCapture('saved');return { ok: true, chunkCount: res.chunkCount, title: video.title };
     })();
+    running.set(id, task);
     try {
-      return await running;
+      return await task;
     } finally {
-      running = null;
+      running.delete(id);
     }
   }
 
@@ -208,11 +244,11 @@
 
   chrome.storage.onChanged?.addListener((changes,area)=>{
     if(area!=='local')return;
-    if(changes.settings&&current)settings().then(s=>{globalThis.__recallScenes?.start(speechClock,s);globalThis.__recallScreen?.start(speechClock,s);});
+    if(changes.settings&&current)settings().then(s=>{if(current)startVisual(s);});
     if(!changes.webCapture)return;
     const previous=excluded;excluded=excludedSite(changes.webCapture.newValue);
     if(excluded){clearDwell();speechPending=null;globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();globalThis.__recallPageAudio?.stop(undefined,true).catch(()=>{});}
-    else if(previous&&current)settings().then(s=>{globalThis.__recallScenes?.start(speechClock,s);globalThis.__recallScreen?.start(speechClock,s);if(s.enabled)startDwell(s.dwellSeconds,current.videoId);});
+    else if(previous&&current)settings().then(s=>{if(current){startVisual(s);if(s.enabled)startDwell(dwellSeconds(s,current),current.videoId);}});
   });
   // yt-main.js may have announced the video before this script loaded.
   toMain({ type: 'hello' });

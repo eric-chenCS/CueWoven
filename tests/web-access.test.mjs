@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createWebAccess } from "../lib/web-access.js";
+import {cleanItem} from '../lib/web-items.js';
 function fixture() {
   let config = { enabled: true, domains: ["example.com"], blocked: [] }, permission = true, tab = { id: 1, url: "https://www.example.com/article", active: true, incognito: false }, clock = { private: false, visible: true }, calls = [];
   const chrome = { storage: { local: { get: async () => ({ webCapture: config }), set: async (data) => {
@@ -63,3 +64,17 @@ test("history and forgetting controls require the library; excluded domains cann
 });
 test('popup page status distinguishes paused, excluded, private and missing permission',async()=>{const f=fixture(),sender={url:'library'};await assert.rejects(f.access.handlers['web-page-status']({tabId:1},{url:'page'}),/Library/);f.config.paused=true;assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'paused');f.config.paused=false;f.clock.private=true;assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'private-form');f.clock.private=false;f.config.blocked=['example.com'];assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'blocked-domain');f.config.blocked=[];f.deny();assert.equal((await f.access.handlers['web-page-status']({tabId:1},sender)).reason,'no-permission');});
 test('capture diagnostics reject iframe and forged origins and ignore incognito',async()=>{const f=fixture();await assert.rejects(f.access.handlers['capture-outcome']({}, {...f.sender,frameId:1}),/Invalid/);await assert.rejects(f.access.handlers['capture-outcome']({}, {...f.sender,url:'https://other.example.com/'}),/changed/);f.tab.incognito=true;assert.deepEqual(await f.access.handlers['capture-outcome']({},f.sender),{ok:true});});
+
+test('video metadata is saved without captions and is bound to permitted active playback',async()=>{
+  const f=fixture(), video=await cleanItem({kind:'video',url:f.tab.url,title:'Reel title',watchedAt:Date.now()});
+  f.clock.video=video;f.clock.paused=false;
+  const input={video,text:'Post caption contact me at test@example.com'};
+  await f.access.handlers['web-metadata'](input,f.sender);
+  assert.equal(f.calls[0].type,'web-capture');assert.equal(f.calls[0].data.kind,'video');assert.match(f.calls[0].data.text,/\[email redacted\]/);
+  for(const key of ['paused','ad']){f.clock[key]=true;assert.equal((await f.access.handlers['web-metadata'](input,f.sender)).inactive,true);f.clock[key]=false;}
+  f.tab.active=false;assert.equal((await f.access.handlers['web-metadata'](input,f.sender)).inactive,true);f.tab.active=true;
+  assert.equal((await f.access.handlers['web-metadata']({...input,video:{videoId:'wrong'}},f.sender)).inactive,true);
+  await assert.rejects(f.access.handlers['web-metadata']({...input,text:'x'.repeat(4001)},f.sender),/Invalid/);
+  f.clock.private=true;await assert.rejects(f.access.handlers['web-metadata'](input,f.sender),/Private/);
+  assert.equal(f.calls.length,1);
+});
