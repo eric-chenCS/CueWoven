@@ -1,3 +1,4 @@
+import {searchIntent,matchesSource} from '../lib/search-intent.js';
 // Offscreen document: owns the embedding model and the local vector index.
 // MV3 service workers can't comfortably run WASM models, so the heavy work lives here.
 import { createLiveSpeech, cleanSpeechText } from '../lib/live-speech.js';
@@ -8,7 +9,7 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
-import { rank } from '../lib/search.js';
+import { prepareQuery, createPool, addIndex, rankPool, nearTie } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateHistoryBatch } from '../lib/takeout.js';
 import { shouldForgetVideo } from '../lib/retention.js';
@@ -122,41 +123,50 @@ async function indexVideo({ video, segments, method }) {
 }
 
 const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
-async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',videoId}){
-  const q=String(query||'').trim();
-  if(!q)return {results:[]};
+async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',videoId,inferFilters=true}){
+  const intent=searchIntent(query,{sinceDays,infer:inferFilters});
+  const q=intent.query;
+  if(!q&&!intent.source&&!intent.sinceDays)return {results:[],appliedFilters:[]};
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
-  const result=await queryCache.get(JSON.stringify({query:q,videoId,perVideo,sinceDays:sinceDays||0,kind}),offset,limit);
-  const results=await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit));
-  return {...result,results:results.filter(hit=>!hit.scene||hit.image)};
+  const result=await queryCache.get(JSON.stringify({query:q,videoId,perVideo,sinceDays:intent.sinceDays||0,kind,source:intent.source}),offset,limit);
+  const results=(await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit))).filter(hit=>!hit.scene||hit.image);
+  // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
+  return {...result,results,appliedFilters:intent.labels,appliedSinceDays:intent.sinceDays,nearTie:!!q&&offset===0&&nearTie(results)};
 }
-async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all',videoId }) {
+async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all',videoId,source='' }) {
   const q = String(query || '').trim();
-  if (!q) return { results: [] };
+  if (!q&&!source&&!sinceDays) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
   const { videos:youtube, index,indexedIds,overflow } = await getIndex(),metadata=await web.metadata();
-  const videos=new Map([...youtube,...metadata].filter(([id,v])=>(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
+  const videos=new Map([...youtube,...metadata].filter(([id,v])=>matchesSource(v,source)&&(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
+  const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
+  if(!q) {
+    const recent=[...videos.values()].filter(v=>!sinceMs||(v.watchedAt||v.indexedAt||0)>=sinceMs).sort((a,b)=>(b.watchedAt||b.indexedAt||0)-(a.watchedAt||a.indexedAt||0));
+    return {results:recent.slice(offset,offset+limit).map(v=>({...v,start:0,text:v.title,titleOnly:true,matchSources:['Title'],score:0,match:'related'}))};
+  }
   const hasScenes = [...videos.values()].some(video=>video.sceneCount>0);
   if (!index.meta.length && !hasScenes && !metadata.size) return { results: [], empty: true };
   const [qv] = await embed([q], {priority:'query'});
-  const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
-  const pageHits=await web.search(q,qv,{sinceMs,kind,videoId,perVideo,limit:offset+limit+2000});
-  const older=[];
+  // One ranking pool for every source, so word weights come from the whole library
+  // (YouTube, websites, Reels/TikTok and older batches) and all scores share one scale.
+  const pool=createPool(prepareQuery(q));
+  addIndex(pool,qv,index,videos,{sinceMs});
+  await web.collect(pool,qv,{sinceMs,kind,videoId,source});
   if(overflow)await db.scanChunks(rows=>{
     const batch=rows.filter(row=>!indexedIds.has(row.id)&&videos.has(row.videoId)&&row.vec?.length===DIM);
-    older.push(...rank(qv,packIndex(batch),videos,{query:q,limit:offset+limit+2000,perVideo,sinceMs}));
-    if(older.length>offset+limit+2500){older.sort((a,b)=>b.score-a.score);older.length=offset+limit+2000;}
+    addIndex(pool,qv,packIndex(batch),videos,{sinceMs});
   });
-  const words=[...older,...rank(qv,index,videos,{query:q,limit:index.meta.length,perVideo,sinceMs}),...pageHits].sort((a,b)=>b.score-a.score);
+  const words=rankPool(pool,{perVideo});
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
-  if(!hasScenes)return {results:select(words)};
+  const finish=results=>({results});
+  if(!hasScenes)return finish(select(words));
   try {
     const visual = await searchScenes(q,{limit:2000,perVideo,sinceMs},videos);
-    if (!visual.results.length) return {results:select(words)};
-    return {results:fuseMatches(words,visual.results,{limit,perVideo,offset})};
+    if (!visual.results.length) return finish(select(words));
+    return finish(fuseMatches(words,visual.results,{limit,perVideo,offset}));
   } catch (error) {
-    return {results:select(words),sceneError:'Scene search unavailable: '+error.message};
+    return {...finish(select(words)),sceneError:'Scene search unavailable: '+error.message};
   }
 }
 

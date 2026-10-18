@@ -2,13 +2,13 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>Recall v3.3.10</title>
+    <title>Recall v3.3.11</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="Recall v3.3.10">
+      <div class="brand" title="Recall v3.3.11">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
         <span>Recall</span>
       </div>
@@ -62,6 +62,7 @@
       <button id="suggest-week" class="link-btn" hidden>Only last week?</button>
     </div>
     <div class="notices">
+        <p id="applied-filters" class="notice" role="status" hidden></p>
       <button id="search-retry" class="btn small" hidden>Retry</button>
       <p id="scene-status" class="notice" role="status" aria-live="polite" hidden></p>
       <p id="ocr-status" class="notice" role="status" aria-live="polite" hidden></p>
@@ -78,6 +79,7 @@
       <span id="page-label" role="status"></span>
       <button id="next-video" class="btn ghost small" aria-label="Next closest result" title="Next closest result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
     </nav>
+    <p id="tie-hint" class="tie-hint" role="status" hidden><span id="tie-text">Another video matches almost as well.</span> <button id="tie-next" class="link-btn" type="button">see the other one</button></p>
 
     <section class="tab-tools" aria-label="This tab">
       <p id="capture-indicator" class="tab-caption" role="status" hidden></p>

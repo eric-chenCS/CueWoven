@@ -138,3 +138,8 @@ body { overflow-y: auto; }
 .speech-actions { display:flex; gap:6px; }
 
 .thumb img.website-icon { object-fit: contain; padding: 20px; }
+
+/* Near-tie hint and "Related" tag (close vs related matches, as in Microsoft Recall). */
+.match-sources span.related { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-3); }
+.tie-hint { margin: 0 16px 8px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunken); color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+.tie-hint .link-btn { font-weight: 600; color: var(--action); }
