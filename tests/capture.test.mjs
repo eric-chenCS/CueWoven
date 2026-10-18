@@ -7,9 +7,9 @@ const id='aaaaaaaaaaa';
 const signed=`https://www.youtube.com/api/timedtext?v=${id}&signature=test-token&fmt=srv3`;
 const body=JSON.stringify({events:[0,1,2].map(i=>({tStartMs:i*1000,dDurationMs:1000,segs:[{utf8:`caption line ${i}`}]}))});
 
-function fixture({on=true, fetchBody=()=>'', userChanges=false, clockStep=0}={}) {
+function fixture({on=true, fetchBody=()=>'', userChanges=false, clockStep=0, path='/watch', playerReady=true}={}) {
   const requests=[];const posted=[];const events=new Map();const docEvents=new Map();
-  const location=new URL(`https://www.youtube.com/watch?v=${id}`);
+  const location=new URL(`https://www.youtube.com${path}?v=${id}`);
   let pressed=String(on);let clicks=0;const buttonEvents=new Map();
   const button={isConnected:true,getAttribute:key=>key==='aria-pressed'?pressed:null,
     addEventListener:(key,fn)=>buttonEvents.set(key,fn),removeEventListener:key=>buttonEvents.delete(key),
@@ -24,11 +24,11 @@ function fixture({on=true, fetchBody=()=>'', userChanges=false, clockStep=0}={})
   let time=0,timerCount=0;
   const ctx={URL,URLSearchParams,AbortSignal,XMLHttpRequest:XHR,location,
     Date: clockStep ? class extends Date {static now(){return time;}} : Date,
-    setTimeout:(fn,ms)=>setTimeout(()=>{time+=clockStep;timerCount++;fn();},Math.min(ms,5)),clearTimeout,
+    setTimeout:(fn,ms)=>setTimeout(()=>{time+=clockStep;timerCount++;fn();},Math.min(ms,5)),clearTimeout,setInterval:fn=>{ctx.poll=fn},
     fetch:async url=>{requests.push(String(url));return new Response(fetchBody(String(url)));},
     document:{readyState:'complete',title:'Fixture - YouTube',
       getElementById:()=>({getPlayerResponse:()=>({videoDetails:{videoId:id,title:'Fixture'}})}),
-      querySelector:selector=>selector==='.ytp-subtitles-button'?button:null,querySelectorAll:()=>[],
+      querySelector:selector=>selector==='.ytp-subtitles-button'?button:null,querySelectorAll:selector=>selector.includes('#shorts-player') && playerReady ? [{getPlayerResponse:()=>({videoDetails:{videoId:id,title:'Fixture',lengthSeconds:'12'}}),querySelector:()=>button}] : [],
       addEventListener:(key,fn)=>docEvents.set(key,fn),removeEventListener:key=>docEvents.delete(key)},
     addEventListener:(key,fn)=>events.set(key,fn),postMessage:msg=>posted.push(msg),
   };
@@ -48,6 +48,19 @@ test('uses the player fetch response body without replaying a one-use signed URL
   const result=await f.request();
   assert.equal(result.method,'player-captions');assert.equal(result.segments.length,3);
   assert.deepEqual(f.requests,[signed]);assert.deepEqual(f.state(),{pressed:'false',clicks:0});
+});
+
+for (const path of [`/shorts/${id}`, `/live/${id}`, '/watch']) test(`detects ${path} immediately without waiting for player data`, () => {
+  const f=fixture({path,playerReady:false});
+  const video=f.posted.find(row=>row.type==='video')?.video;
+  assert.equal(video?.videoId,id);assert.equal(video?.shortForm,path.startsWith('/shorts/'));
+  assert.equal(f.timerCount(),0);
+});
+
+test('feed polling detects a new Short even without a navigation event', () => {
+  const f=fixture({path:`/shorts/${id}`});
+  f.location.pathname='/shorts/bbbbbbbbbbb';f.ctx.poll();
+  assert.equal(f.posted.at(-1).video.videoId,'bbbbbbbbbbb');
 });
 
 test('captures caption XHR response bodies without another network request',async()=>{

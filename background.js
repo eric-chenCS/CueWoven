@@ -307,6 +307,14 @@ const handlers = {
     return { videos: candidates, limited: candidates.length === 500 || groups.some(g => g.length === 10000) };
   },
   // From YouTube tabs
+  async 'index-metadata'({video}, sender) {
+    if (!sender.tab || sender.frameId > 0 || new URL(sender.url).origin !== 'https://www.youtube.com' || !/^[\w-]{11}$/.test(video?.videoId)) throw Error('Invalid video metadata source.');
+    const s = await getSettings();
+    if (sender.tab?.incognito || s.youtubeBlocked || !s.enabled) throw Error('Video capture is paused or excluded.');
+    const result = await engine('import-history', {videos:[video], historyImported:false});
+    chrome.runtime.sendMessage({type:'index-changed'}).catch(() => {});
+    return result;
+  },
   async 'should-index'({ videoId, manual, watchedAt },sender) {
     if(sender?.tab?.incognito)return {index:false,reason:'Incognito capture is excluded.'};
     const s = await getSettings();
@@ -333,8 +341,8 @@ const handlers = {
       throw e;
     }
   },
-  async 'index-failed'({ reason,title }, sender) {
-    flashBadge(sender.tab && sender.tab.id, '!', '#b3261e');
+  async 'index-failed'({ reason,title,metadataSaved }, sender) {
+    flashBadge(sender.tab && sender.tab.id, metadataSaved ? '✓' : '!', metadataSaved ? '#1f8a4c' : '#b3261e');
     settleWaiter(sender.tab && sender.tab.id, { ok: false,title:String(title||'').slice(0,300), reason });
     return { ok: true };
   },

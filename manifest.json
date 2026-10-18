@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Recall v3.3.8 \u2013 Search Your History",
-  "short_name": "Recall v3.3.8",
-  "version": "3.3.8",
+  "name": "Recall v3.3.10 \u2013 Search Your History",
+  "short_name": "Recall v3.3.10",
+  "version": "3.3.10",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -74,7 +74,7 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Ctrl+Shift+K",
+        "default": "Ctrl+Shift+F",
         "mac": "Command+Shift+K"
       }
     }

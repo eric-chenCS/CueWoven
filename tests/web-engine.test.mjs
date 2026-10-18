@@ -68,6 +68,18 @@ test("web history validates the entire batch before saving and rejects malformed
   await assert.rejects(f.engine.restore({ ...input, passages: [{ source: "Page text", start: 0, text: "Valid text", anchor: "x".repeat(501) }] }), /Invalid saved/);
   assert.equal(f.calls.length, 0);
 });
+
+test('video titles and post captions are searchable before any media transcript exists',async()=>{
+  const f=fixture();
+  f.db.items.searchScan=async visit=>{for(const row of f.rows.values())visit(row)};
+  const video={...input,kind:'video',url:'https://www.instagram.com/reel/example',title:'Aurora lantern',text:''};
+  await f.engine.capture(video);
+  const title=await f.engine.search('"Aurora lantern"',new Float32Array(384),{kind:'video'});
+  assert.equal(title.length,1);assert.equal(title[0].titleOnly,true);
+  await f.engine.capture({...video,text:'Nebula journeys through the northern sky'});
+  const caption=await f.engine.search('"Nebula journeys"',new Float32Array(384),{kind:'video'});
+  assert.equal(caption.length,1);assert.equal(caption[0].pageText,true);assert.equal(caption[0].videoId,title[0].videoId);
+});
 test("backup restoration keeps original indexing dates and packed audio ranges", async () => {
   const f = fixture(), indexedAt = 1700000001e3;
   await f.engine.restore({ ...input, indexedAt, historyImported: true, kind: "video", passages: [{ source: "Audio", start: 12, text: "Words actually heard.", speechStart: 10, speechEnd: 25 }] });
