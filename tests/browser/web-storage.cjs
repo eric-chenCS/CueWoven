@@ -14,15 +14,18 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
         entries.push({ video: video2, item: { id: video2.videoId, contentAt: i + 1, passages } });
       }
       const database = await new Promise((resolve, reject) => {
-        const req = indexedDB.open("recall", 5);
+        const req = indexedDB.open("recall", 6);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
-      const tx = database.transaction(["videos", "items"], "readwrite");
+      const {titleBucket}=await import(chrome.runtime.getURL("lib/title-bundles.js")),bundles=new Map();
+      const tx = database.transaction(["videos", "items", "titles"], "readwrite");
       for (const entry of entries) {
         tx.objectStore("videos").put(entry.video);
         tx.objectStore("items").put(entry.item);
+        const id=titleBucket(entry.item.id),bundle=bundles.get(id)||{id,items:[]};bundle.items.push({id:entry.item.id,passages:entry.item.passages.filter(row=>row.source==="Title")});bundles.set(id,bundle);
       }
+      for(const bundle of bundles.values())tx.objectStore("titles").put(bundle);
       tx.objectStore("items").put({ id: "@stats", bytes, count: 2e3 });
       await new Promise((resolve, reject) => {
         tx.oncomplete = resolve;
