@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.4** adds Settings → Appearance (System, Light or Dark), matched retention choices and 1/3/6/10 transcript concurrency. Website indicators, moments help and the five-row scrolling library remain. Retention lives in Your data; Settings includes Lite mode. YouTube history import remains in one section. It keeps the supplied minimal UI: a search-first popup, yellow moment highlights, teal controls, and a sidebar library with expandable settings. It retains all v3.3.0 search, capture, privacy and storage improvements. Current-video scope, copy links, samples, query consent, Lite mode and recent-item deletion remain accessible. See [the latest UI update](docs/UPDATE-3.3.4.md), [the v3.3.0 behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.5** simplifies Websites with one saving switch, grouped suggested/custom sites, remove controls, an access-repair button and editable exclusions. Website saving stays off until enabled; existing site choices stay intact. Appearance themes, retention ranges, 1/3/6/10 fetch limits, moments help and the scrolling library remain available. See [the website update](docs/UPDATE-3.3.5.md), [the search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 

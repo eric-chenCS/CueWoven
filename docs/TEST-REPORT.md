@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.5 update
+
+All 230 Node tests pass. Browser checks cover the supplied grouped website UI, optional-permission denial and rollback, keyboard toggling, missing access, add/remove, blocked-parent handling, all-sites removal, Lite mode/global auto-save indicators, exclusions and popup control. The packaged copy passes the website suite. Disabling the all-sites removal exclusion in a disposable copy fails its regression. Article/title/query search, text fragments, private/form exclusions, backup/restore, capture-clear races and forget/import blocking pass. Minimal UI and appearance/retention/concurrency preferences pass; layouts have no horizontal overflow at 320/768/1024/1440 px. The dependency audit is unchanged: three high native sharp findings and one moderate sprintf-js finding. See [UPDATE-3.3.5.md](UPDATE-3.3.5.md) for the review corrections and scope.
+
 ## Version 3.3.4 update
 
 All 229 Node tests pass. Browser preferences checks cover exact menu choices, 1/3/6/10 persistence, preservation of previous 30/90-day values, explicit theme override of the system setting across popup/options and reload, and system fallback. A controlled YouTube browser pipeline reaches ten concurrent caption fetches through the real service worker, preserves original import dates, retrieves at 0:42, pauses and cleans up its minimized capture window.

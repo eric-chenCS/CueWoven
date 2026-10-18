@@ -76,9 +76,11 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     assert.equal(race.clear.ok, true);
     assert.equal(race.after.videos.length, 0);
     await send({ type: "import", data: backup });
-    await options.locator("#web-domain").fill("example.com");
+    const siteOptions=options.locator("details.fold", { has: options.locator("#web-forget") });
+    if (!await siteOptions.evaluate(node=>node.open)) await siteOptions.locator("summary").first().click();
+    await options.locator("#web-forget-domain").fill("example.com");
     await options.locator("#web-forget").click();
-    await options.waitForFunction(() => document.querySelector("#web-msg").textContent.startsWith("Forgot"));
+    await options.waitForFunction(() => document.querySelector("#web-msg").textContent.startsWith("Deleted"));
     assert.equal((await send({ type: "list" })).videos.some((row) => row.url?.includes("example.com")), false);
     assert.equal((await send({ type: "web-import", items: [{ kind: "page", url: "https://articles.example.com/reef", title: "Coral reef science", watchedAt: Date.now() }] })).imported, 0);
     const layouts = [];

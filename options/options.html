@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.4 · Library &amp; settings</title>
+    <title>Recall v3.3.5 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.4</span>
+        <span class="version">v3.3.5</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -119,33 +119,52 @@
         <!-- Websites -->
         <section id="sec-websites" class="sec" aria-labelledby="web-capture-heading">
           <h2 id="web-capture-heading">Websites</h2>
-          <p class="desc">Off until you allow a site. Saves the text of pages you read there.</p>
-          <p id="web-state" class="state" role="status" aria-live="polite"></p>
-          <p id="web-access" class="block-desc" role="status" aria-live="polite"></p>
-          <p id="web-features" class="hint" role="status" aria-live="polite"></p>
+          <p class="desc">Recall can save the articles and posts you read on these sites, so you can search them later.</p>
           <div class="sheet">
+            <label class="setting switch-row">
+              <span class="setting-text"><strong>Save pages from these sites</strong><span id="web-state" class="hint" role="status" aria-live="polite"></span></span>
+              <input id="web-enabled" type="checkbox" role="switch" class="switch" />
+            </label>
             <div class="block">
-              <div class="row">
-                <label for="web-domain" class="visually-hidden">Site</label>
-                <input id="web-domain" type="text" autocomplete="off" placeholder="wikipedia.org" />
-                <button id="web-allow" class="btn">Allow</button>
-                <button id="web-forget" class="btn ghost" title="Delete everything saved from this site and stop saving it">Forget</button>
+              <p class="hint site-scope">Sites include their subdomains. Saving stays off until you turn it on.</p>
+              <p id="web-scope-note" class="hint site-scope" hidden>All-public-site mode also includes sites outside this list. Removing a listed site excludes it from saving.</p>
+              <div id="web-sites" class="site-groups"></div>
+              <form id="web-add" class="row add-site">
+                <label for="web-domain" class="visually-hidden">Add a site</label>
+                <input id="web-domain" type="text" autocomplete="off" spellcheck="false" placeholder="Add a site, like example.com" />
+                <button id="web-allow" class="btn ghost" type="submit">Add site</button>
+                <button id="web-restore" class="link-btn" type="button" hidden>Add the suggested sites back</button>
+              </form>
+              <div id="web-access-row" class="access-warning" hidden>
+                <p id="web-access" role="status"></p>
+                <button id="web-fix" class="btn small" type="button">Give access</button>
               </div>
-              <p id="web-exclusions" class="hint"></p>
               <p id="web-msg" class="msg" role="status" aria-live="polite"></p>
             </div>
             <details class="fold">
-              <summary><span class="fold-title">More options</span><span id="web-options-summary" class="fold-sub">All sites, pause, video audio</span></summary>
-              <div class="fold-body">
-                <div class="row">
-                  <button id="web-all" class="btn ghost">Allow all public sites</button>
-                  <button id="web-pause" class="btn ghost">Pause</button>
-                  <button id="web-off" class="btn ghost">Turn off</button>
+              <summary><span class="fold-title">More options</span><span id="web-options-summary" class="fold-sub">Every site, searches, video audio, forget a site</span></summary>
+              <div class="fold-body flush">
+                <label class="setting">
+                  <span class="setting-text"><strong>Save from all public websites</strong><span class="hint">Not just the list above. Known private sites and detected private pages are skipped.</span></span>
+                  <input id="web-all" type="checkbox" role="switch" class="switch" />
+                </label>
+                <label class="setting">
+                  <span class="setting-text"><strong>Save my Google searches</strong><span class="hint">Off by default; applies to live capture and history import. Obvious medical queries stay excluded.</span></span>
+                  <input id="web-searches" type="checkbox" role="switch" class="switch" />
+                </label>
+                <label class="setting">
+                  <span class="setting-text"><strong>Transcribe videos on these sites</strong><span class="hint">Local English speech recognition for played portions without captions. First use downloads the model.</span></span>
+                  <input id="web-audio" type="checkbox" role="switch" class="switch" />
+                </label>
+                <div class="block"><details class="more"><summary>What gets saved?</summary><p>Only public page text and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
+                  <h3><label for="web-forget-domain">Forget a site</label></h3>
+                  <p class="block-desc">Deletes saved items from this site and excludes future capture and imports until you allow it again.</p>
+                  <div class="row">
+                    <input id="web-forget-domain" type="text" autocomplete="off" spellcheck="false" placeholder="example.com" />
+                    <button id="web-forget" class="btn danger" type="button">Forget site</button>
+                  </div>
+                  <div id="web-exclusions" class="site-groups blocked"></div><p class="hint">Removing an exclusion allows the site again; it does not restore deleted items.</p>
                 </div>
-                <details class="more"><summary>What gets saved?</summary><p>Only public page text and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
-                <label class="check"><input id="web-searches" type="checkbox" /><span>Save Google search queries</span></label>
-                <p class="hint">Off by default; applies to live capture and history import. Obvious medical queries remain excluded.</p>
-                <label class="check"><input id="web-audio" type="checkbox" /><span>Transcribe video audio on these sites</span></label>
               </div>
             </details>
           </div>
