@@ -1,23 +1,29 @@
-/* Recall design tokens — "highlighter": neutral gray panels, one amber marker for the found moment. */
+/* Recall design tokens — "reading lamp": cool paper by day, blue-slate at night, teal for actions, one amber marker for the found moment. */
 :root {
-  --paper: #e2e2e2;
-  --surface: #fafafa;
-  --sunken: #d8d8d8;
-  --ink: #242424;
-  --ink-2: #4b4b4b;
-  --ink-3: #626262;
-  --line: #b8b8b8;
-  --line-strong: #737373;
-  --action: #222222;
-  --action-hover: #3d3d3d;
+  --paper: #f2f4f7;
+  --surface: #ffffff;
+  --sunken: #e9edf2;
+  --ink: #18202b;
+  --ink-2: #465163;
+  --ink-3: #5f6b7c;
+  --line: #dde2e9;
+  --line-strong: #848f9f;
+  --action: #0d6870;
+  --action-hover: #0a565d;
   --action-ink: #ffffff;
-  --action-soft: #d8d8d8;
+  --action-soft: #dff0f1;
   --focus: #000000;
   --marker: #ffd34d;
   --marker-ink: #2e2300;
   --good: #1e7a46;
   --bad: #b42318;
   --bad-soft: #fdecea;
+  /* Site groups: a quiet tint per group so long lists are easy to scan. */
+  --tint-news: #2f6fd6;
+  --tint-reference: #7a4fd0;
+  --tint-social: #c2417a;
+  --tint-own: #0d6870;
+  --raise: 0 1px 2px rgb(16 24 40 / 0.05);
 
   /* Legacy names kept so older rules still resolve. */
   --bg: var(--paper);
@@ -36,48 +42,60 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #3d3d3d;
-    --surface: #333333;
-    --sunken: #454545;
-    --ink: #f5f5f5;
-    --ink-2: #dedede;
-    --ink-3: #c4c4c4;
-    --line: #8c8c8c;
-    --line-strong: #c4c4c4;
-    --action: #ffffff;
-    --action-hover: #e5e5e5;
-    --action-ink: #222222;
-    --action-soft: #484848;
+    /* Night reading room: deep blue-slate, cards lifted above the page, one calm teal action. */
+    --paper: #14181f;
+    --surface: #202630;
+    --sunken: #29313d;
+    --ink: #e6ebf2;
+    --ink-2: #b3bdcb;
+    --ink-3: #9ba8b8;
+    --line: #253041;
+    --line-strong: #738094;
+    --action: #5cc4c6;
+    --action-hover: #7fd4d6;
+    --action-ink: #062a2c;
+    --action-soft: #12353a;
     --focus: #ffffff;
     --marker: #f2c94c;
     --marker-ink: #1d1500;
     --good: #5cc98a;
     --bad: #ff8a80;
-    --bad-soft: #3a1714;
+    --bad-soft: #3a1a1a;
+    --tint-news: #6ea1ff;
+    --tint-reference: #b393ff;
+    --tint-social: #f17aae;
+    --tint-own: #5cc4c6;
+    --raise: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px rgb(0 0 0 / 0.18);
   }
 }
 
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #3d3d3d;
-  --surface: #333333;
-  --sunken: #454545;
-  --ink: #f5f5f5;
-  --ink-2: #dedede;
-  --ink-3: #c4c4c4;
-  --line: #8c8c8c;
-  --line-strong: #c4c4c4;
-  --action: #ffffff;
-  --action-hover: #e5e5e5;
-  --action-ink: #222222;
-  --action-soft: #484848;
+  /* Night reading room: deep blue-slate, cards lifted above the page, one calm teal action. */
+  --paper: #14181f;
+  --surface: #202630;
+  --sunken: #29313d;
+  --ink: #e6ebf2;
+  --ink-2: #b3bdcb;
+  --ink-3: #9ba8b8;
+  --line: #253041;
+  --line-strong: #738094;
+  --action: #5cc4c6;
+  --action-hover: #7fd4d6;
+  --action-ink: #062a2c;
+  --action-soft: #12353a;
   --focus: #ffffff;
   --marker: #f2c94c;
   --marker-ink: #1d1500;
   --good: #5cc98a;
   --bad: #ff8a80;
-  --bad-soft: #3a1714;
+  --bad-soft: #3a1a1a;
+  --tint-news: #6ea1ff;
+  --tint-reference: #b393ff;
+  --tint-social: #f17aae;
+  --tint-own: #5cc4c6;
+  --raise: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 6px rgb(0 0 0 / 0.18);
 }
 
 * { box-sizing: border-box; }
@@ -92,6 +110,7 @@ body {
 
 a { color: var(--action); text-decoration: none; }
 a:hover { text-decoration: underline; }
+input::placeholder, textarea::placeholder { color: var(--ink-3); opacity: 1; }
 
 /* Buttons: one filled action per area; everything else is quiet. */
 .btn {
