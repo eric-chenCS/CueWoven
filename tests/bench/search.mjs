@@ -2,6 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { rank, normalizedPassage } from "../../lib/search.js";
+import {warmLexical} from '../../lib/lexical-cache.js';
 const baseline = execFileSync("git", ["show", "029eaf2:lib/search.js"], { encoding: "utf8" });
 const { rank: oldRank } = await import("data:text/javascript;base64," + Buffer.from(baseline).toString("base64"));
 const text = "Café reef science discusses coral bleaching, ocean temperatures, and the symbiotic algae that provide nutrients. ".repeat(12), dim = 384, matrix = new Float32Array(3e4 * dim), q = new Float32Array(dim), videos = new Map(), meta = [];
@@ -17,6 +18,7 @@ const measure = (fn) => {
   const start = performance.now(), result = fn(q, index, videos, options);
   return { ms: performance.now() - start, ids: result.map((row) => row.videoId + ":" + row.start) };
 };
+await warmLexical(meta);
 const before = measure(oldRank), after = measure(rank);
 if (JSON.stringify(before.ids) !== JSON.stringify(after.ids)) throw Error("Rank order changed in the full-passage benchmark");
 console.log(JSON.stringify({ passages: meta.length, items: videos.size, wordsPerPassage: meta[0].text.split(" ").length, beforeMs: before.ms, afterMs: after.ms, speedup: before.ms / after.ms, scope: "Synthetic 30,000 full passages; cached normalization excludes one-time migration; in-memory ranking only, excluding IndexedDB, model loading and query embedding." }, null, 2));

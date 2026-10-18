@@ -1,4 +1,5 @@
-import {searchIntent,matchesSource} from '../lib/search-intent.js';
+import {warmLexical,lexicalCache} from '../lib/lexical-cache.js';
+import {searchIntent,matchesSource,searchWithFallback} from '../lib/search-intent.js';
 // Offscreen document: owns the embedding model and the local vector index.
 // MV3 service workers can't comfortably run WASM models, so the heavy work lives here.
 import { createLiveSpeech, cleanSpeechText } from '../lib/live-speech.js';
@@ -50,10 +51,12 @@ const indexCache=createRevisionCache(async()=>{
   for(const [id,video] of metadataUpdates)if(videos.has(id))videos.set(id,video);
   migration.start(videoList,chunks).catch(()=>{});
   const usable=[...chunks,...screenText.map(c=>({...c,kind:'screen-text'}))].filter(c=>c.vec?.length===DIM&&(videos.has(c.videoId)||policy.webId(c.videoId)));
-  return {videos,index:packIndex(usable),indexedIds,overflow};
+  const index=packIndex(usable);
+  await warmLexical(index.meta);
+  return {videos,index,indexedIds,overflow};
 });
 const getIndex=()=>indexCache.get();
-const invalidate=(destructive=true)=>{indexCache.invalidate({destructive});queryCache.invalidate({destructive});if(destructive)metadataUpdates.clear();};
+const invalidate=(destructive=true)=>{indexCache.invalidate({destructive});queryCache.invalidate({destructive});if(destructive){metadataUpdates.clear();lexicalCache.clear();}};
 async function refreshVideo(id) {
   if (policy.webId(id)) await web.refresh(id);
   else {
@@ -129,10 +132,17 @@ async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',v
   if(!q&&!intent.source&&!intent.sinceDays)return {results:[],appliedFilters:[]};
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
-  const result=await queryCache.get(JSON.stringify({query:q,videoId,perVideo,sinceDays:intent.sinceDays||0,kind,source:intent.source}),offset,limit);
+  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,kind,source:filters.source});
+  // Only an empty first page relaxes inferred filters; reaching the last page does not.
+  const first=offset?await queryCache.get(keyFor(intent),0,1):null;
+  const result=await searchWithFallback(intent,sinceDays,async filters=>{
+    if(offset&&filters===intent&&first.results.length===0)return first;
+    const page=await queryCache.get(keyFor(filters),offset,limit);
+    return offset&&filters===intent?{...page,hasFirst:true}:page;
+  });
   const results=(await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit))).filter(hit=>!hit.scene||hit.image);
   // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
-  return {...result,results,appliedFilters:intent.labels,appliedSinceDays:intent.sinceDays,nearTie:!!q&&offset===0&&nearTie(results)};
+  return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!!q&&offset===0&&nearTie(results)};
 }
 async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all',videoId,source='' }) {
   const q = String(query || '').trim();

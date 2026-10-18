@@ -126,6 +126,7 @@ async function runSearch() {
   const seq = ++searchSeq;
   $('search-retry').hidden=true;
   $('applied-filters').hidden=true;
+  $('ignore-inferred').hidden=true;
   const original = q.value.trim();
   const query = [original, !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
   // Refinement belongs to this open popup; reopening starts with an independent query.
@@ -151,8 +152,9 @@ async function runSearch() {
     $('search-retry').hidden=false;
     return;
   }
-  $('applied-filters').textContent=res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
-  $('applied-filters').hidden=!res.appliedFilters?.length;
+  $('applied-filters').textContent=res.filtersRelaxed?'No matches with the suggested filters. Showing results without them.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
+  $('applied-filters').hidden=!res.filtersRelaxed&&!res.appliedFilters?.length;
+  $('ignore-inferred').hidden=!res.appliedFilters?.length;
   document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-checked',String(Number(c.dataset.days)===(res.appliedSinceDays??sinceDays))));
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   if (res.empty) {showIdle();return;}
@@ -161,7 +163,7 @@ async function runSearch() {
       resultOffset = 0; // The library may have changed while browsing matches.
       return runSearch();
     }
-    empty('No match yet', ['Nothing you’ve watched lines up with that.'], sinceDays ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
+    empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
     return;
   }
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
@@ -182,6 +184,7 @@ function showTie(tie) {
     ? 'Another video matches almost as well. Add the channel or a detail to pick one, or'
     : 'The top videos match almost equally. Add the channel or a detail to pick one.';
 }
+$('ignore-inferred').addEventListener('click',()=>{inferFilters=false;resultOffset=0;runSearch();q.focus();});
 $('tie-next').addEventListener('click', () => $('next-video').click());
 
 let debounce;
@@ -190,7 +193,6 @@ function scheduleSearch() {
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
   $('search-retry').hidden=true;
-  $('suggest-week').hidden=true;
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
@@ -201,7 +203,6 @@ function scheduleSearch() {
     return;
   }
   debounce = setTimeout(runSearch, 250);
-  $('suggest-week').hidden=sinceDays===7||!/(?:last|past) week|recent(?:ly)?/i.test(q.value);
 }
 
 q.addEventListener('input', () => {
@@ -280,7 +281,6 @@ singleVideo.addEventListener('change', () => {
 $('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('search-retry').addEventListener('click',runSearch);
-$('suggest-week').addEventListener('click',()=>{document.querySelector('.chip[data-days="7"]').click();$('suggest-week').hidden=true;});
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
 async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'Recall is saving pages you read on your sites. Click to stop.':'Recall isn\u2019t saving websites right now. Click to start again.';}
 $('previous-video').addEventListener('click', () => {

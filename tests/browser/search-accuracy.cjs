@@ -41,13 +41,20 @@ if(!models)throw Error('Set RECALL_MODEL_DIR to a folder containing Xenova/all-M
    }
   },{videos:conf.videos,ids:conf.videos.map(v=>id(v.videoId))});
   console.log('indexed',conf.videos.length,'videos through the real pipeline in',Math.round((Date.now()-t0)/1000),'s');
-  let right=0;const misses=[];
+  let right=0,top5=0,top20=0;const misses=[];
   for(const q of conf.queries){
    const res=await options.evaluate(m=>chrome.runtime.sendMessage(m),{type:'search',query:q.query,singleVideo:true,offset:0});
    if(res.error)throw Error(res.error);
-   if(res.results[0]?.videoId===id(q.videoId))right++;else misses.push(`${q.query} → ${res.results[0]?.videoId}`);
+   if(res.results[0]?.videoId===id(q.videoId)){right++;top5++;top20++;}else{
+    misses.push(`${q.query} → ${res.results[0]?.videoId}`);
+    const candidates=await options.evaluate(query=>chrome.runtime.sendMessage({target:'offscreen',type:'search',query,perVideo:1,limit:20}),q.query);
+    if(candidates.error)throw Error(candidates.error);
+    const position=candidates.results.findIndex(hit=>hit.videoId===id(q.videoId));
+    if(position>=0&&position<5)top5++;if(position>=0)top20++;
+   }
    if(!res.results[0]||!('match' in res.results[0])||!Number.isFinite(res.results[0].score))throw Error('result lacks match/score: '+JSON.stringify(res.results[0]));
   }
+  console.log('CANDIDATE_RECALL',JSON.stringify({top1:right,top5,top20,total:conf.queries.length}));
   console.log(`real extension: right video first for ${right}/${conf.queries.length}`);misses.forEach(m=>console.log('  ✗ '+m));
   // Social titles use the same real model, owner grouping and date/source filters.
   await options.evaluate(async()=>{
@@ -62,12 +69,22 @@ if(!models)throw Error('Set RECALL_MODEL_DIR to a folder containing Xenova/all-M
     if(found.error||found.results.length!==1||!new URL(found.results[0].url).hostname.endsWith(host))throw Error('Social source/date retrieval failed: '+JSON.stringify(found));
    }
   });
-  console.log('SOCIAL_SOURCE_DATE_PASS');
+  const relaxed=await options.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'quasar tire rotation from Reddit',singleVideo:false}));
+  require('assert/strict').equal(relaxed.filtersRelaxed,true);require('assert/strict').ok(relaxed.results.length>0);
+  require('assert/strict').deepEqual(relaxed.appliedFilters,[]);
+  console.log('SOCIAL_SOURCE_DATE_AND_FALLBACK_PASS');
   // Popup screenshots: a close match, a related match, and a near tie.
   const popup=await context.newPage();await popup.goto(`${base}/popup/popup.html`);
   const shoot=async(query,name)=>{await popup.locator('#q').fill(query);await popup.waitForFunction(q=>!document.querySelector('#page-label')||document.querySelector('#page-label').textContent!=='Searching…',query);await popup.waitForTimeout(1500);await popup.screenshot({path:path.join(shots,name+'.png')});
    return popup.evaluate(()=>({tie:!document.querySelector('#tie-hint').hidden,tags:[...document.querySelectorAll('.match-sources span')].map(s=>s.textContent),title:document.querySelector('.result .title')?.textContent}));};
   for(const [query,name] of [['the Motor Explained video on battery degradation','popup-channel'],['battery','popup-generic'],['keeping things cool','popup-related']])console.log(name,JSON.stringify(await shoot(query,name)));
+  await popup.locator('#q').fill('the TikTok about quasar tire rotation last week');
+  await popup.locator('#ignore-inferred').waitFor({state:'visible'});
+  await popup.locator('#ignore-inferred').click();
+  await popup.locator('#ignore-inferred').waitFor({state:'hidden'});
+  await popup.locator('#q').fill('quasar tire rotation from Reddit');
+  await popup.waitForFunction(()=>document.querySelector('#applied-filters').textContent.includes('Showing results without them'));
+  console.log('FILTER_POPUP_PASS');
   console.log('page errors:',errors.length?errors:'none');
   require('assert/strict').ok(right>=119,`right video first for ${right}/${conf.queries.length}; v3.3.10 scored 114`);
   require('assert/strict').deepEqual(errors,[]);
