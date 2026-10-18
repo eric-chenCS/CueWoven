@@ -1,9 +1,13 @@
 const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=require('path'),os=require('os');
 (async()=>{const f=await fixture(),errors=[];f.context.on('weberror',e=>errors.push(e.error().message));try{
- await f.options.waitForFunction(()=>document.querySelector('#web-site-count').textContent==='31');
+ await f.options.waitForFunction(()=>document.querySelector('#web-site-count').textContent==='1');
  assert.equal(await f.options.evaluate(()=>chrome.permissions.contains({permissions:['favicon']})),true);
- for(const host of ['youtube.com','instagram.com'])assert.equal(await f.options.locator('#web-sites [aria-label="Remove '+host+'"]').count(),1);
- const initial=await f.options.evaluate(()=>chrome.storage.local.get('webCapture'));assert.equal(initial.webCapture.enabled,false);assert.equal(initial.webCapture.siteDefaultsInitialized,true);
+ assert.equal(await f.options.locator('#web-sites [aria-label="Remove youtube.com"]').count(),1);
+ assert.equal(await f.options.locator('#web-sites [aria-label="Remove instagram.com"]').count(),0);
+ await f.options.evaluate(()=>{window.realPermission=chrome.permissions.request.bind(chrome.permissions);chrome.permissions.request=async()=>true;});
+ await f.options.locator('#web-restore').click();await f.options.waitForFunction(()=>document.querySelector('#web-site-count').textContent==='31');
+ await f.options.evaluate(()=>chrome.permissions.request=window.realPermission);
+ const initial=await f.options.evaluate(()=>chrome.storage.local.get('webCapture'));assert.equal(initial.webCapture.enabled,true);assert.equal(initial.webCapture.siteDefaultsInitialized,true);
  await f.options.waitForFunction(()=>{const image=document.querySelector('#web-sites img');return image.complete&&image.naturalWidth>0;});
  await f.options.locator('#web-site-list > summary').click();assert.equal(await f.options.locator('#web-sites').isVisible(),false);
  await f.options.locator('#web-site-list > summary').click();

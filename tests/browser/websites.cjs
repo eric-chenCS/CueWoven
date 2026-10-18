@@ -8,15 +8,16 @@ const SUGGESTED=31;
  const stored=()=>o.evaluate(async()=>(await chrome.storage.local.get('webCapture')).webCapture);
  try{
   await o.setViewportSize({width:1280,height:900});await o.emulateMedia({reducedMotion:'reduce'});
-  // Fresh install: suggested news, reference and social sites are listed, and saving is off.
+  // Fresh install: only YouTube is listed and saving defaults to on.
   await o.evaluate(()=>chrome.storage.local.remove('webCapture'));await o.reload();
   await o.waitForFunction(()=>document.querySelectorAll('#web-sites .site').length>0);
-  assert.equal(await o.locator('#web-enabled').isChecked(),false);
-  assert.match(await state(),/^Off\./);
-  assert.equal(await o.locator('#web-sites .site').count(),SUGGESTED);
-  assert.deepEqual(await o.locator('#web-sites .site-group h3').allInnerTexts(),['News','Reference','Social']);
-  assert.equal(await o.locator('#web-restore').isVisible(),false);
-  assert.equal(await o.locator('#web-access-row').isVisible(),false,'no permission warning while off');
+  assert.equal(await o.locator('#web-enabled').isChecked(),true);
+  assert.match(await state(),/^On for 1 site\./);
+  assert.equal(await o.locator('#web-sites .site').count(),1);
+  assert.deepEqual(await o.locator('#web-sites .site-group h3').allInnerTexts(),['Social']);
+  assert.equal(await o.locator('#web-restore').isVisible(),true);
+  assert.equal(await o.locator('#web-restore').innerText(),'Add suggested sites (30)');
+  assert.equal(await o.locator('#web-access-row').isVisible(),false,'YouTube uses existing built-in access');
   for(const old of ['#web-pause','#web-off']) assert.equal(await o.locator(old).count(),0,`${old} is gone`);
   await o.locator('.nav a[href="#sec-websites"]').click();await o.waitForTimeout(300);
   await o.screenshot({path:path.join(output,'websites-default.png')});
@@ -78,7 +79,11 @@ const SUGGESTED=31;
   await o.locator('#web-exclusions [aria-label="Allow again example.com"]').click();await msg('can be saved again');
   assert.equal(await o.locator('#web-exclusions [aria-label="Allow again example.com"]').count(),0);
   // Bring the suggested sites back.
+  await o.evaluate(()=>{window.realPermission=chrome.permissions.request.bind(chrome.permissions);chrome.permissions.request=async request=>{window.suggestedRequest=request;return true;};});
   await o.locator('#web-restore').click();await msg('suggested sites');
+  assert.ok((await o.evaluate(()=>window.suggestedRequest.origins)).includes('https://*.wikipedia.org/*'));
+  assert.ok(!(await o.evaluate(()=>window.suggestedRequest.origins)).includes('https://*.instagram.com/*'),'already listed sites need no new request');
+  await o.evaluate(()=>chrome.permissions.request=window.realPermission);
   assert.equal((await stored()).domains.length>=SUGGESTED,true);
   // Popup footer says what its button does.
   const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');
@@ -104,7 +109,10 @@ const SUGGESTED=31;
   await o.evaluate(()=>chrome.permissions.request=window.askPermission);
   // Long custom domains fit on narrow screens, including their remove buttons.
   const longHost='a'.repeat(60)+'.'+'b'.repeat(60)+'.test';
+  await o.evaluate(()=>{window.realPermission=chrome.permissions.request.bind(chrome.permissions);chrome.permissions.request=async request=>{window.addRequest=request;return true;};});
   await o.locator('#web-domain').fill(longHost);await o.locator('#web-allow').click();await msg('Added '+longHost);
+  assert.deepEqual(await o.evaluate(()=>window.addRequest.origins),['https://*.'+longHost+'/*','http://*.'+longHost+'/*']);
+  await o.evaluate(()=>chrome.permissions.request=window.realPermission);
   // Layout holds from phone to desktop, in both themes.
   await o.setViewportSize({width:390,height:900});await o.emulateMedia({colorScheme:'light'});await o.locator('#sec-websites').screenshot({path:path.join(output,'websites-phone.png')});
   for(const width of [320,768,1024,1440]){await o.setViewportSize({width,height:900});assert.equal(await o.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`no overflow at ${width}`);}

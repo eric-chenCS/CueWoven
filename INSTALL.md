@@ -1,8 +1,8 @@
-# Recall v3.3.7 installation
+# Recall v3.3.8 installation
 
 ## From the ZIP
 
-Extract `recall-v3.3.7.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `recall-v3.3.8.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## From this repository
 
@@ -10,9 +10,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.7 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.8 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.7 includes website icons and the favicon permission, a collapsible site list prefilled with standard domains, and Match 2/3 result labels. Accept icon access if prompted when reloading. × excludes future site capture/import; saved items stay searchable. Reload Recall and refresh Library & settings. See [UPDATE-3.3.7.md](docs/UPDATE-3.3.7.md).
+Version 3.3.8 starts with YouTube only and saving enabled. Add suggested sites adds the remaining 30 domains after requesting browser access. Existing custom lists, exclusions and intentional pauses remain. See [UPDATE-3.3.8.md](docs/UPDATE-3.3.8.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Lite mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 
@@ -22,11 +22,11 @@ Storage protection adds the `unlimitedStorage` permission; site access remains o
 
 ## Enable websites and articles
 
-Website capture starts off. In **Library & settings → Websites & articles**, enter a domain and click **Allow this site**, then approve the browser's optional site permission and refresh that site's tab. **Allow public websites** requests broader HTTP/HTTPS access only when you choose it. Use specific domains where possible: sensitive-page filtering cannot identify every private or signed-in page.
+New setups have saving enabled for YouTube only. Choose **Add suggested sites (30)** to add the remaining standard list with browser access, or add individual domains. In **Library & settings → Websites & articles**, enter a domain and click **Allow this site**, then approve the browser's optional site permission and refresh that site's tab. **Allow public websites** requests broader HTTP/HTTPS access only when you choose it. Use specific domains where possible: sensitive-page filtering cannot identify every private or signed-in page.
 
 The same settings area imports extracted Takeout **Chrome/BrowserHistory.json** and **My Activity/Search** JSON files (up to 100 MB), or scans this browser's saved visits after optional history permission. Page titles, search queries and YouTube titles become searchable; old page bodies are not fetched. Keep settings open while importing. Pause preserves completed entries; importing again skips completed duplicates.
 
-Live allowed pages save up to the first 2,000 visible words. Compatible visible HTML videos use native captions, sampled scenes and on-screen OCR. **Transcribe website video audio** is a separate off-by-default English-only option. Protected/cross-origin players, iframes, login walls and native social apps may not work. These techniques capture played portions, not an entire historical video. **Forget this site** blocks future capture and removes its saved entries. Use the popup site-pause button to pause website capture quickly.
+Live allowed pages save up to the first 2,000 visible words. Compatible visible HTML videos use native captions, sampled scenes and on-screen OCR. **Transcribe website video audio** is a separate off-by-default English-only option. Protected/cross-origin players, iframes, login walls and native social apps may not work. These techniques capture played portions, not an entire historical video. The popup's **Forget and block site** blocks future capture and removes its saved entries. Use the popup site-pause button to pause website capture quickly.
 
 Search **Everything**, or filter to **Videos**, **Pages** or **Searches**. Articles use text highlights when supported and the passage remains; website video time links need a matching player and the allowed page script. Feed URLs can be approximate. Full web content is capped at 2,000 items or 64 MiB of accounted text/vector payload, with older items retained as titles. Model memory and database overhead are additional.
 
@@ -34,7 +34,7 @@ For history imported earlier, click Fetch missing transcripts; no re-import is n
 
 ## Packaged installation or moving folders
 
-After building the runtime, `pnpm run zip` creates recall-v3.3.0.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
+After building the runtime, `pnpm run zip` creates recall-v3.3.8.zip. Extract it before using Load unpacked. A source ZIP from GitHub still needs `pnpm run setup`; it does not contain the generated runtime.
 
 A different folder can mean a different extension identity. Export your old library through Library & settings → Export index before replacing or removing the old extension. Import that backup into the new installation. Avoid leaving both copies enabled on YouTube simultaneously.
 
