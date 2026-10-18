@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.1** applies the supplied minimal UI: a search-first popup, yellow moment highlights, teal controls, and a sidebar library with expandable settings. It retains all v3.3.0 search, capture, privacy and storage improvements. Current-video scope, copy links, samples, query consent, Light mode and recent-item deletion remain accessible. See [the UI update](docs/UPDATE-3.3.1.md), [the v3.3.0 behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.2** combines YouTube Takeout import and browser watch-history scanning in one section. It keeps the supplied minimal UI: a search-first popup, yellow moment highlights, teal controls, and a sidebar library with expandable settings. It retains all v3.3.0 search, capture, privacy and storage improvements. Current-video scope, copy links, samples, query consent, Light mode and recent-item deletion remain accessible. See [the latest UI update](docs/UPDATE-3.3.2.md), [the v3.3.0 behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 

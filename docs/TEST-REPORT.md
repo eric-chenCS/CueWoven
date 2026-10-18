@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.2 update
+
+YouTube Takeout import and browser watch-history scanning share one disclosure. All 223 Node tests pass. The browser UI suite checks both controls in the same section, file keyboard focus, progress reveal, and 320/768/1024/1440 px layouts. The 53-video browser-history workflow passes automatic transcript queueing, pause, opt-out and timestamp retrieval with controlled captions. The Takeout check retains all 205 imported titles and queues the newest 200 missing transcripts. No capture, model, database or permission changes.
+
 ## Version 3.3.1 update
 
 The supplied minimal UI is integrated with all v3.3.0 features. All 223 Node tests pass. Isolated browser checks cover sidebar/disclosures, keyboard file focus, progress reveal, light/dark popup and library layouts, and 320–1440 px settings without horizontal overflow. Existing feature, navigation, article/import/backup, diagnostics, newest-200 transcript queue and automatic speech tests pass. Disabling progress reveal fails the new browser test; the correct code was restored. All 52 backend/capture files are byte-identical to v3.3.0, so no new model/performance claim or migration is made. See [UPDATE-3.3.1.md](UPDATE-3.3.1.md) for the design and scope.

@@ -10,6 +10,9 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   const picker=f.options.waitForEvent('filechooser');await f.options.locator('#welcome-import').click();await picker;
   assert.equal(await f.options.locator('#takeout-import').evaluate(node=>node.closest('details').open),true);
   const fold=f.options.locator('details').filter({has:f.options.locator('#takeout-import')});
+  assert.equal(await fold.locator('#history-scan').count(),1,'both YouTube import methods share one section');
+  assert.equal(await f.options.locator('#sec-add > .sheet > details').count(),3);
+  assert.equal(await fold.locator('#history-scan').isVisible(),true);
   await fold.locator('summary').first().click();
   await f.options.locator('#history-import-msg').evaluate(node=>node.textContent='Adding 1 of 2…');
   await f.options.waitForFunction(()=>document.querySelector('#takeout-import').closest('details').open,null,{timeout:5000});
@@ -31,12 +34,12 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    });
    assert.equal(layout.width,440);assert.ok(layout.height<=600);assert.ok(layout.result>170);assert.ok(layout.footerBottom<=601);
    assert.ok(layout.marker.includes('255, 211, 77')||layout.marker.includes('242, 201, 76'));
-   await popup.locator('body').screenshot({path:path.join(output,'recall-v3.3.1-popup-'+theme+'.png')});
+   await popup.locator('body').screenshot({path:path.join(output,'recall-v3.3.2-popup-'+theme+'.png')});
   }
   await f.options.bringToFront();await f.options.reload();await f.options.waitForFunction(()=>document.querySelectorAll('.vid').length===5);
   for(const theme of ['light','dark']){
    await f.options.emulateMedia({colorScheme:theme});await f.options.evaluate(()=>scrollTo(0,0));
-   await f.options.screenshot({path:path.join(output,'recall-v3.3.1-library-'+theme+'.png')});
+   await f.options.screenshot({path:path.join(output,'recall-v3.3.2-library-'+theme+'.png')});
   }
   await f.options.locator('.nav a[href="#sec-websites"]').click();
   await f.options.waitForFunction(()=>document.querySelector('.nav a[href="#sec-websites"]').getAttribute('aria-current')==='true');
@@ -56,7 +59,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    const position=await f.options.evaluate(()=>({heading:document.querySelector('#capture-heading').getBoundingClientRect().top,menu:document.querySelector('.side').getBoundingClientRect().bottom}));
    if(width<=900)assert.ok(position.heading>=position.menu,'section heading must clear the sticky menu');
    await f.options.evaluate(()=>scrollTo(0,0));
-   await f.options.screenshot({path:path.join(output,'recall-v3.3.1-options-'+width+'.png'),fullPage:true});
+   await f.options.screenshot({path:path.join(output,'recall-v3.3.2-options-'+width+'.png'),fullPage:true});
   }
   assert.deepEqual(errors,[]);
   console.log('MINIMAL_UI_PASS',JSON.stringify({sidebar:true,folds:true,progressReveal:true,nativeFileKeyboardFocus:true,samples:true,copy:true,themes:['light','dark'],sourceIndicators:true,newControlsPreserved:true,layouts}));

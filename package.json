@@ -1,6 +1,6 @@
 {
   "name": "recall-extension",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "description": "Recall: local semantic search over watched videos, articles and history, with optional website capture.",

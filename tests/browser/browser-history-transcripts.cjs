@@ -29,6 +29,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
    for(let i=0;i<53;i++)await chrome.history.addUrl({url:`https://www.youtube.com/watch?v=${String(i).padStart(11,'a')}`});
   });
   await installControlledQueue(page);
+  await page.locator('details.fold').filter({has:page.locator('#history-scan')}).locator('summary').first().click();
   await page.locator('#history-scan').click();
   await page.waitForFunction(()=>document.querySelector('#history-msg').textContent.includes('53 unique'));
   const scanned=await page.evaluate(()=>chrome.runtime.sendMessage({type:'history-videos',days:90}));
@@ -60,7 +61,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   assert.match(await page.locator('#history-msg').innerText(),/46 not attempted/);
   assert.equal(await page.evaluate(()=>bulkCalls.length),59);
   assert.equal(await page.locator('#history-save').isEnabled(),true);
-  await page.locator('[aria-labelledby="history-heading"]').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR || os.tmpdir(),'recall-history-auto-transcripts.png')});
+  await page.locator('details.fold').filter({has:page.locator('#history-scan')}).screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR || os.tmpdir(),'recall-history-auto-transcripts.png')});
   assert.deepEqual(errors,[]);
   console.log('BROWSER_HISTORY_TRANSCRIPTS_PASS: real 53-video browser-history scan, default automatic transcripts, no truncation, scoped queue, failure preservation, visit dates, transcript search at 0:42, opt-out, duplicate skip and pause. Caption outcomes controlled.');
  } finally {await context.close();}
