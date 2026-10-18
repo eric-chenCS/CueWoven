@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 async function refresh() {
   try {
     const [estimate, protectedStorage, { captureLog = [] }] = await Promise.all([navigator.storage.estimate(), chrome.permissions.contains({ permissions: ["unlimitedStorage"] }), chrome.storage.session.get("captureLog")]);
-    $("storage-usage").textContent = `Recall uses approximately ${(estimate.usage / 1024 / 1024).toFixed(1)} MB, including downloaded models. ${protectedStorage ? "Protected from normal browser quota eviction; disk space and Recall’s own limits still apply." : "Normal browser quota applies; export regular backups."}`;
+    $("storage-usage").textContent = `Momento uses approximately ${(estimate.usage / 1024 / 1024).toFixed(1)} MB, including downloaded models. ${protectedStorage ? "Protected from normal browser quota eviction; disk space and Momento’s own limits still apply." : "Normal browser quota applies; export regular backups."}`;
     $("capture-events").textContent = "";
     for (const row of [...captureLog].reverse()) {
       const tr = document.createElement("tr");

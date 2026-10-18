@@ -3,6 +3,7 @@ import {setItemImage} from '../lib/item-image.js';
 import {restoreBackup} from '../lib/backup.js';
 import {DEFAULT_SETTINGS as DEFAULTS, resetPreferences} from '../lib/settings.js';
 import {resultLink} from '../lib/result-link.js';
+import {sampleFor} from '../lib/samples.js';
 import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js';
 
 const $ = (id) => document.getElementById(id);
@@ -34,7 +35,7 @@ $('welcome-import').addEventListener('click', () => $('takeout-import').click())
 $('welcome-empty').addEventListener('click', async () => {
   await chrome.storage.local.set({ onboardingComplete: true });
   $('welcome').hidden = true;
-  $('startup-msg').textContent = 'Ready. Recall will build your library from new videos. You can import history later.';
+  $('startup-msg').textContent = 'Ready. Momento will build your library from new videos. You can import history later.';
 });
 
 // ---------------------------------------------------------------------------
@@ -104,10 +105,10 @@ function renderLibrary() {
     info.className = 'info';
     const t = document.createElement('div');
     t.className = 't';
-    t.textContent = v.title || v.videoId;
+    t.textContent = (v.sample&&sampleFor(v.videoId)?.title) || v.title || v.videoId;
     const m = document.createElement('div');
     m.className = 'm';
-    m.textContent=[v.channel,v.method==='history-title'?'Title only':`${v.chunkCount} moments`,v.method==='speech-local'?'AI speech':'',new Date(v.indexedAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})].filter(Boolean).join(' · ');
+    m.textContent=[v.sample?'Momento demo':v.channel,v.method==='history-title'?'Title only':`${v.chunkCount} moments`,v.method==='speech-local'?'AI speech':'',new Date(v.indexedAt).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})].filter(Boolean).join(' · ');
     m.title=[v.sceneCount?`${v.sceneCount} ${v.kind==='page'?'images':'scenes'}`:'',v.screenCount?`${v.screenCount} on-screen text moments`:'',v.method==='speech-local'?'Played portions only':''].filter(Boolean).join(' · ');
     info.append(t, m);
     const actions = document.createElement('div');
@@ -173,7 +174,7 @@ async function saveHistoryTitles(entries) {
   let complete = false;
   try {
     for (let i = 0; i < entries.length; i += 16) {
-      $('history-import-msg').textContent = `Adding history to Recall… ${processed} of ${entries.length}. First use may download the search model.`;
+      $('history-import-msg').textContent = `Adding history to Momento… ${processed} of ${entries.length}. First use may download the search model.`;
       const batch = entries.slice(i, i + 16);
       const res = await send({ type: 'import-history', videos: batch });
       if (!res || res.error) throw new Error(res?.error || 'The import did not respond.');
@@ -182,7 +183,7 @@ async function saveHistoryTitles(entries) {
       repaired += res.repaired || 0;
       processed += batch.length;
     }
-    $('history-import-msg').textContent = `Added ${imported} searchable video titles; ${skipped} already saved. ${repaired ? `Restored history protection for ${repaired} videos. ` : ''}Open Recall to search your past videos.`;
+    $('history-import-msg').textContent = `Added ${imported} searchable video titles; ${skipped} already saved. ${repaired ? `Restored history protection for ${repaired} videos. ` : ''}Open Momento to search your past videos.`;
     complete = true;
   } catch (e) {
     $('history-import-msg').textContent = `Import stopped after adding ${imported} titles: ${e.message}. Already added videos are saved; re-import to continue.`;
@@ -507,7 +508,7 @@ $('export').addEventListener('click', async () => {
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `recall-index-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `momento-index-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   $('data-msg').textContent = `Exported ${data.videos.length} videos`+(data.items?.length?` and ${data.items.length} web items`:'')+'.';
@@ -547,7 +548,7 @@ send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(respon
 $('forget-recent').addEventListener('click',async()=>{
   if(libraryBusy()||historyImportBusy)return;
   const hours=Number($('forget-hours').value);
-  if(!confirm('Forget items Recall saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.'))return;
+  if(!confirm('Forget items Momento saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.'))return;
   const release=beginLibraryTask();
   try{const result=await send({type:'forget-recent',hours});if(result.error)throw Error(result.error);$('data-msg').textContent='Forgot '+result.removed+' recently saved items.';await loadLibrary();}
   catch(error){$('data-msg').textContent=error.message;}

@@ -8,7 +8,7 @@ import {createVisionModel} from './vision-model.js';
 import {createOcrModel} from './ocr-model.js';
 import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
-import {validateScene, rankScenes, fuseMatches} from '../lib/scenes.js';
+import {validateScene, rankScenes,SCENES_TOTAL, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { prepareQuery, createPool, addIndex, rankPool, nearTie } from '../lib/search.js';
 import * as db from '../lib/db.js';
@@ -209,7 +209,7 @@ async function importIndex({ data }) {
   try {return await restoreIndex(data);} finally {indexImportBusy = false;}
 }
 async function restoreIndex(data) {
-  if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Recall export file');
+  if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Momento export file');
   let imported = 0;
   if(data.items!==undefined&&!Array.isArray(data.items))throw Error('Invalid web-history backup.');
   for(const item of data.items||[]){await web.restore(item);imported++;}
@@ -224,7 +224,7 @@ async function restoreIndex(data) {
     broadcast({ type: 'import-progress', done: imported, total: data.videos.length });
   }
   if (Array.isArray(data.scenes)) {
-    for (const scene of data.scenes.slice(-2000)) {
+    for (const scene of data.scenes.slice(-SCENES_TOTAL)) {
       const video = await db.getVideo(scene?.videoId);if (!video) continue;
       const valid = validateScene({...scene,video});
       const vec = await visionModel.image(valid.image);
@@ -385,7 +385,7 @@ async function loadSamples(){
     if(await db.getVideo(sample.videoId))continue;
     const chunks=sample.lines.map((text,i)=>({text,start:i*8}));
     const vecs=await embed(chunks.map(row=>row.text));
-    if(await db.addVideoIfAbsent({...cleanVideo(sample),sample:true,channel:'Recall demo',method:'demo',indexedAt:Date.now(),savedAt:Date.now(),chunkCount:chunks.length},chunks.map((row,i)=>({...row,videoId:sample.videoId,vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}))))imported++;
+    if(await db.addVideoIfAbsent({...cleanVideo(sample),sample:true,channel:'Momento demo',method:'demo',indexedAt:Date.now(),savedAt:Date.now(),chunkCount:chunks.length},chunks.map((row,i)=>({...row,videoId:sample.videoId,vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}))))imported++;
   }
   invalidate(false);broadcast({type:'index-changed'});return {imported};
 }
