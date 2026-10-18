@@ -1,12 +1,12 @@
 import { parseTakeoutHistory, validateTakeoutFileSize } from '../lib/takeout.js';
 import {restoreBackup} from '../lib/backup.js';
+import {DEFAULT_SETTINGS as DEFAULTS, resetPreferences} from '../lib/settings.js';
 import {resultLink} from '../lib/result-link.js';
 import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-const DEFAULTS = { enabled: true, dwellSeconds: 20, maxAgeDays: 28, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,screenTextEnabled:true,lightMode:false };
 let historyCandidates = [];
 const selectedHistory = new Set();
 let bulkBusy = false;
@@ -424,6 +424,31 @@ $('bulk-go').addEventListener('click', () => {
 // ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
+for (const [id, value] of Object.entries({ ...DEFAULTS, theme: 'system' })) {
+  const control = $(id);
+  if (control?.tagName === 'SELECT') {
+    const option = [...control.options].find(option => option.value === String(value));
+    if (option) { option.textContent += ' (default option)'; option.dataset.default = 'true'; }
+  } else if (control?.type === 'checkbox') {
+    const note = document.createElement('span');
+    note.className = 'hint default-note';
+    note.textContent = `Default: ${value ? 'On' : 'Off'}`;
+    control.closest('label').querySelector('.setting-text').append(note);
+  }
+}
+$('reset-settings').addEventListener('click', async () => {
+  const button = $('reset-settings');
+  button.disabled = true;
+  try {
+    const { settings } = await chrome.storage.local.get('settings');
+    await chrome.storage.local.set(resetPreferences(settings));
+    await loadSettings();
+    $('reset-msg').textContent = 'Settings reset to default. Your library, retention choices and website access are unchanged.';
+  } catch (error) {
+    $('reset-msg').textContent = `Could not reset settings: ${error.message}`;
+  } finally { button.disabled = false; }
+});
+
 function selectRetention(id, days) {
   const select = $(id), value = String(days);
   if (![...select.options].some(option => option.value === value)) select.add(new Option(`${days} days (previous setting)`, value));

@@ -12,7 +12,8 @@ import {policy} from './lib/web-items.js';
 export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
-export const DEFAULT_SETTINGS = { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true, screenTextEnabled:true, lightMode:false };
+import {DEFAULT_SETTINGS} from './lib/settings.js';
+export {DEFAULT_SETTINGS};
 
 // ---------------------------------------------------------------------------
 // Offscreen document

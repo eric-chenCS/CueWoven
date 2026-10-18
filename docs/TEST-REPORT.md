@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.6 update
+
+All 231 Node tests pass. Browser checks cover default labels, the exact reset-button wording, restored capture/search/theme preferences and persistence, and preservation of saved records, retention, site settings and grants. Existing preference and responsive UI checks pass. A disposable mutation that changes retention during reset fails its preservation regression. No dependency, schema or model changes.
+
 ## Version 3.3.5 update
 
 All 230 Node tests pass. Browser checks cover the supplied grouped website UI, optional-permission denial and rollback, keyboard toggling, missing access, add/remove, blocked-parent handling, all-sites removal, Lite mode/global auto-save indicators, exclusions and popup control. The packaged copy passes the website suite. Disabling the all-sites removal exclusion in a disposable copy fails its regression. Article/title/query search, text fragments, private/form exclusions, backup/restore, capture-clear races and forget/import blocking pass. Minimal UI and appearance/retention/concurrency preferences pass; layouts have no horizontal overflow at 320/768/1024/1440 px. The dependency audit is unchanged: three high native sharp findings and one moderate sprintf-js finding. See [UPDATE-3.3.5.md](UPDATE-3.3.5.md) for the review corrections and scope.
