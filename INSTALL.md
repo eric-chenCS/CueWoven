@@ -1,8 +1,8 @@
-# Recall v3.3.1 installation
+# Recall v3.3.2 installation
 
 ## From the ZIP
 
-Extract `recall-v3.3.1.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `recall-v3.3.2.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## From this repository
 
@@ -10,9 +10,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.1 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.2 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.1 applies the supplied minimal UI without changing v3.3.0 storage, permissions or model runtime. Sidebar sections and expandable rows organize settings; progress opens the relevant row. Manual English speech remains under the popup disclosure. Reload the extension and refresh open extension pages after updating. See [UPDATE-3.3.1.md](docs/UPDATE-3.3.1.md).
+Version 3.3.2 combines YouTube Takeout import and browser history scanning in one YouTube watch-history section, retaining the minimal UI and existing storage, permissions and model runtime. Sidebar sections and expandable rows organize settings; progress opens the relevant row. Manual English speech remains under the popup disclosure. Reload the extension and refresh open extension pages after updating. See [UPDATE-3.3.2.md](docs/UPDATE-3.3.2.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Light mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 

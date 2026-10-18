@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Recall v3.3.1 · Library &amp; settings</title>
+    <title>Recall v3.3.2 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>Recall</h1></div>
-        <span class="version">v3.3.1</span>
+        <span class="version">v3.3.2</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -50,36 +50,18 @@
           <h2 id="add-heading">Add history</h2>
           <div class="sheet">
             <details class="fold">
-              <summary><span class="fold-title">YouTube watch history</span><span class="fold-sub">Google Takeout file</span></summary>
+              <summary><span class="fold-title">YouTube watch history</span><span class="fold-sub">This browser or Google Takeout</span></summary>
               <div class="fold-body">
+                <h3 class="group">From Google Takeout</h3>
                 <p class="block-desc">Export YouTube history as JSON from <a href="https://takeout.google.com/" target="_blank" rel="noopener">Google Takeout</a>, then choose <strong>watch-history.json</strong>.</p>
                 <div class="row">
-                  <label class="btn file">Choose file<input id="takeout-import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                  <label class="btn file">Choose Takeout file<input id="takeout-import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
                   <button id="history-transcripts" class="btn ghost" disabled>Fetch missing transcripts</button>
                 </div>
                 <label class="check"><input id="takeout-transcripts" type="checkbox" checked /><span>Fetch transcripts for the newest 200 missing videos</span></label>
                 <p id="history-import-msg" class="msg" role="status" aria-live="polite"></p>
-              </div>
-            </details>
-
-            <details class="fold">
-              <summary><span class="fold-title">Websites and searches</span><span class="fold-sub">This browser or a Takeout file</span></summary>
-              <div class="fold-body">
-                <p class="block-desc">Import titles and visit dates from Chrome BrowserHistory.json or Google Search My Activity JSON. Query import uses the Google search switch under Websites.</p>
-                <div class="row">
-                  <label for="web-history-days" class="visually-hidden">How far back</label>
-                  <select id="web-history-days"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option><option value="0" selected>All time</option></select>
-                  <button id="web-history-scan" class="btn">Import from this browser</button>
-                  <button id="web-history-stop" class="btn ghost" hidden>Pause</button>
-                  <label class="btn ghost file">Choose Takeout file<input id="web-history-file" type="file" accept="application/json,.json" class="visually-hidden" /></label>
-                </div>
-                <p id="web-import-msg" class="msg" role="status" aria-live="polite"></p>
-              </div>
-            </details>
-
-            <details class="fold">
-              <summary><span class="fold-title">YouTube visits in this browser</span><span class="fold-sub">From before you installed Recall</span></summary>
-              <div class="fold-body">
+                <h3 class="group">From this browser</h3>
+                <p class="block-desc">Find YouTube videos in this browser's saved history, including visits from before you installed Recall. A visit does not necessarily mean you watched the video.</p>
                 <div class="row">
                   <label for="history-days" class="visually-hidden">How far back</label>
                   <select id="history-days">
@@ -100,6 +82,21 @@
                   </div>
                 </div>
                 <div id="history-list" class="history-list"></div>
+              </div>
+            </details>
+
+            <details class="fold">
+              <summary><span class="fold-title">Websites and searches</span><span class="fold-sub">This browser or a Takeout file</span></summary>
+              <div class="fold-body">
+                <p class="block-desc">Import titles and visit dates from Chrome BrowserHistory.json or Google Search My Activity JSON. Query import uses the Google search switch under Websites.</p>
+                <div class="row">
+                  <label for="web-history-days" class="visually-hidden">How far back</label>
+                  <select id="web-history-days"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365">Last year</option><option value="0" selected>All time</option></select>
+                  <button id="web-history-scan" class="btn">Import from this browser</button>
+                  <button id="web-history-stop" class="btn ghost" hidden>Pause</button>
+                  <label class="btn ghost file">Choose Takeout file<input id="web-history-file" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                </div>
+                <p id="web-import-msg" class="msg" role="status" aria-live="polite"></p>
               </div>
             </details>
 
