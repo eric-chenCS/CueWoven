@@ -36,6 +36,7 @@ function renderGroups(container, groups, label, onClick) {
     if (!hosts.length) continue;
     const group = document.createElement("div");
     group.className = "site-group";
+    group.dataset.group = title;
     const heading = document.createElement("h3");
     heading.textContent = title;
     const list = document.createElement("ul");

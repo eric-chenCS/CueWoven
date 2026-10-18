@@ -284,3 +284,18 @@ input.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2p
 .site img { width: 16px; height: 16px; object-fit: contain; flex: none; margin-right: 4px; }
 #web-site-list { margin: 0; }
 #web-site-list > .site-groups { margin-top: 12px; }
+
+/* ---- Color pass: panels lift off the page; site groups carry a quiet tint ---- */
+.sheet { box-shadow: var(--raise); }
+.site-group { --tint: var(--ink-3); }
+.site-group[data-group="News"] { --tint: var(--tint-news); }
+.site-group[data-group="Reference"] { --tint: var(--tint-reference); }
+.site-group[data-group="Social"] { --tint: var(--tint-social); }
+.site-group[data-group="Added by you"] { --tint: var(--tint-own); }
+.site-group h3 { display: flex; align-items: center; gap: 7px; color: var(--ink-2); }
+.site-group h3::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tint); flex: none; }
+.site-groups:not(.blocked) .site {
+  background: color-mix(in srgb, var(--tint) 11%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 26%, transparent);
+}
+.site-groups:not(.blocked) .site-remove:hover { background: color-mix(in srgb, var(--tint) 22%, var(--surface)); }
