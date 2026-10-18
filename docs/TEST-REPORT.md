@@ -1,5 +1,9 @@
 # Recall test report
 
+## Version 3.3.3 update
+
+All 223 Node tests pass. Isolated browser checks cover collapsible moments help, Settings/Lite mode labels, retention controls in Your data, five-row library sizing and keyboard scrolling at 320/768/1024/1440 px, filtering, allowed-site/missing-permission status, paused/off action indicators and persistent search/audio summaries. Diagnostics and original-date retention checks pass. No model, database or capture-policy changes.
+
 ## Version 3.3.2 update
 
 YouTube Takeout import and browser watch-history scanning share one disclosure. All 223 Node tests pass. The browser UI suite checks both controls in the same section, file keyboard focus, progress reveal, and 320/768/1024/1440 px layouts. The 53-video browser-history workflow passes automatic transcript queueing, pause, opt-out and timestamp retrieval with controlled captions. The Takeout check retains all 205 imported titles and queues the newest 200 missing transcripts. No capture, model, database or permission changes.
