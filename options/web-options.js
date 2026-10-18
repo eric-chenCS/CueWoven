@@ -93,7 +93,7 @@ async function refresh() {
   if (on && !scripting) missing = settings.allSites ? ["every website"] : hosts.filter(host => siteOrigins([host]).length);
   if (on && autoSave && missing.length) $("web-state").textContent = "Ready to save. Give browser access below to start on the remaining sites.";
   $("web-access-row").hidden = !missing.length;
-  $("web-access").textContent = missing.length ? `The browser hasn't given Momento access to ${missing.length > 3 ? missing.length + " of these sites" : missing.join(", ")} yet.` : "";
+  $("web-access").textContent = missing.length ? `The browser hasn't given WebLapse access to ${missing.length > 3 ? missing.length + " of these sites" : missing.join(", ")} yet.` : "";
 
   // Sites the user forgot: blocked until unblocked here.
   const blocked = settings.blocked || [];

@@ -209,7 +209,7 @@ async function importIndex({ data }) {
   try {return await restoreIndex(data);} finally {indexImportBusy = false;}
 }
 async function restoreIndex(data) {
-  if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a Momento export file');
+  if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a WebLapse export file');
   let imported = 0;
   if(data.items!==undefined&&!Array.isArray(data.items))throw Error('Invalid web-history backup.');
   for(const item of data.items||[]){await web.restore(item);imported++;}
@@ -385,7 +385,7 @@ async function loadSamples(){
     if(await db.getVideo(sample.videoId))continue;
     const chunks=sample.lines.map((text,i)=>({text,start:i*8}));
     const vecs=await embed(chunks.map(row=>row.text));
-    if(await db.addVideoIfAbsent({...cleanVideo(sample),sample:true,channel:'Momento demo',method:'demo',indexedAt:Date.now(),savedAt:Date.now(),chunkCount:chunks.length},chunks.map((row,i)=>({...row,videoId:sample.videoId,vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}))))imported++;
+    if(await db.addVideoIfAbsent({...cleanVideo(sample),sample:true,channel:'WebLapse demo',method:'demo',indexedAt:Date.now(),savedAt:Date.now(),chunkCount:chunks.length},chunks.map((row,i)=>({...row,videoId:sample.videoId,vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}))))imported++;
   }
   invalidate(false);broadcast({type:'index-changed'});return {imported};
 }
