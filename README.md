@@ -1,6 +1,6 @@
 # Recall — SwampHacks XII
 
-Recall helps you find something you watched or read from a vague memory. Version **3.3.5** simplifies Websites with one saving switch, grouped suggested/custom sites, remove controls, an access-repair button and editable exclusions. Website saving stays off until enabled; existing site choices stay intact. Appearance themes, retention ranges, 1/3/6/10 fetch limits, moments help and the scrolling library remain available. See [the website update](docs/UPDATE-3.3.5.md), [the search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
+Recall helps you find something you watched or read from a vague memory. Version **3.3.6** labels default preferences and adds **Reset settings to default** in Settings. Reset restores capture, search and appearance preferences while keeping saved content, retention choices and site access. Grouped website controls, themes, 1/3/6/10 fetching, moments help and the scrolling library remain available. See [the defaults update](docs/UPDATE-3.3.6.md), [search behavior and measurements](docs/UPDATE-3.3.0.md), and [the test report](docs/TEST-REPORT.md).
 
 ## Team setup
 

@@ -1,8 +1,8 @@
-# Recall v3.3.5 installation
+# Recall v3.3.6 installation
 
 ## From the ZIP
 
-Extract `recall-v3.3.5.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
+Extract `recall-v3.3.6.zip` into a folder. Open `edge://extensions` or `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted folder containing `manifest.json`. The ZIP includes the runtime and five small original sample videos. Load the extracted folder, not the ZIP. If replacing an installation, back up the library and update the contents of its existing folder, then Reload and refresh video/website tabs. A different folder can create a different extension identity.
 
 ## From this repository
 
@@ -10,9 +10,9 @@ Install Node.js 22+ and pnpm 11.25.0. From the cloned repository, run `pnpm inst
 
 ## Existing installation
 
-After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.5 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
+After pulling changes, rebuild with `pnpm run setup` if dependencies or the runtime build changed. Reload the Recall extension and refresh existing YouTube and allowed website tabs. Reopen Library & settings. The version should read 3.3.6 in the extension manager and settings sidebar. Keeping the same folder preserves the extension identity and local library.
 
-Version 3.3.5 simplifies Websites: choose sites from grouped suggestions or add your own, then turn saving on with the switch. More options includes all public sites, Google search queries, video speech and site exclusions. Suggestions do not enable capture automatically or replace existing sites. Missing browser access has a Give access button. Reload Recall and refresh Library & settings. See [UPDATE-3.3.5.md](docs/UPDATE-3.3.5.md).
+Version 3.3.6 marks default choices and adds Reset settings to default in Settings. Reset preserves the library, retention choices, site lists/exclusions and browser permissions while restoring capture/search/appearance preferences. Reload Recall and refresh Library & settings. See [UPDATE-3.3.6.md](docs/UPDATE-3.3.6.md).
 
 Version 3.3.0 improves search responsiveness and history indexing and adds current-video search, copy links, samples, `rc` address-bar search, capture status, Lite mode and Forget recent. The database automatically upgrades to schema 6, compresses caption vectors and builds derived title bundles; existing titles, transcripts and watch dates remain. No model/runtime rebuild or history re-import is needed when updating from v3.2.1. See [UPDATE-3.3.0.md](docs/UPDATE-3.3.0.md) for the tests and limitations.
 

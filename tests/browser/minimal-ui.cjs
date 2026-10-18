@@ -40,12 +40,12 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    });
    assert.equal(layout.width,440);assert.ok(layout.height<=600);assert.ok(layout.result>170);assert.ok(layout.footerBottom<=601);
    assert.ok(layout.marker.includes('255, 211, 77')||layout.marker.includes('242, 201, 76'));
-   await popup.locator('body').screenshot({path:path.join(output,'recall-v3.3.5-popup-'+theme+'.png')});
+   await popup.locator('body').screenshot({path:path.join(output,'recall-v3.3.6-popup-'+theme+'.png')});
   }
   await f.options.bringToFront();await f.options.reload();await f.options.waitForFunction(()=>document.querySelectorAll('.vid').length===5);
   for(const theme of ['light','dark']){
    await f.options.emulateMedia({colorScheme:theme});await f.options.evaluate(()=>scrollTo(0,0));
-   await f.options.screenshot({path:path.join(output,'recall-v3.3.5-library-'+theme+'.png')});
+   await f.options.screenshot({path:path.join(output,'recall-v3.3.6-library-'+theme+'.png')});
   }
   await f.options.locator('.nav a[href="#sec-websites"]').click();
   await f.options.waitForFunction(()=>document.querySelector('.nav a[href="#sec-websites"]').getAttribute('aria-current')==='true');
@@ -65,7 +65,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
    const position=await f.options.evaluate(()=>({heading:document.querySelector('#capture-heading').getBoundingClientRect().top,menu:document.querySelector('.side').getBoundingClientRect().bottom}));
    if(width<=900)assert.ok(position.heading>=position.menu,'section heading must clear the sticky menu');
    await f.options.evaluate(()=>scrollTo(0,0));
-   await f.options.screenshot({path:path.join(output,'recall-v3.3.5-options-'+width+'.png'),fullPage:true});
+   await f.options.screenshot({path:path.join(output,'recall-v3.3.6-options-'+width+'.png'),fullPage:true});
   }
   // Library stays at five rows while additional items remain reachable by scrolling.
   await f.send({type:'import-history',videos:[{videoId:'extra000001',title:'Extra library item',channel:'Fixture',watchedAt:Date.now()}]});

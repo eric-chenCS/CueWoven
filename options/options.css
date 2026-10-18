@@ -277,3 +277,7 @@ input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2
 .site-remove { flex: none; }
 .site-scope { margin: 0 0 12px; }
 .block > .more + h3 { margin-top: 20px; }
+
+.setting:has(select) { flex-wrap: wrap; }
+.setting:has(select) .setting-text { flex: 1 1 160px; }
+.setting select { max-width: 100%; }
