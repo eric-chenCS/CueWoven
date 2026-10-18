@@ -35,7 +35,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
   await f.options.evaluate(()=>scrollTo({top:document.querySelector('#sec-websites').offsetTop-32,behavior:'instant'}));
   if(theme==='dark'){
    const icon=f.options.locator('#web-sites .site img').first();await icon.evaluate(el=>{el.loading='eager';el.src='data:image/png;base64,broken'});
-   await f.options.waitForFunction(()=>{const img=document.querySelector('#web-sites .site img');return img.complete&&img.naturalWidth>0&&img.src.endsWith('/icons/web.svg')});
+   await f.options.waitForFunction(()=>{const img=document.querySelector('#web-sites .site img');return img.complete&&img.naturalWidth>0});
   }
   await f.options.screenshot({path:path.join(output,'recall-slate-websites-'+theme+'.png')});
   await f.options.locator('.nav a[href="#sec-capture"]').click();

@@ -21,8 +21,8 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelectorAll('#library .vid').length===3);
  await f.options.waitForFunction(()=>[...document.querySelectorAll('#library img.website-icon')].length===2&&[...document.querySelectorAll('#library img.website-icon')].every(img=>img.complete&&img.naturalWidth>0));
  // An unavailable browser icon gets a real local image instead of a broken-image box.
- await f.options.locator('#library img.website-icon').first().evaluate(img=>img.src=chrome.runtime.getURL('missing-icon-for-test.png'));
- await f.options.waitForFunction(()=>[...document.querySelectorAll('#library img')].some(img=>img.src.endsWith('/icons/web.svg')&&img.complete&&img.naturalWidth>0));
+ await f.options.locator('#library img.website-icon').first().evaluate(async img=>{const {setItemImage}=await import('../lib/item-image.js');setItemImage(img,{kind:'page',url:'https://articles.example.com'});img.onerror();});
+ await f.options.waitForFunction(()=>[...document.querySelectorAll('#library img')].some(img=>img.src.endsWith('/icons/site.svg')&&img.complete&&img.naturalWidth>0));
  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#q').fill('coral reef science');
  await popup.waitForFunction(()=>document.querySelector('#page-label').textContent==='Best match'&&!!document.querySelector('.result'));
  for(const label of ['Match 2','Match 3']){await popup.locator('#next-video').click();await popup.waitForFunction(label=>document.querySelector('#page-label').textContent===label,label);}
