@@ -259,7 +259,7 @@ $('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
 $('search-retry').addEventListener('click',runSearch);
 $('suggest-week').addEventListener('click',()=>{document.querySelector('.chip[data-days="7"]').click();$('suggest-week').hidden=true;});
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
-async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;$('web-pause-popup').textContent=webCapture.paused?'Resume sites':'Pause sites';}
+async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'Recall is saving pages you read on your sites. Click to stop.':'Recall isn\u2019t saving websites right now. Click to start again.';}
 $('previous-video').addEventListener('click', () => {
   resultOffset = Math.max(0, resultOffset - 1);
   runSearch();

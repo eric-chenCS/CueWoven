@@ -220,3 +220,60 @@ code { font-size: 12px; }
 
 .btn.file:has(input:disabled) { opacity:0.5; cursor:default; }
 @media (max-width:900px) { .version { position:absolute; right:0; top:18px; margin:0; } }
+
+/* ---- Websites: one switch, a visible list of sites, plain-language options ---- */
+.setting-text strong { display: block; }
+.switch-row { padding-top: 16px; padding-bottom: 16px; }
+.switch-row .setting-text strong { font-size: 15px; }
+
+/* Toggle switch built on a real checkbox, so labels, keyboard and screen readers work as-is. */
+input.switch {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; cursor: pointer;
+  width: 38px !important; height: 22px !important; border-radius: 11px;
+  background: var(--line-strong); position: relative; transition: background 0.15s;
+}
+input.switch::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--surface); box-shadow: 0 1px 2px rgb(0 0 0 / 0.25); transition: transform 0.15s;
+}
+input.switch:checked { background: var(--action); }
+input.switch:checked::after { transform: translateX(16px); }
+input.switch:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+
+.site-groups { display: grid; gap: 14px; }
+.site-group h3 { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin: 0 0 6px; }
+.sites { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.site {
+  display: inline-flex; align-items: center; gap: 2px; padding: 3px 3px 3px 10px;
+  background: var(--sunken); border-radius: 999px; font-size: 13px; color: var(--ink);
+}
+.site-remove {
+  appearance: none; border: 0; background: transparent; color: var(--ink-3); cursor: pointer;
+  width: 22px; height: 22px; border-radius: 50%; font: 16px/1 var(--font); display: grid; place-items: center;
+}
+.site-remove:hover { background: var(--line); color: var(--ink); }
+.site-remove:focus-visible { outline: 2px solid var(--action); outline-offset: 0; }
+.site-groups.blocked:not(:empty) { margin-top: 14px; }
+.site-groups.blocked .site { background: var(--bad-soft); }
+
+.add-site { margin-top: 16px; }
+#web-domain { width: 260px; max-width: 100%; }
+#web-forget-domain { width: 200px; max-width: 100%; }
+.link-btn { appearance: none; border: 0; background: none; padding: 0; color: var(--action); font: 500 13px var(--font); cursor: pointer; }
+.link-btn:hover { text-decoration: underline; }
+
+.access-warning { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--marker); color: var(--marker-ink); }
+.access-warning[hidden] { display: none; }
+.access-warning p { margin: 0; font-size: 13px; }
+.access-warning .btn { background: var(--marker-ink); border-color: var(--marker-ink); color: var(--marker); }
+@media (max-width: 560px) {
+  .access-warning { flex-direction: column; align-items: flex-start; }
+  #web-domain, #web-forget-domain { width: 100%; }
+}
+@media (max-width: 560px) { .fold[open] > summary .fold-sub { display: none; } }
+
+.site { max-width: 100%; min-width: 0; }
+.site > span { overflow-wrap: anywhere; min-width: 0; }
+.site-remove { flex: none; }
+.site-scope { margin: 0 0 12px; }
+.block > .more + h3 { margin-top: 20px; }
