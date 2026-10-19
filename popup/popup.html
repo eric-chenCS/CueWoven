@@ -2,13 +2,13 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>CueWoven v3.3.25</title>
+    <title>CueWoven v3.3.26</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="CueWoven v3.3.25">
+      <div class="brand" title="CueWoven v3.3.26">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
         <span>CueWoven</span>
       </div>
@@ -45,6 +45,7 @@
         <button class="chip" role="radio" aria-checked="false" data-days="1">Today</button>
         <button class="chip" role="radio" aria-checked="false" data-days="7">7 days</button>
         <button class="chip" role="radio" aria-checked="false" data-days="30">30 days</button>
+        <button class="chip" role="radio" aria-checked="false" data-days="custom" aria-controls="custom-range">Custom</button>
       </div>
       <div class="source-options">
         <label for="kind-filter" class="visually-hidden">Show</label>
@@ -55,6 +56,10 @@
           <option value="search">Searches</option>
         </select>
       </div>
+    </div>
+    <div id="custom-range" class="custom-range" role="group" aria-label="Watched or saved between" hidden>
+      <label>From <input type="date" id="range-from" /></label>
+      <label>To <input type="date" id="range-to" /></label>
     </div>
 
     <div class="search-extras">

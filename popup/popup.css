@@ -38,6 +38,13 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 }
 .chip:hover { color: var(--ink); }
 .chip[aria-checked="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+.custom-range { display: flex; align-items: center; gap: 12px; padding: 0 16px 6px; color: var(--ink-2); font: 500 12px/1 var(--font); }
+.custom-range[hidden] { display: none; }
+.custom-range label { display: inline-flex; align-items: center; gap: 6px; }
+.custom-range input {
+  font: 500 12px/1 var(--font); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 5px 6px;
+}
 .source-options select {
   font: 500 12px/1 var(--font); color: var(--ink); background: var(--surface);
   border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 6px 8px; cursor: pointer;

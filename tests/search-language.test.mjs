@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {wordText,stem} from '../lib/search-language.js';
-import {prepareQuery,createPool,addPassage,rankPool,nearTie} from '../lib/search.js';
+import {prepareQuery,createPool,addPassage,rankPool,nearTie,watchedWithin} from '../lib/search.js';
 import {searchIntent,matchesSource,searchWithFallback} from '../lib/search-intent.js';
 const lexical=(query,text)=>{const p=createPool(prepareQuery(query));addPassage(p,{text},{title:'',channel:''},.3,(score,match)=>({score,match}));return rankPool(p)[0];};
 test('word endings connect rotation, rotate, rotating and tires without substring matches',()=>{
@@ -77,4 +77,41 @@ test('empty inferred filters relax once while manual restrictions remain',async(
 
 test('article visual evidence never produces a text-score near-tie hint',()=>{
  assert.equal(nearTie([{videoId:'a',score:.5,articleImage:true,matchSources:['Article image']},{videoId:'b',score:.49}]),false);
+});
+
+// Fixed local "now" (Mon Oct 19 2026, 2 PM) so typed date windows are deterministic.
+const NOW=new Date(2026,9,19,14).getTime(),DAY=864e5;
+const windowOf=(text,options={})=>searchIntent(text,{now:NOW,...options});
+test('typed "ago" dates become padded date windows and leave the topic words',()=>{
+  const days=windowOf('cat video 3 days ago');
+  assert.equal(days.query,'cat video');assert.deepEqual(days.range,{sinceMs:NOW-4*DAY,untilMs:NOW-2*DAY});assert.equal(days.labels.length,1);
+  const span=windowOf('react hooks 3-4 days ago');
+  assert.equal(span.query,'react hooks');assert.deepEqual(span.range,{sinceMs:NOW-5*DAY,untilMs:NOW-2*DAY});
+  const months=windowOf('the cooking video I watched between 1 and 2 months ago');
+  assert.deepEqual(months.range,{sinceMs:NOW-60*DAY-7.5*DAY,untilMs:NOW-30*DAY+7.5*DAY});
+  assert.deepEqual(windowOf('pasta a few weeks ago').range,{sinceMs:NOW-35*DAY-1.75*DAY,untilMs:NOW-14*DAY+1.75*DAY});
+  assert.deepEqual(windowOf('battery talk two weeks ago').range,{sinceMs:NOW-17.5*DAY,untilMs:NOW-10.5*DAY});
+});
+test('date words that are usually topics need viewing words',()=>{
+  for(const text of ['30 days of running','gardening in May','yesterday lyrics','the last 3 days of summer','"3 days ago" lyrics'])assert.equal(windowOf(text).range,undefined,text);
+  const yesterday=windowOf('the video I watched yesterday about rockets');
+  assert.equal(yesterday.query,'the video I watched about rockets');
+  assert.deepEqual(yesterday.range,{sinceMs:new Date(2026,9,18).getTime(),untilMs:new Date(2026,9,19).getTime()});
+  assert.deepEqual(windowOf('the TikTok I saw in September').range,{sinceMs:new Date(2026,8,1).getTime()-3*DAY,untilMs:new Date(2026,9,1).getTime()+3*DAY});
+  assert.equal(windowOf('the video I watched in November').range.sinceMs,new Date(2025,10,1).getTime()-3*DAY);
+  assert.deepEqual(windowOf('the clip I saw last 3 days').range,{sinceMs:NOW-3*DAY,untilMs:0});
+});
+test('a date picked in the popup wins over a typed one, and relaxing drops only typed dates',async()=>{
+  assert.equal(windowOf('cat video 3 days ago',{manualRange:true}).range,undefined);
+  assert.equal(windowOf('cat video 3 days ago',{sinceDays:7}).range,undefined);
+  assert.equal(windowOf('cat video 3 days ago',{infer:false}).range,undefined);
+  const intent=windowOf('cat video 3 days ago'),calls=[];
+  const result=await searchWithFallback(intent,0,async filters=>{calls.push(filters);return {results:filters.range?[]:[{videoId:'found'}]};});
+  assert.equal(result.relaxed,true);assert.equal(calls[1].range,undefined);assert.equal(calls[1].query,'cat video');
+});
+test('one date check keeps items watched inside the window from every source',()=>{
+  const at=time=>({watchedAt:time});
+  assert.equal(watchedWithin(at(5),{sinceMs:5,untilMs:10}),true);assert.equal(watchedWithin(at(10),{sinceMs:5,untilMs:10}),false);
+  assert.equal(watchedWithin(at(4),{sinceMs:5}),false);assert.equal(watchedWithin(at(1),{untilMs:2}),true);
+  assert.equal(watchedWithin({indexedAt:7},{sinceMs:5,untilMs:10}),true);assert.equal(watchedWithin(at(99)),true);
 });

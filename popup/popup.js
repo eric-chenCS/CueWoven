@@ -16,7 +16,19 @@ const singleVideo = $('single-video');
 const resultsEl = $('results');
 const statusEl = $('status');
 let sinceDays = 0;
+let customRange = null; // {from, to} as YYYY-MM-DD while the Custom chip is on; either may be empty
 let inferFilters = true;
+// Local midnight at the start of From through the end of To, as the engine's [sinceMs, untilMs).
+function customMs() {
+  if (!customRange) return {};
+  const day = (value, add = 0) => { if (!value) return 0; const [y, m, d] = value.split('-').map(Number); return new Date(y, m - 1, d + add).getTime(); };
+  const sinceMs = day(customRange.from), untilMs = day(customRange.to, 1);
+  return { ...(sinceMs ? { sinceMs } : {}), ...(untilMs ? { untilMs } : {}) };
+}
+function showChips(days) {
+  document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-checked', String(c.dataset.days === 'custom' ? !!customRange : !customRange && Number(c.dataset.days) === days)));
+  $('custom-range').hidden = !customRange;
+}
 let searchSeq = 0;
 let activeIndex = -1;
 let renderedSeq = -1;
@@ -136,7 +148,7 @@ async function runSearch() {
     return;
   }
   // Refinement belongs to this open popup; reopening starts with an independent query.
-  chrome.storage.session.set({ lastQuery: original, sinceDays, inferFilters }).catch(() => {});
+  chrome.storage.session.set({ lastQuery: original, sinceDays, customRange, inferFilters }).catch(() => {});
   if (!original) { showIdle(); return; }
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
@@ -149,7 +161,7 @@ async function runSearch() {
       if(state.error)throw Error(state.error);
       if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
     }
-    return send({ type: 'search', query,videoId, sinceDays, inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
+    return send({ type: 'search', query,videoId, sinceDays, ...customMs(), inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
   })())
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
@@ -161,7 +173,7 @@ async function runSearch() {
   $('applied-filters').textContent=res.filtersRelaxed?'No matches with the suggested filters. Showing results without them.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
   $('applied-filters').hidden=!res.filtersRelaxed&&!res.appliedFilters?.length;
   $('ignore-inferred').hidden=!res.appliedFilters?.length;
-  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-checked',String(Number(c.dataset.days)===(res.appliedSinceDays??sinceDays))));
+  showChips(res.appliedSinceDays ?? sinceDays);
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
   if (res.empty) {showIdle();return;}
@@ -170,7 +182,7 @@ async function runSearch() {
       resultOffset = 0; // The library may have changed while browsing matches.
       return runSearch();
     }
-    empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
+    empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays||customRange) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
     return;
   }
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
@@ -207,7 +219,7 @@ function prepareSearch() {
   activeIndex = -1;
   resultsEl.querySelectorAll('.active').forEach(el => el.classList.remove('active'));
   if (!q.value.trim()) {
-    chrome.storage.session.set({ lastQuery: '', sinceDays }).catch(() => {});
+    chrome.storage.session.set({ lastQuery: '', sinceDays, customRange }).catch(() => {});
     showIdle();
     return;
   }
@@ -270,13 +282,22 @@ q.addEventListener('keydown', async (e) => {
 
 document.querySelectorAll('.chip').forEach((chip) => {
   chip.addEventListener('click', () => {
-    document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(c === chip)));
-    sinceDays = Number(chip.dataset.days) || 0;
+    const custom = chip.dataset.days === 'custom';
+    customRange = custom ? { from: $('range-from').value, to: $('range-to').value } : null;
+    sinceDays = custom ? 0 : Number(chip.dataset.days) || 0;
+    showChips(sinceDays);
     inferFilters = false;
     resultOffset = 0;
     runSearch();
-    q.focus();
+    (custom && !customRange.from && !customRange.to ? $('range-from') : q).focus();
   });
+});
+for (const id of ['range-from', 'range-to']) $(id).addEventListener('change', () => {
+  let from = $('range-from').value, to = $('range-to').value;
+  if (from && to && from > to) { [from, to] = [to, from]; $('range-from').value = from; $('range-to').value = to; }
+  customRange = { from, to };
+  resultOffset = 0;
+  runSearch();
 });
 
 singleVideo.addEventListener('change', () => {
@@ -412,7 +433,9 @@ $('start-empty').addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 (async () => {
   q.focus();
-  const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays', 'inferFilters']).catch(() => ({}));
+  const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays', 'customRange', 'inferFilters']).catch(() => ({}));
+  const today = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  $('range-from').max = $('range-to').max = today;
   await refreshStatus();
   refreshWebPause();
   const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
@@ -422,9 +445,13 @@ $('start-empty').addEventListener('click', async () => {
   refreshSpeech();
   send({type:'vision-status'}).then(renderVision).catch(()=>{});
   inferFilters = saved?.inferFilters !== false;
-  if (saved && saved.sinceDays) {
-    sinceDays = saved.sinceDays;
-    document.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-checked', String(Number(c.dataset.days) === sinceDays)));
+  if (saved?.customRange) {
+    customRange = { from: saved.customRange.from || '', to: saved.customRange.to || '' };
+    $('range-from').value = customRange.from; $('range-to').value = customRange.to;
+  }
+  if (saved && (saved.sinceDays || customRange)) {
+    sinceDays = customRange ? 0 : saved.sinceDays;
+    showChips(sinceDays);
   }
   if (saved && saved.lastQuery) {
     q.value = saved.lastQuery;

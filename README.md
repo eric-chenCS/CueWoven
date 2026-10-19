@@ -14,7 +14,7 @@ Built for SwampHacks XII as a local-first Chrome and Microsoft Edge extension. N
 
 ## Install and try it
 
-1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.25.zip** asset. Extract it to a permanent folder.
+1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.26.zip** asset. Extract it to a permanent folder.
 2. Open `chrome://extensions` or `edge://extensions` and enable **Developer mode**.
 3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
 4. Open CueWoven from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
