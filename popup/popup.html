@@ -2,13 +2,13 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>CueWoven v3.3.26</title>
+    <title>CueWoven v3.3.27</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="CueWoven v3.3.26">
+      <div class="brand" title="CueWoven v3.3.27">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
         <span>CueWoven</span>
       </div>
@@ -31,13 +31,8 @@
         <input id="q" type="search" autocomplete="off" spellcheck="false"
                placeholder="Describe a memory, then press Enter" aria-label="Search your CueWoven library" />
       </div>
-      <button id="refine-toggle" class="btn ghost" aria-expanded="false" aria-controls="refine-panel" title="Add more details to this search" disabled>Refine</button>
     </div>
-    <section id="refine-panel" class="refine-panel" aria-labelledby="refine-label" hidden>
-      <label id="refine-label" for="details">More details</label>
-      <textarea id="details" rows="2" maxlength="1000" placeholder="Add details, then press Enter" ></textarea>
-
-    </section>
+    <div id="clues" class="clues" aria-label="Added to this search" hidden></div>
 
     <div class="filter-row">
       <div class="filters" role="radiogroup" aria-label="Watched within">
@@ -68,6 +63,7 @@
     <div class="notices">
         <p id="applied-filters" class="notice" role="status" hidden></p>
         <button id="ignore-inferred" class="link-btn" hidden>Ignore suggested filters</button>
+        <p id="hidden-note" class="notice" role="status" hidden><span id="hidden-text"></span> <button id="hidden-undo" class="link-btn" type="button">Undo</button></p>
       <button id="search-retry" class="btn small" hidden>Retry</button>
       <p id="scene-status" class="notice" role="status" aria-live="polite" hidden></p>
       <p id="ocr-status" class="notice" role="status" aria-live="polite" hidden></p>
@@ -85,6 +81,19 @@
       <button id="next-video" class="btn ghost small" aria-label="Next closest result" title="Next closest result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
     </nav>
     <p id="tie-hint" class="tie-hint" role="status" hidden><span id="tie-text">Another video matches almost as well.</span> <button id="tie-next" class="link-btn" type="button">see the other one</button></p>
+    <section id="refine" class="refine" aria-label="Add a detail to this search" hidden>
+      <button id="refine-toggle" class="link-btn" type="button" aria-expanded="false" aria-controls="refine-panel">Not it? Add a detail</button>
+      <div id="refine-panel" class="refine-panel" hidden>
+        <div class="refine-hints" role="group" aria-label="What do you remember?">
+          <button type="button" class="hint-chip" aria-pressed="false" data-hint="What did they say? e.g. lithium gets trapped">Something said</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-hint="What was on screen? e.g. a red car, a whiteboard">On screen</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-hint="Which channel or site? e.g. Veritasium, from TikTok">Channel or site</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-hint="When? e.g. 3 days ago, between 1 and 2 months ago">When</button>
+        </div>
+        <label for="details" class="visually-hidden">A detail you remember</label>
+        <input id="details" type="text" maxlength="300" autocomplete="off" spellcheck="false" placeholder="Add a detail you remember, then press Enter" />
+      </div>
+    </section>
 
     <section class="tab-tools" aria-label="This tab">
       <p id="capture-indicator" class="tab-caption" role="status" hidden></p>
@@ -132,7 +141,10 @@
           <div class="meta"></div>
         </div>
       </a>
-      <button class="copy-link btn ghost small" aria-label="Copy link to this moment" title="Copy link to this moment">Copy link</button>
+      <div class="result-actions">
+        <button class="not-this icon-btn" type="button" aria-label="Not this one" title="Not this one: hide it and search again"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.7 5.1A9.7 9.7 0 0 1 12 5c6 0 10 7 10 7a17.6 17.6 0 0 1-2.9 3.6M6.6 6.6C3.9 8.3 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18"/></svg></button>
+        <button class="copy-link icon-btn" type="button" aria-label="Copy link to this moment" title="Copy link to this moment"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.5-1.5"/></svg></button>
+      </div>
       </div>
     </template>
 

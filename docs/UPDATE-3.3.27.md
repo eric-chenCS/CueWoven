@@ -1,0 +1,9 @@
+# CueWoven v3.3.27
+
+**Refine after searching.** The Refine button beside the search box is gone. After a search, **Not it? Add a detail** appears below the results; when nothing matches it reads **No match? Add a detail you remember** and opens on its own. Four prompts (Something said, On screen, Channel or site, When) change the example text to jog memory without adding words to the search. Each detail becomes a removable tag under the search box, so details build on the search instead of replacing each other; ✕ removes one and searches again. Typed dates and "from TikTok"-style sources work inside details. Editing the main search starts fresh.
+
+**Not this one.** Each result has an icon to hide it and search again. Hidden items leave every source (YouTube passages, website items, images and title-only matches) and are part of the search cache key. A "Hid … Undo" line confirms what was hidden, and an "N hidden" tag restores everything. The engine accepts at most 100 hidden items, each a valid item ID.
+
+**Quieter result actions.** Not this one and Copy link are now small icon buttons in each result's corner, shown on hover or keyboard focus in the list and always for the single best match. Copy link confirms with a brief accent color instead of changing its label.
+
+Validation: all 287 Node tests pass, including hiding an item from website ranking while others still rank (fails without the change). In Chromium, the refine, Enter-search, single-video, gray theme, minimal UI, v3.3 features, backup simplification and preferences browser checks pass; the real model and ranker find the refined Minecraft fixture at 1:12. A separate check hid and restored a sample video in list and best-match views with no page errors or horizontal overflow, in light and dark themes. No permissions, dependencies or storage format changed.

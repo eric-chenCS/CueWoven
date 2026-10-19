@@ -77,6 +77,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const refined=await expected('battery electrodes. a phone losing energy');
   await hit(refined[0],'Best match');
   await page.locator('#next-video').click();await hit(refined[1],'Match 2');
+  await page.locator('.clue button').click();
   await page.locator('#details').fill('chemical reactions');await page.locator('#details').press('Enter');
   const refinedAgain=await expected('battery electrodes. chemical reactions');
   await hit(refinedAgain[0],'Best match');

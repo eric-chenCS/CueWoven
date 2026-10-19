@@ -20,14 +20,23 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 }
 #q::placeholder { color: var(--ink-3); }
 #q:focus { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
-#refine-toggle { height: 40px; border-radius: var(--r-md); }
-#refine-toggle[aria-expanded="true"] { border-color: var(--action); background: var(--action-soft); color: var(--ink); }
-
-.refine-panel { margin: 8px 16px 0; }
-.refine-panel label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-#details { width: 100%; resize: vertical; min-height: 56px; max-height: 120px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font: 13px/1.4 var(--font); background: var(--surface); color: var(--ink); }
+/* Details added after a search: removable tags under the search box, added from below the results. */
+.clues { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 16px 0; }
+.clues[hidden] { display: none; }
+.clue { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 3px 3px 3px 9px; border-radius: 999px; background: var(--action-soft); color: var(--ink); font-size: 12px; }
+.clue span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clue button { appearance: none; border: 0; background: none; color: var(--ink-2); cursor: pointer; font: 600 11px/1 var(--font); padding: 3px 6px; border-radius: 999px; }
+.clue button:hover, .clue button:focus-visible { background: var(--surface); color: var(--ink); }
+.refine { margin: 2px 16px 12px; }
+.refine #refine-toggle { font-weight: 600; color: var(--action); }
+.refine-panel { margin-top: 8px; }
+.refine-hints { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.hint-chip { appearance: none; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 9px; font: 500 11.5px/1 var(--font); cursor: pointer; }
+.hint-chip:hover { color: var(--ink); }
+.hint-chip[aria-pressed="true"] { border-color: var(--action); background: var(--action-soft); color: var(--ink); }
+#details { width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-md); font: 13px var(--font); background: var(--surface); color: var(--ink); }
+#details::placeholder { color: var(--ink-3); }
 #details:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
-.refine-panel p { margin: 4px 0 0; color: var(--ink-3); font-size: 11.5px; }
 
 /* Filters: one segmented time control plus the source picker, on one line. */
 .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px 6px; }
@@ -135,7 +144,16 @@ body { overflow-y: auto; }
 .search-extras .view-option { padding:4px 0; }
 #search-retry { margin:6px 0; }
 .result-wrap + .result-wrap { border-top:1px solid var(--line); }
-.copy-link { display:block; margin:0 10px 8px auto; font-size:11px; }
+/* Per-result actions: small icons in the card's corner, shown on hover or focus (always for the single best match). */
+.result-wrap { position:relative; }
+.result-actions { position:absolute; right:8px; bottom:8px; display:flex; gap:4px; opacity:0; transition:opacity .12s; }
+.result-wrap:hover .result-actions, .result-wrap:focus-within .result-actions, .result-wrap:has(.result.active) .result-actions, body:has(#single-video:checked) .result-actions { opacity:1; }
+.icon-btn { display:grid; place-items:center; width:28px; height:28px; padding:0; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); color:var(--ink-2); cursor:pointer; }
+.icon-btn:hover { color:var(--ink); border-color:var(--line-strong); }
+.icon-btn:focus-visible { outline:none; box-shadow:0 0 0 2px var(--focus); }
+.icon-btn svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.copy-link.copied { color:var(--action); border-color:var(--action); }
+#hidden-note .link-btn { font-weight:600; color:var(--action); }
 .tab-caption { margin:4px 0; font-size:11.5px; color:var(--ink-3); overflow-wrap:anywhere; }
 .tab-tools:not(:has(> .tab-item:not([hidden]), > .speech:not([hidden]), > .tab-caption:not([hidden]))) { display:none; }
 .speech { border-top:1px solid var(--line); padding:6px 0; font-size:12px; }
