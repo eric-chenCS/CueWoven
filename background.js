@@ -38,7 +38,10 @@ async function ensureOffscreen() {
   await creating;
 }
 
+// Requests that save, trim or report images carry the chosen image storage size.
+const SCENE_STORAGE_REQUESTS = new Set(['scene-index', 'article-image', 'import', 'prune', 'list']);
 async function engine(type, payload = {}) {
+  if (SCENE_STORAGE_REQUESTS.has(type)) payload = { ...payload, sceneStorageMB: (await getSettings()).sceneStorageMB };
   await ensureOffscreen();
   let lastErr;
   for (let attempt = 0; attempt < 6; attempt++) {

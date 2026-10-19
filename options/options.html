@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CueWoven v3.3.24 · Library &amp; settings</title>
+    <title>CueWoven v3.3.25 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>CueWoven</h1></div>
-        <span class="version">v3.3.24</span>
+        <span class="version">v3.3.25</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -42,6 +42,7 @@
             <input id="filter" type="search" placeholder="Filter" aria-label="Filter saved items" />
           </div>
           <div class="stats" id="stats"></div>
+          <p id="scene-storage" class="msg" role="status" aria-live="polite"></p>
           <details class="more" id="moments-help"><summary>What are moments?</summary><p>A moment is a searchable piece of a video or page: spoken words, on-screen text or a passage you read. Several moments can come from one item. Video matches link to a timestamp; page matches highlight the saved passage when supported. Scenes are saved images and are counted separately.</p></details>
           <div id="library" class="library sheet" role="region" aria-label="Saved items" tabindex="0"></div>
         </section>
@@ -167,6 +168,10 @@
                 <label class="setting">
                   <span class="setting-text">Forget what I watch or read after</span>
                   <select id="maxAgeDays"><option value="1">24 hours</option><option value="7">7 days</option><option value="28">4 weeks</option><option value="365">12 months</option><option value="0">Forever</option></select>
+                </label>
+                <label class="setting">
+                  <span class="setting-text">Image storage<span class="hint">For scenes and article images. Larger keeps more images but uses more memory when searching them.</span></span>
+                  <select id="sceneStorageMB"><option value="120">120 MB</option><option value="240">240 MB</option><option value="500">500 MB</option><option value="1024">1 GB</option></select>
                 </label>
 
 

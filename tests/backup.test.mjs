@@ -1,9 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {restoreBackup} from '../lib/backup.js';
-import {SCENES_TOTAL} from '../lib/scenes.js';
+import {SCENE_STORAGE_CHOICES,sceneCaps} from '../lib/scenes.js';
+const SCENES_TOTAL=sceneCaps(Math.max(...SCENE_STORAGE_CHOICES)).count;
 
-test('restore retains the full expanded visual capacity instead of truncating to the old cap',async()=>{
+test('restore retains the largest image storage choice instead of truncating to a smaller cap',async()=>{
  const scenes=Array.from({length:SCENES_TOTAL+1},(_,i)=>({videoId:'fixture',image:String(i)}));let count=0,first,last;
  await restoreBackup({format:'recall-export',videos:[],scenes},async message=>{const scene=message.data.scenes[0];first??=scene;last=scene;count++;return{imported:0}});
  assert.equal(count,SCENES_TOTAL);assert.equal(first.image,'1');assert.equal(last.image,String(SCENES_TOTAL));

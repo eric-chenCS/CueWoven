@@ -1,8 +1,8 @@
 # CueWoven test report
 
-## Current baseline — v3.3.24
+## Current baseline — v3.3.25
 
-All 279 Node tests pass, including a word-pair ranking regression. CueWoven's 31-query retrieval fixture still finds 30 of 31, and the 30,000-passage ranking benchmark stays under its 400 ms budget; see [v3.3.24 validation](UPDATE-3.3.24.md). Historical counts below apply to their named versions.
+All 282 Node tests pass, including image storage size, trimming and full-storage reporting checks; see [v3.3.25 validation](UPDATE-3.3.25.md). Historical counts below apply to their named versions.
 
 ## v3.3.22 baseline
 

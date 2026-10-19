@@ -8,7 +8,7 @@ import {createVisionModel} from './vision-model.js';
 import {createOcrModel} from './ocr-model.js';
 import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
-import {validateScene, rankScenes,SCENES_TOTAL, fuseMatches} from '../lib/scenes.js';
+import {validateScene, rankScenes,sceneCaps, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { prepareQuery, createPool, addIndex, rankPool, nearTie } from '../lib/search.js';
 import * as db from '../lib/db.js';
@@ -203,12 +203,12 @@ async function exportIndex() {
 }
 
 // Backups store text/images and re-embed here so vectors survive model changes.
-async function importIndex({ data }) {
+async function importIndex({ data,sceneStorageMB }) {
   if (indexImportBusy) throw new Error('An index import is already running.');
   indexImportBusy = true;
-  try {return await restoreIndex(data);} finally {indexImportBusy = false;}
+  try {return await restoreIndex(data,sceneStorageMB);} finally {indexImportBusy = false;}
 }
-async function restoreIndex(data) {
+async function restoreIndex(data,sceneStorageMB) {
   if (!data || data.format !== 'recall-export' || !Array.isArray(data.videos)) throw new Error('Not a CueWoven export file');
   let imported = 0;
   if(data.items!==undefined&&!Array.isArray(data.items))throw Error('Invalid web-history backup.');
@@ -224,11 +224,11 @@ async function restoreIndex(data) {
     broadcast({ type: 'import-progress', done: imported, total: data.videos.length });
   }
   if (Array.isArray(data.scenes)) {
-    for (const scene of data.scenes.slice(-SCENES_TOTAL)) {
+    for (const scene of data.scenes.slice(-sceneCaps(sceneStorageMB).count)) {
       const video = await db.getVideo(scene?.videoId);if (!video) continue;
       const valid = validateScene({...scene,video});
       const vec = await visionModel.image(valid.image);
-      await db.scenes.put({...valid,videoId:video.videoId,indexedAt:Number(scene.indexedAt)||Date.now(),watchedAt:video.watchedAt,vec});
+      await putScene({...valid,videoId:video.videoId,indexedAt:Number(scene.indexedAt)||Date.now(),watchedAt:video.watchedAt,vec},sceneStorageMB);
     }
     invalidate();
   }
@@ -243,8 +243,10 @@ async function restoreIndex(data) {
   web.reset();return { imported };
 }
 
-async function prune({ maxAgeDays,importMaxAgeDays=0 }) {
-  if (!maxAgeDays&&!importMaxAgeDays) return { removed: 0 };
+async function prune({ maxAgeDays,importMaxAgeDays=0,sceneStorageMB }) {
+  const scenesTrimmed = sceneStorageMB===undefined ? 0 : await db.scenes.trim(sceneCaps(sceneStorageMB));
+  if (scenesTrimmed) invalidate();
+  if (!maxAgeDays&&!importMaxAgeDays) return { removed: 0,scenesTrimmed };
   const old = (await db.listVideos()).filter(v => shouldForgetVideo(v,maxAgeDays,Date.now(),importMaxAgeDays));
   for (const v of old) await db.deleteVideo(v.videoId);
   if (old.length) {invalidate();web.reset();}
@@ -252,16 +254,20 @@ async function prune({ maxAgeDays,importMaxAgeDays=0 }) {
   if (scenesRemoved) invalidate();
   const screenRemoved=maxAgeDays?await db.screenText.prune(Date.now()-maxAgeDays*864e5):0;
   if(screenRemoved)invalidate();
-  return { removed: old.length, scenesRemoved,screenRemoved };
+  return { removed: old.length, scenesRemoved,screenRemoved,scenesTrimmed };
 }
 
 let screenTask=null,screenEpoch=0,sceneEpoch=0;
 const visualQueries=new Set();
 const ocrModel=createOcrModel(state=>broadcast({type:'ocr-state',state}));
 const captureHold=createCaptureHold({pending:()=>[screenTask,sceneTask,...visualQueries,...webTasks,...captionTasks],cancel:()=>{screenEpoch++;sceneEpoch++;web.cancel();ocrModel.release();}});
+// Set when the visual cap removes old snapshots before the Forget setting would.
+let sceneStorageFull=false;
+// Without a known size, never remove images early; the next prune applies the chosen size.
+async function putScene(row,sceneStorageMB){const response=await db.scenes.put(row,sceneStorageMB===undefined?{count:Infinity,bytes:Infinity}:sceneCaps(sceneStorageMB));if(response?.evicted)sceneStorageFull=true;return response;}
 function libraryChange(work,options){
   return captureHold.run(async()=>{
-    invalidate();web.reset();
+    sceneStorageFull=false;invalidate();web.reset();
     try{return await work();}
     finally{invalidate();web.reset();}
   },options);
@@ -321,19 +327,19 @@ async function indexScene(input) {
     if(epoch!==sceneEpoch)return {disabled:true};
     if(scene.articleImage&&scene.caption)await web.imageCaption(scene.video,scene.caption);
     if(epoch!==sceneEpoch)return {disabled:true};
-    const response = await db.scenes.put({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,...(scene.articleImage?{articleImage:true,caption:scene.caption,imageId:scene.imageId}:{}),vec,indexedAt:Date.now(),watchedAt:Date.now()});
+    const response = await putScene({key:scene.key,videoId:scene.video.videoId,start:scene.start,image:scene.image,adaptive:scene.adaptive,...(scene.articleImage?{articleImage:true,caption:scene.caption,imageId:scene.imageId}:{}),vec,indexedAt:Date.now(),watchedAt:Date.now()},input.sceneStorageMB);
     await refreshVideo(scene.video.videoId);broadcast({type:'index-changed'});return response;
   })();
   try {return await sceneTask;} catch(error){if(epoch!==sceneEpoch)return {disabled:true};throw error;} finally {sceneTask = null;}
 }
-async function indexArticleImage({url,image,caption}){
+async function indexArticleImage({url,image,caption,sceneStorageMB}){
   const identity=await webIdentity(url),video=await db.getVideo(identity.videoId);
   if(!video||video.kind!=='page')return {disabled:true};
   const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(image));
   const imageId=Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
   const scene=validateScene({video,start:0,image,caption,articleImage:true,imageId});
   if(await db.scenes.get(scene.key))return {duplicate:true};
-  return indexScene(scene);
+  return indexScene({...scene,sceneStorageMB});
 }
 function searchScenes(query,options,records) {
   if(sceneTask)return Promise.resolve({results:[],pending:true});
@@ -441,7 +447,7 @@ const handlers = {
   index: input=>captionChange(()=>indexVideo(input)),
   search,
   status,
-  list: async () => ({ videos: await db.listVideos() }),
+  list: async ({sceneStorageMB}) => {const videos=await db.listVideos();return {videos,sceneStorageFull:sceneStorageFull||videos.reduce((n,v)=>n+(v.sceneCount||0),0)>=sceneCaps(sceneStorageMB).count};},
   delete: ({ videoId }) => libraryChange(async()=>{await db.deleteVideo(videoId);web.reset();invalidate();return {ok:true};}),
   clear: () => libraryChange(async()=>{await db.clearAll();web.reset();invalidate();return {ok:true};}),
   export: exportIndex,

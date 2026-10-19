@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {rankScenes,fuseMatches,validateScene,SCENES_TOTAL,SCENES_PER_VIDEO,SCENE_BYTES_TOTAL,IMAGES_PER_PAGE} from '../lib/scenes.js';
+import {rankScenes,fuseMatches,validateScene,SCENES_TOTAL,SCENES_PER_VIDEO,SCENE_BYTES_TOTAL,IMAGES_PER_PAGE,sceneCaps} from '../lib/scenes.js';
+import {sceneStorage} from '../lib/scene-db.js';
 const hit=(videoId,start,score,extra={})=>({videoId,start,score,title:videoId,...extra});
 test('fusion includes visual-only matches without comparing raw cosine scales',()=>{
   const out=fuseMatches([hit('weak-title',0,0.3,{titleOnly:true})],[hit('cats',20,0.27,{scene:true})],{perVideo:1});
@@ -58,4 +59,39 @@ test('article images have stable distinct keys and cannot masquerade as video fr
  assert.deepEqual(results[0].matchSources,['Article image']);
  const words=[hit(video.videoId,0,.6,{kind:'page',titleOnly:true,matchSources:['Title']})];
  const fused=fuseMatches(words,results,{perVideo:1});assert.equal(fused[0].articleImage,true);assert.deepEqual(fused[0].matchSources,['Title','Article image']);
+});
+
+// In-memory stand-in for the scenes/videos stores, spread over 84 videos so each stays under its per-video cap.
+function memoryScenes(total){
+ const scenes=new Map(Array.from({length:total},(_,i)=>[`v${i%84}:${i}`,{key:`v${i%84}:${i}`,videoId:'v'+i%84,indexedAt:i,bytes:100}])),videos=new Map(Array.from({length:84},(_,i)=>['v'+i,{videoId:'v'+i}]));
+ const objectStore=name=>{const rows=name==='scenes'?scenes:videos;return {get:key=>rows.get(key),put:row=>rows.set(row.key??row.videoId,row),delete:key=>rows.delete(key),index:field=>({
+  getAll:key=>key===undefined?[...rows.values()].sort((a,b)=>a[field]-b[field]):[...rows.values()].filter(row=>row[field]===key),
+  count:key=>[...rows.values()].filter(row=>row[field]===key).length})};};
+ return {scenes,storage:sceneStorage(async()=>({transaction:()=>({objectStore})}),async value=>value,async()=>{})};
+}
+
+test('image storage choices scale the image count with the size',()=>{
+ assert.deepEqual(sceneCaps(240),{bytes:SCENE_BYTES_TOTAL,count:SCENES_TOTAL});
+ assert.deepEqual(sceneCaps(120),{bytes:120*1024*1024,count:10000});
+ assert.equal(sceneCaps(1024).count,85333);
+ assert.deepEqual(sceneCaps(999),sceneCaps(240));assert.deepEqual(sceneCaps(),sceneCaps(240));
+});
+
+test('lowering image storage trims the oldest images to the smaller size',async()=>{
+ const {scenes,storage}=memoryScenes(12000);
+ assert.equal(await storage.trim(sceneCaps(120)),2000);
+ assert.equal(scenes.size,10000);assert.ok(!scenes.has('v0:0'));assert.ok(scenes.has('v71:11999'));
+ assert.equal(await storage.trim(sceneCaps(240)),0);
+});
+
+test('saving reports when the visual cap removes older scenes',async()=>{
+ const {scenes,storage}=memoryScenes(SCENES_TOTAL);
+ const scene=key=>({key,videoId:key.split(':')[0],start:1,image:'data:image/jpeg;base64,/9j/',vec:new Float32Array(4),indexedAt:SCENES_TOTAL+1});
+ assert.equal((await storage.put(scene('v83:new'))).evicted,1);
+ assert.equal(scenes.size,SCENES_TOTAL);assert.ok(!scenes.has('v0:0'));
+ scenes.delete('v1:1');
+ assert.equal((await storage.put(scene('v83:newer'))).evicted,0);
+ // A larger choice keeps images the default would remove.
+ assert.equal((await storage.put(scene('v82:roomy'),sceneCaps(1024))).evicted,0);
+ assert.equal(scenes.size,SCENES_TOTAL+1);
 });
