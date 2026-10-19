@@ -1,8 +1,8 @@
 # CueWoven test report
 
-## Current baseline — v3.3.25
+## Current baseline — v3.3.26
 
-All 282 Node tests pass, including image storage size, trimming and full-storage reporting checks; see [v3.3.25 validation](UPDATE-3.3.25.md). Historical counts below apply to their named versions.
+All 286 Node tests pass, including typed date windows, custom date ranges and one shared date check across sources; see [v3.3.26 validation](UPDATE-3.3.26.md). Historical counts below apply to their named versions.
 
 ## v3.3.22 baseline
 

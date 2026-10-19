@@ -332,14 +332,15 @@ const handlers = {
   'video-status':({videoId},sender)=>{requirePopup(sender);return engine('has',{videoId});},
   'load-samples':(_data,sender)=>{requirePopup(sender);return engine('load-samples');},
   'forget-recent':async({hours},sender)=>{requireLibrary(sender);if(![1,24,168].includes(hours))throw Error('Invalid recent range.');const jobs=await getTranscriptJobs();jobs.pause();await jobs.wait();await engine('speech-stop',{reason:'Forgetting recent items.'});const result=await engine('forget-recent',{hours});chrome.runtime.sendMessage({type:'index-changed'}).catch(()=>{});return result;},
-  async search({ query, sinceDays, singleVideo, offset = 0,kind,videoId,inferFilters }) {
+  async search({ query, sinceDays, sinceMs, untilMs, singleVideo, offset = 0,kind,videoId,inferFilters }) {
     const s = await getSettings();
     if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
+    const range={...(sinceMs?{sinceMs}:{}),...(untilMs?{untilMs}:{})};
     if (singleVideo === true) {
       if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid search position.');
-      return engine('search', { query, sinceDays,videoId,inferFilters, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
+      return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
     }
-    return engine('search', { query, sinceDays,videoId,inferFilters, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
+    return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
   },
   status: () => engine('status'),
   warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),

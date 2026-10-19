@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CueWoven v3.3.25 · Library &amp; settings</title>
+    <title>CueWoven v3.3.26 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>CueWoven</h1></div>
-        <span class="version">v3.3.25</span>
+        <span class="version">v3.3.26</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -181,8 +181,13 @@
             </div>
             <div class="block" id="backup-controls">
               <h3>Keep your saved moments safe</h3>
-              <p class="hint">One backup file contains your saved transcripts, page text, titles, source links, timestamps, on-screen text and captured images. Keep it private. Restore it in CueWoven to make those saved moments searchable again.</p>
-              <p class="hint">Uninstalling or clearing this browser profile can erase your library. There is no account or automatic cloud sync. A backup does not include full video files, audio recordings, settings, site permissions or downloaded AI models. If a source video or page disappears, its saved evidence remains available, but the backup cannot bring the original source back online.</p>
+              <p class="hint">Your library lives only in this browser, with no account or cloud sync. Export a backup before uninstalling, clearing this browser profile or moving to another computer, then restore it there to search everything again.</p>
+              <details class="more" id="backup-help"><summary>What's in a backup?</summary>
+                <p><strong>Included:</strong> everything that makes your saved moments searchable. That's each video's title, channel, link, watch date and full transcript with timestamps; each page's title, link and saved text; scene snapshots and article images; and on-screen text read from videos.</p>
+                <p><strong>Not included:</strong> original video files, audio recordings or complete websites, only what CueWoven saved from them. Settings, site permissions and AI models aren't included either; set them again after restoring, and the models download again. If a video or page is later removed online, your saved moments from it stay searchable, but the backup can't bring the original back.</p>
+                <p><strong>Restoring:</strong> CueWoven rebuilds its search data on this computer, so a large library with many images can take a while and keep your computer busy. Keep this page open until it finishes. If it's interrupted, the parts already restored stay.</p>
+                <p><strong>Privacy:</strong> the backup file contains your transcripts, page text and images. Keep it private and don't share it.</p>
+              </details>
               <div class="row">
                 <button id="export" class="btn ghost">Export backup</button>
                 <label class="btn ghost file">Restore backup<input id="import" type="file" accept="application/json,.json" class="visually-hidden" /></label>

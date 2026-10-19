@@ -1,7 +1,7 @@
 import {matchesSource} from '../lib/search-intent.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
 import { cleanItem, pagePassages, quantize, packedDot, webHitBuilder, policy, WEB_PASSAGES } from "../lib/web-items.js";
-import { prepareQuery, normalizedPassage, createPool, addPassage, rankPool } from "../lib/search.js";
+import { prepareQuery, normalizedPassage, createPool, addPassage, rankPool, watchedWithin } from "../lib/search.js";
 export function createWebEngine({ db, embed, onChange = () => {
 } }) {
   let epoch = 0;
@@ -110,18 +110,18 @@ export function createWebEngine({ db, embed, onChange = () => {
     },
     // Add every saved website passage to a shared ranking pool (see lib/search.js). Passages of
     // filtered-out items still count toward word frequencies, like the YouTube index.
-    async collect(pool, vector, { sinceMs = 0, kind = "all", videoId, source } = {}) {
+    async collect(pool, vector, { sinceMs = 0, untilMs = 0, kind = "all", videoId, source } = {}) {
       const records = await cache();
       await db.items.searchScan((item) => {
         const video = records.get(item.id);
-        const eligible = video && matchesSource(video,source) && !(videoId && video.videoId !== videoId) && !(kind !== "all" && video.kind !== kind) && !(sinceMs && (video.watchedAt || video.indexedAt || 0) < sinceMs);
+        const eligible = video && matchesSource(video,source) && !(videoId && video.videoId !== videoId) && !(kind !== "all" && video.kind !== kind) && watchedWithin(video, { sinceMs, untilMs });
         for (const row of item.passages) addPassage(pool, row, eligible ? video : null, eligible ? packedDot(vector, row) : NaN, eligible ? webHitBuilder(video, row) : null, 0);
       });
       return pool;
     },
-    async search(query, vector, { sinceMs = 0, kind = "all", videoId, perVideo = 2, limit = 2048, prepared = prepareQuery(query) } = {}) {
+    async search(query, vector, { sinceMs = 0, untilMs = 0, kind = "all", videoId, perVideo = 2, limit = 2048, prepared = prepareQuery(query) } = {}) {
       const pool = createPool(prepared);
-      await this.collect(pool, vector, { sinceMs, kind, videoId });
+      await this.collect(pool, vector, { sinceMs, untilMs, kind, videoId });
       return rankPool(pool, { perVideo, limit });
     }
   };

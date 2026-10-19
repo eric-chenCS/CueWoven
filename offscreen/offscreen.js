@@ -10,7 +10,7 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes,sceneCaps, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
-import { prepareQuery, createPool, addIndex, rankPool, nearTie } from '../lib/search.js';
+import { prepareQuery, createPool, addIndex, rankPool, nearTie, watchedWithin } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateVideoMetadataBatch } from '../lib/video-metadata.js';
 import { shouldForgetVideo } from '../lib/retention.js';
@@ -127,13 +127,16 @@ async function indexVideo({ video, segments, method }) {
 }
 
 const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
-async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',videoId,inferFilters=true}){
-  const intent=searchIntent(query,{sinceDays,infer:inferFilters});
+async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,offset=0,kind='all',videoId,inferFilters=true}){
+  if(![sinceMs,untilMs].every(ms=>Number.isSafeInteger(ms)&&ms>=0))throw Error('Invalid date range.');
+  const custom=sinceMs||untilMs?{sinceMs,untilMs}:null;
+  const intent=searchIntent(query,{sinceDays,infer:inferFilters,manualRange:!!custom});
   const q=intent.query;
-  if(!q&&!intent.source&&!intent.sinceDays)return {results:[],appliedFilters:[]};
+  if(!q&&!intent.source&&!intent.sinceDays&&!intent.range&&!custom)return {results:[],appliedFilters:[]};
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
-  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,kind,source:filters.source});
+  // A date range chosen in the popup survives relaxing typed filters; a typed one does not.
+  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),kind,source:filters.source});
   // Only an empty first page relaxes inferred filters; reaching the last page does not.
   const first=offset?await queryCache.get(keyFor(intent),0,1):null;
   const result=await searchWithFallback(intent,sinceDays,async filters=>{
@@ -145,15 +148,15 @@ async function search({query,limit=12,perVideo=2,sinceDays,offset=0,kind='all',v
   // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
   return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!!q&&offset===0&&nearTie(results)};
 }
-async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kind='all',videoId,source='' }) {
+async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, untilMs=0, offset=0,kind='all',videoId,source='' }) {
   const q = String(query || '').trim();
-  if (!q&&!source&&!sinceDays) return { results: [] };
+  if (!q&&!source&&!sinceDays&&!sinceMs&&!untilMs) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
   const { videos:youtube, index,indexedIds,overflow } = await getIndex(),metadata=await web.metadata();
   const videos=new Map([...youtube,...metadata].filter(([id,v])=>matchesSource(v,source)&&(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
-  const sinceMs = sinceDays ? Date.now() - sinceDays * 864e5 : 0;
+  const range={sinceMs:sinceMs||(sinceDays?Date.now()-sinceDays*864e5:0),untilMs};
   if(!q) {
-    const recent=[...videos.values()].filter(v=>!sinceMs||(v.watchedAt||v.indexedAt||0)>=sinceMs).sort((a,b)=>(b.watchedAt||b.indexedAt||0)-(a.watchedAt||a.indexedAt||0));
+    const recent=[...videos.values()].filter(v=>watchedWithin(v,range)).sort((a,b)=>(b.watchedAt||b.indexedAt||0)-(a.watchedAt||a.indexedAt||0));
     return {results:recent.slice(offset,offset+limit).map(v=>({...v,start:0,text:v.title,titleOnly:true,matchSources:['Title'],score:0,match:'related'}))};
   }
   const hasScenes = [...videos.values()].some(video=>video.sceneCount>0);
@@ -162,18 +165,18 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, offset=0,kin
   // One ranking pool for every source, so word weights come from the whole library
   // (YouTube, websites, Reels/TikTok and older batches) and all scores share one scale.
   const pool=createPool(prepareQuery(q));
-  addIndex(pool,qv,index,videos,{sinceMs});
-  await web.collect(pool,qv,{sinceMs,kind,videoId,source});
+  addIndex(pool,qv,index,videos,range);
+  await web.collect(pool,qv,{...range,kind,videoId,source});
   if(overflow)await db.scanChunks(rows=>{
     const batch=rows.filter(row=>!indexedIds.has(row.id)&&videos.has(row.videoId)&&row.vec?.length===DIM);
-    addIndex(pool,qv,packIndex(batch),videos,{sinceMs});
+    addIndex(pool,qv,packIndex(batch),videos,range);
   });
   const words=rankPool(pool,{perVideo});
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   const finish=results=>({results});
   if(!hasScenes)return finish(select(words));
   try {
-    const visual = await visualBudget(searchScenes(q,{limit:2000,perVideo,sinceMs},videos));
+    const visual = await visualBudget(searchScenes(q,{limit:2000,perVideo,...range},videos));
     if (!visual.results.length) return {...finish(select(words)),visualPending:!!visual.pending};
     return finish(fuseMatches(words,visual.results,{limit,perVideo,offset}));
   } catch (error) {
