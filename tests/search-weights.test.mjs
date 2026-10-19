@@ -25,6 +25,15 @@ test('the distinctive word decides between two videos on the same topic', () => 
   assert.equal(out[0].videoId, 'phone');
 });
 
+test('keeping two query words together beats the same words scattered', () => {
+  const out = search([
+    {videoId: 'scattered', start: 0, text: 'Trapped heat near the lithium anode.', similarity: .5},
+    {videoId: 'together', start: 0, text: 'Cycling leaves lithium trapped on the anode.', similarity: .5},
+  ], 'lithium trapped anode');
+  assert.equal(out[0].videoId, 'together');
+  assert.deepEqual(prepareQuery('the lithium trapped').pairs, ['lithium trapped']);
+});
+
 test('a title word counts toward the right video', () => {
   const out = search([
     {videoId: 'gummy', start: 140, title: 'Why is my sourdough gummy?', text: 'Cutting the bread while it is hot makes it gummy.', similarity: .37},
