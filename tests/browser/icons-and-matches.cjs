@@ -23,9 +23,9 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.locator('#library img.website-icon').first().evaluate(async img=>{const {setItemImage}=await import('../lib/item-image.js');setItemImage(img,{kind:'page',url:'https://articles.example.com'});img.onerror();});
  await f.options.waitForFunction(()=>[...document.querySelectorAll('#library img')].some(img=>img.src.endsWith('/icons/site.svg')&&img.complete&&img.naturalWidth>0));
  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#q').fill('coral reef science');await popup.locator('#q').press('Enter');
- await popup.waitForFunction(()=>document.querySelector('#page-label').textContent==='Best match'&&!!document.querySelector('.result'));
- for(const label of ['Match 2','Match 3']){await popup.locator('#next-video').click();await popup.waitForFunction(label=>document.querySelector('#page-label').textContent===label,label);}
- assert.equal(await popup.locator('#next-video').isDisabled(),true);assert.equal(await popup.locator('body').evaluate(node=>node.scrollWidth),440);
+ await popup.waitForFunction(()=>!!document.querySelector('.best .result'));
+ if(await popup.locator('.others-head').getAttribute('aria-expanded')==='false')await popup.locator('.others-head').click();
+ assert.equal(await popup.locator('.compact').count(),2,'the other two sites show as rows');assert.equal(await popup.locator('body').evaluate(node=>node.scrollWidth),440);
  await popup.screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-v3.3.7-match.png')});
  assert.equal(await f.options.locator('#web-forget-domain').count(),0);
  assert.deepEqual(errors,[]);console.log('ICONS_MATCHES_PASS: browser icons load, local fallback loads, starter sites initialize once, exclusions survive reload, mixed page/video Match 2/3 navigation.');

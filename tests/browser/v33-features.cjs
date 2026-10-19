@@ -9,10 +9,10 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   await f.wait(async()=>(await f.send({type:'list'})).videos.length===5);
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
   if(process.env.RECALL_SCREENSHOT_DIR)await popup.locator('body').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'recall-v3.3.0-samples.png')});
-  const sampleUrl=await popup.locator('.result').getAttribute('href');
+  const sampleUrl=await popup.locator('.best .result').getAttribute('href');
   assert.ok(sampleUrl.startsWith(f.base+'/samples/player.html?id=rcDemo00001&t='));
   await popup.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>window.copiedLink=text}});});
-  await popup.locator('.copy-link').click();assert.equal(await popup.evaluate(()=>window.copiedLink),sampleUrl);
+  await popup.locator('.best .copy-link').click();assert.equal(await popup.evaluate(()=>window.copiedLink),sampleUrl);
   const player=await f.context.newPage();await player.goto(f.base+'/samples/player.html?id=rcDemo00001&t=8');
   await player.waitForFunction(()=>document.querySelector('video').readyState>=2&&document.querySelector('video').currentTime>=7.9);
   assert.match(await player.locator('#caption').textContent(),/Repeated charging/);
@@ -33,8 +33,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   });
   await popup.reload();await popup.locator('#video-scope').check();await popup.locator('#q').fill('warm ocean algae');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result')?.href.includes('v=aaaaaaaaaaa'));
-  await popup.locator('#single-video').uncheck();
-  await popup.waitForFunction(()=>document.querySelectorAll('.result').length===1);
+  await popup.waitForFunction(()=>document.querySelectorAll('.result').length===1,'searching one video shows only that video');
   assert.ok((await popup.locator('.result').getAttribute('href')).includes('&t=42s'));
   // Fresh current videos are indexed automatically before their first scoped search.
   await f.send({type:'delete',videoId:'aaaaaaaaaaa'});

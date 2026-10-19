@@ -2,13 +2,13 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>CueWoven v3.3.27</title>
+    <title>CueWoven v3.3.28</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="CueWoven v3.3.27">
+      <div class="brand" title="CueWoven v3.3.28">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
         <span>CueWoven</span>
       </div>
@@ -75,12 +75,6 @@
     </div>
 
     <main id="results" class="results" aria-live="polite"></main>
-    <nav id="result-pages" class="result-pages" aria-label="Ranked results" hidden>
-      <button id="previous-video" class="btn ghost small" aria-label="Previous result" title="Previous result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button>
-      <span id="page-label" role="status"></span>
-      <button id="next-video" class="btn ghost small" aria-label="Next closest result" title="Next closest result" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
-    </nav>
-    <p id="tie-hint" class="tie-hint" role="status" hidden><span id="tie-text">Another video matches almost as well.</span> <button id="tie-next" class="link-btn" type="button">see the other one</button></p>
     <section id="refine" class="refine" aria-label="Add a detail to this search" hidden>
       <button id="refine-toggle" class="link-btn" type="button" aria-expanded="false" aria-controls="refine-panel">Not it? Add a detail</button>
       <div id="refine-panel" class="refine-panel" hidden>
@@ -120,7 +114,6 @@
     </section>
 
     <footer class="foot">
-      <label class="view-option"><input id="single-video" type="checkbox" checked /> Best match only</label>
       <span class="foot-actions">
         <button id="web-pause-popup" class="link-btn" hidden>Stop saving sites</button>
         <a href="#" id="open-library">Library &amp; settings</a>

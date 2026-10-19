@@ -13,7 +13,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
    if(!location.pathname.endsWith('/popup/popup.html'))return;
    const original=chrome.runtime.sendMessage.bind(chrome.runtime);
    chrome.runtime.sendMessage=async message=>{
-    if(message.type==='search'&&window.holdNext&&message.offset===1){
+    if(message.type==='search'&&window.holdNext&&message.offset===12){
      window.holdNext=false;
      await new Promise(resolve=>window.releaseNext=resolve);
     }
@@ -37,14 +37,14 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
    if(imported.error)throw Error(imported.error);
   });
   const query='battery charging energy capacity';
+  // The engine's distinct-video ranking, page by page, is what the popup should show in order.
   const expected=async(query,sinceDays=0)=>{
    const found=[];
-   for(let offset=0;offset<20;offset++){
-    const response=await options.evaluate(message=>chrome.runtime.sendMessage(message),{type:'search',query,sinceDays,singleVideo:true,offset});
+   for(let offset=0;;offset+=12){
+    const response=await options.evaluate(message=>chrome.runtime.sendMessage(message),{type:'search',query,sinceDays,distinct:true,offset});
     if(response.error)throw Error(response.error);
-    if(!response.results.length)break;
-    found.push(response.results[0]);
-    if(response.results.length===1)break;
+    found.push(...response.results);
+    if(response.results.length<12)break;
    }
    return found;
   };
@@ -52,57 +52,51 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   assert.equal(ranked.length,14);assert.equal(new Set(ranked.map(r=>r.videoId)).size,14);
   const page=await context.newPage();page.on('pageerror',e=>errors.push(String(e)));
   await page.goto(`${base}/popup/popup.html`);
-  const hit=async(result,label)=>{
-   await page.waitForFunction(({title,label})=>document.querySelector('.result .title')?.textContent===title&&document.querySelector('#page-label').textContent===label,{title:result.title,label});
-   assert.equal(await page.locator('.result').count(),1);
-   const url=`https://www.youtube.com/watch?v=${result.videoId}${result.titleOnly?'':`&t=${Math.floor(result.start)}s`}`;
-   assert.equal(await page.locator('.result').getAttribute('href'),url);
+  const href=result=>`https://www.youtube.com/watch?v=${result.videoId}${result.titleOnly?'':`&t=${Math.floor(result.start)}s`}`;
+  // The best match as the big card, then `rows` other videos in ranked order.
+  const shows=async(list,rows)=>{
+   const want=list.slice(0,1+rows).map(href);
+   await page.waitForFunction(best=>document.querySelector('.best .result')?.getAttribute('href')===best,want[0]);
+   // Other matches start folded unless the engine is unsure; open them to compare the ranking.
+   if(rows&&await page.locator('.others-head').getAttribute('aria-expanded')==='false')await page.locator('.others-head').click();
+   await page.waitForFunction(want=>JSON.stringify([...document.querySelectorAll('.result')].map(a=>a.getAttribute('href')))===JSON.stringify(want),want);
+   assert.equal(await page.locator('.best .result').getAttribute('href'),want[0]);
+   assert.equal(await page.locator('.compact').count(),rows);
   };
-  assert.equal(await page.locator('#single-video').isChecked(),true,'one-at-a-time is default');
-  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await hit(ranked[0],'Best match');
-  assert.equal(await page.locator('#previous-video').isDisabled(),true);
-  for(let i=1;i<ranked.length;i++){
-   await page.locator('#next-video').click();await hit(ranked[i],`Match ${i+1}`);
-  }
-  assert.equal(await page.locator('#next-video').isDisabled(),true);
-  await page.locator('#previous-video').click();await hit(ranked.at(-2),'Match 13');
-  // New query/filters/refinement start at the strongest eligible video.
+  assert.equal(await page.locator('#single-video').count(),0,'one layout, no view toggle');
+  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await shows(ranked,3);
+  assert.equal(await page.locator('.others-head').innerText(),'OTHER MATCHES');assert.equal(await page.locator('.others-head').getAttribute('aria-expanded'),'true');
+  await page.locator('.show-more').click();await shows(ranked,11);
+  await page.locator('.show-more').click();await shows(ranked,13);
+  assert.equal(await page.locator('.show-more').count(),0,'the last page hides Show more');
+  // New query/filters/refinement start again from the strongest eligible video.
   const changed=await expected('battery electrodes');
-  await page.locator('#q').fill('battery electrodes');await page.locator('#q').press('Enter');await hit(changed[0],'Best match');
+  await page.locator('#q').fill('battery electrodes');await page.locator('#q').press('Enter');await shows(changed,3);
   await page.locator('.chip[data-days="1"]').click();
   const today=await expected('battery electrodes',1);assert.equal(today.length,1);
-  await hit(today[0],'Best match');assert.equal(await page.locator('#next-video').isDisabled(),true);
-  await page.locator('.chip[data-days="0"]').click();await hit(changed[0],'Best match');
+  await shows(today,0);assert.equal(await page.locator('.others-head').count(),0);assert.equal(await page.locator('.show-more').count(),0);
+  await page.locator('.chip[data-days="0"]').click();await shows(changed,3);
   await page.locator('#refine-toggle').click();await page.locator('#details').fill('a phone losing energy');await page.locator('#details').press('Enter');
-  const refined=await expected('battery electrodes. a phone losing energy');
-  await hit(refined[0],'Best match');
-  await page.locator('#next-video').click();await hit(refined[1],'Match 2');
+  await shows(await expected('battery electrodes. a phone losing energy'),3);
   await page.locator('.clue button').click();
   await page.locator('#details').fill('chemical reactions');await page.locator('#details').press('Enter');
-  const refinedAgain=await expected('battery electrodes. chemical reactions');
-  await hit(refinedAgain[0],'Best match');
-  // A delayed next page must not overwrite a new query or re-enable stale navigation.
-  await page.evaluate(()=>window.holdNext=true);await page.locator('#next-video').click();
-  await page.waitForFunction(()=>!!window.releaseNext);
-  assert.equal(await page.locator('#next-video').isDisabled(),true);
-  assert.equal(await page.locator('#previous-video').isDisabled(),true);
-  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await hit(ranked[0],'Best match');
-  await page.evaluate(()=>window.releaseNext());await page.waitForTimeout(300);await hit(ranked[0],'Best match');
+  await shows(await expected('battery electrodes. chemical reactions'),3);
+  // A delayed "Show more" page must not add rows to a newer search.
+  await page.evaluate(()=>window.holdNext=true);
+  await page.locator('#q').fill(query);await page.locator('#q').press('Enter');await shows(ranked,3);
+  await page.locator('.show-more').click();await shows(ranked,11);
+  await page.locator('.show-more').click();await page.waitForFunction(()=>!!window.releaseNext);
+  await page.locator('#q').fill('battery electrodes');await page.locator('#q').press('Enter');await shows(changed,3);
+  await page.evaluate(()=>window.releaseNext());await page.waitForTimeout(300);await shows(changed,3);
   const output=process.env.RECALL_SCREENSHOT_DIR || os.tmpdir();
   for(const colorScheme of ['light','dark']){
    await page.emulateMedia({colorScheme});
    assert.equal(await page.evaluate(()=>document.body.scrollWidth>document.body.clientWidth),false);
    await page.locator('body').screenshot({path:path.join(output,`recall-single-${colorScheme}.png`)});
   }
-  await page.locator('#single-video').uncheck();
-  await page.waitForFunction(()=>document.querySelectorAll('.result').length===12);
-  assert.equal(await page.locator('#result-pages').isVisible(),false);
-  await page.reload();await page.locator('#q').press('Enter');await page.waitForFunction(()=>document.querySelectorAll('.result').length===12);
-  assert.equal(await page.locator('#single-video').isChecked(),false,'list preference is remembered');
-  await page.locator('#single-video').check();await hit(ranked[0],'Best match');
   await page.locator('#q').fill('');await page.waitForFunction(()=>document.querySelector('.empty'));
-  assert.equal(await page.locator('#result-pages').isVisible(),false);
+  assert.equal(await page.locator('.best').count(),0);
   assert.deepEqual(errors,[]);
-  console.log('SINGLE_VIDEO_PASS: real model/ranker, default single view, 14 distinct videos, timestamps/title-only URLs, next/previous boundaries, filters/refinement resets, stale page rejection, list opt-out and persistence. Transcript data is controlled.');
+  console.log('SINGLE_VIDEO_PASS: real model/ranker, best match plus other videos in ranked order, Show more across a second page of 14 distinct videos, timestamps/title-only URLs, filters/refinement resets and stale page rejection. Transcript data is controlled.');
  } finally {await context.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});
