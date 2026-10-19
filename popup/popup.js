@@ -12,7 +12,6 @@ const q = $('q');
 const details = $('details');
 const refineToggle = $('refine-toggle');
 const refinePanel = $('refine-panel');
-const singleVideo = $('single-video');
 const resultsEl = $('results');
 const statusEl = $('status');
 let sinceDays = 0;
@@ -34,7 +33,6 @@ let activeIndex = -1;
 let renderedSeq = -1;
 let currentTab = null;
 let currentMedia = null;
-let resultOffset = 0;
 let submittedQuery = null;
 // Details build on the search typed above them; "Not this one" hides results. Both belong to this search only.
 let clues = [];
@@ -54,7 +52,7 @@ function renderClues() {
   if (excluded.size) tag(`${excluded.size} hidden`, 'Show hidden results again', () => excluded.clear());
   bar.hidden = !bar.childElementCount;
 }
-function searchAgain() { resultOffset = 0; submittedQuery = searchText(); runSearch(); }
+function searchAgain() { submittedQuery = searchText(); runSearch(); }
 function setRefineOpen(open, focus = open) {
   refinePanel.hidden = !open;
   refineToggle.setAttribute('aria-expanded', String(open));
@@ -100,8 +98,6 @@ function ago(ts) {
 }
 
 function empty(title, lines = [], hint = '') {
-  $('tie-hint').hidden = true;
-  $('result-pages').hidden = true;
   resultsEl.textContent = '';
   const box = document.createElement('div');
   box.className = 'empty';
@@ -122,13 +118,59 @@ function empty(title, lines = [], hint = '') {
   resultsEl.append(box);
 }
 
-function render(results, query) {
+// One big card for the best match, then compact rows for other videos; "Show more" reveals the rest.
+const PAGE = 12, OTHERS_SHOWN = 3, MORE_STEP = 8;
+let found = [], visible = 0, moreAvailable = false, closeCall = false, othersOpen = false, lastRequest = null;
+function renderResults() {
   resultsEl.textContent = '';
   activeIndex = -1;
-  const terms = queryTerms(query);
-  const tpl = $('result-tpl');
-  for (const r of results) {
-    const wrap = tpl.content.firstElementChild.cloneNode(true),node=wrap.querySelector('.result');
+  const terms = queryTerms(submittedQuery || '');
+  const [best, ...others] = found;
+  resultsEl.append(resultCard(best, terms, 'best'));
+  if (!others.length) return;
+  const toggle = document.createElement('button');
+  toggle.type = 'button'; toggle.className = 'others-head'; toggle.textContent = 'Other matches';
+  toggle.setAttribute('aria-expanded', String(othersOpen));
+  toggle.addEventListener('click', () => { othersOpen = !othersOpen; renderResults(); resultsEl.querySelector('.others-head').focus(); });
+  resultsEl.append(toggle);
+  if (!othersOpen) return;
+  const rows = others.slice(0, visible - 1);
+  rows.forEach((r, i) => {
+    const card = resultCard(r, terms, 'compact');
+    // The engine flags a near tie between the top two from comparable scores.
+    if (i === 0 && closeCall) {
+      const tag = document.createElement('span');
+      tag.className = 'almost'; tag.textContent = 'Almost as good';
+      tag.title = 'This matches nearly as well as the best match. Add a detail to tell them apart.';
+      card.querySelector('.title').prepend(tag);
+    }
+    resultsEl.append(card);
+  });
+  if (visible < found.length || moreAvailable) {
+    const more = document.createElement('button');
+    more.type = 'button'; more.className = 'link-btn show-more'; more.textContent = 'Show more';
+    more.addEventListener('click', showMore);
+    resultsEl.append(more);
+  }
+}
+async function showMore() {
+  if (visible >= found.length && moreAvailable) {
+    const seq = searchSeq;
+    const res = await send({ ...lastRequest, offset: found.length }).catch(e => ({ error: e.message }));
+    if (seq !== searchSeq || !res || res.error) return;
+    const known = new Set(found.map(r => r.videoId));
+    found.push(...res.results.filter(r => !known.has(r.videoId)));
+    moreAvailable = res.results.length === PAGE;
+  }
+  const first = visible;
+  visible = Math.min(found.length, visible + MORE_STEP);
+  renderResults();
+  resultsEl.querySelectorAll('.result')[first]?.focus();
+}
+
+function resultCard(r, terms, variant) {
+    const wrap = $('result-tpl').content.firstElementChild.cloneNode(true),node=wrap.querySelector('.result');
+    wrap.classList.add(variant);
     const url = resultLink(r);
     node.href = url;
     setItemImage(node.querySelector('img'), r);
@@ -164,8 +206,7 @@ function render(results, query) {
       copy.title=label;copy.setAttribute('aria-label',label);
       setTimeout(()=>{copy.classList.remove('copied');copy.title='Copy link to this moment';copy.setAttribute('aria-label',copy.title);},2000);
     });
-    resultsEl.append(wrap);
-  }
+    return wrap;
 }
 
 function openResult(url, background) {
@@ -192,10 +233,8 @@ async function runSearch() {
   // Refinement belongs to this open popup; reopening starts with an independent query.
   chrome.storage.session.set({ lastQuery: original, sinceDays, customRange, inferFilters }).catch(() => {});
   if (!original) { $('refine').hidden = true; showIdle(); return; }
-  $('previous-video').disabled = true;
-  $('next-video').disabled = true;
-  $('page-label').textContent = 'Searching…';
-  $('result-pages').hidden = !singleVideo.checked;
+  // One distinct video per row, so "Other matches" are alternatives rather than more moments of the best one.
+  const request = { type: 'search', query, sinceDays, ...customMs(), ...(excluded.size ? { exclude: [...excluded] } : {}), inferFilters, distinct: true, offset: 0, kind: $('kind-filter').value };
   const res = await withTimeout((async()=>{
     const videoId=$('video-scope').checked?currentMedia?.videoId:undefined;
     if(videoId){
@@ -203,7 +242,8 @@ async function runSearch() {
       if(state.error)throw Error(state.error);
       if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
     }
-    return send({ type: 'search', query,videoId, sinceDays, ...customMs(), ...(excluded.size ? { exclude: [...excluded] } : {}), inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
+    if(videoId)request.videoId=videoId;
+    return send(request);
   })())
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
@@ -221,35 +261,19 @@ async function runSearch() {
   else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
   if (res.empty) {$('refine').hidden = true;showIdle();return;}
   if (!res.results.length) {
-    if (singleVideo.checked && resultOffset > 0) {
-      resultOffset = 0; // The library may have changed while browsing matches.
-      return runSearch();
-    }
     empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays||customRange) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
     showRefine(true);
     return;
   }
   showRefine(false);
-  render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
-  showTie(res.nearTie === true);
+  found = res.results; visible = Math.min(found.length, 1 + OTHERS_SHOWN);
+  moreAvailable = found.length === PAGE; closeCall = res.nearTie === true; lastRequest = request;
+  // Alternatives start folded so a confident answer reads as one; they open when the engine is unsure.
+  othersOpen = closeCall || found[0].match === 'related';
+  renderResults();
   renderedSeq=seq;
-  $('result-pages').hidden = !singleVideo.checked;
-  $('page-label').textContent = resultOffset ? `Match ${resultOffset + 1}` : 'Best match';
-  $('previous-video').disabled = resultOffset === 0;
-  $('next-video').disabled = res.results.length < 2;
 }
-
-// The search engine decides near ties (it knows which scores are comparable); this only shows it.
-function showTie(tie) {
-  $('tie-hint').hidden = !tie;
-  if (!tie) return;
-  $('tie-next').hidden = !singleVideo.checked;
-  $('tie-text').textContent = singleVideo.checked
-    ? 'Another video matches almost as well. Add the channel or a detail to pick one, or'
-    : 'The top videos match almost equally. Add the channel or a detail to pick one.';
-}
-$('ignore-inferred').addEventListener('click',()=>{inferFilters=false;resultOffset=0;runSearch();q.focus();});
-$('tie-next').addEventListener('click', () => $('next-video').click());
+$('ignore-inferred').addEventListener('click',()=>{inferFilters=false;runSearch();q.focus();});
 
 function prepareSearch() {
   submittedQuery = null;
@@ -257,9 +281,6 @@ function prepareSearch() {
   $('applied-filters').hidden = true;
   $('ignore-inferred').hidden = true;
   $('hidden-note').hidden = true;
-  resultOffset = 0;
-  $('previous-video').disabled = true;
-  $('next-video').disabled = true;
   $('search-retry').hidden=true;
   ++searchSeq; // Invalidate pending results as soon as the query changes.
   activeIndex = -1;
@@ -308,9 +329,8 @@ q.addEventListener('keydown', async (e) => {
   } else if (e.key === 'Enter' && !e.isComposing) {
     e.preventDefault();
     const target = items[activeIndex >= 0 ? activeIndex : 0];
-    if (target && renderedSeq===searchSeq && (activeIndex>=0 || singleVideo.checked)) openResult(target.href, e.ctrlKey || e.metaKey);
+    if (target && renderedSeq===searchSeq) openResult(target.href, e.ctrlKey || e.metaKey);
     else {
-      resultOffset=0;
       submittedQuery=searchText();
       await runSearch();
     }
@@ -324,7 +344,6 @@ document.querySelectorAll('.chip').forEach((chip) => {
     sinceDays = custom ? 0 : Number(chip.dataset.days) || 0;
     showChips(sinceDays);
     inferFilters = false;
-    resultOffset = 0;
     runSearch();
     (custom && !customRange.from && !customRange.to ? $('range-from') : q).focus();
   });
@@ -333,28 +352,14 @@ for (const id of ['range-from', 'range-to']) $(id).addEventListener('change', ()
   let from = $('range-from').value, to = $('range-to').value;
   if (from && to && from > to) { [from, to] = [to, from]; $('range-from').value = from; $('range-to').value = to; }
   customRange = { from, to };
-  resultOffset = 0;
   runSearch();
 });
 
-singleVideo.addEventListener('change', () => {
-  resultOffset = 0;
-  chrome.storage.local.set({ singleVideoView: singleVideo.checked }).catch(() => {});
-  runSearch();
-});
-$('kind-filter').addEventListener('change',()=>{resultOffset=0;runSearch();});
-$('video-scope').addEventListener('change',()=>{resultOffset=0;runSearch();});
+$('kind-filter').addEventListener('change',runSearch);
+$('video-scope').addEventListener('change',runSearch);
 $('search-retry').addEventListener('click',runSearch);
 $('web-pause-popup').addEventListener('click',async()=>{const {webCapture={}}=await chrome.storage.local.get('webCapture');await chrome.storage.local.set({webCapture:{...webCapture,paused:!webCapture.paused}});refreshWebPause();});
 async function refreshWebPause(){const {webCapture={}}=await chrome.storage.local.get('webCapture');$('web-pause-popup').hidden=!webCapture.enabled;const on=!webCapture.paused;$('web-pause-popup').textContent=on?'Stop saving sites':'Start saving sites';$('web-pause-popup').title=on?'CueWoven is saving pages you read on your sites. Click to stop.':'CueWoven isn\u2019t saving websites right now. Click to start again.';}
-$('previous-video').addEventListener('click', () => {
-  resultOffset = Math.max(0, resultOffset - 1);
-  runSearch();
-});
-$('next-video').addEventListener('click', () => {
-  resultOffset++;
-  runSearch();
-});
 
 // ---------------------------------------------------------------------------
 // Status, model progress, idle state
@@ -475,8 +480,7 @@ $('start-empty').addEventListener('click', async () => {
   $('range-from').max = $('range-to').max = today;
   await refreshStatus();
   refreshWebPause();
-  const { onboardingComplete, singleVideoView } = await chrome.storage.local.get(['onboardingComplete', 'singleVideoView']);
-  singleVideo.checked = singleVideoView !== false;
+  const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
   $('start-choice').hidden = !!onboardingComplete || (stats.total||stats.videos) > 0;
   await setupIndexNow();
   refreshSpeech();

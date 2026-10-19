@@ -19,15 +19,15 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   // Load real local sample data via its first-run button, then show its matched moment.
   const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
-  assert.equal(await popup.locator('.copy-link').isVisible(),true);
-  assert.equal(await popup.locator('#next-video').isVisible(),true);
+  assert.equal(await popup.locator('.best .copy-link').isVisible(),true);
+  assert.equal(await popup.locator('.best .result').isVisible(),true);
   for(const theme of ['light','dark']){
    await popup.emulateMedia({colorScheme:theme});
    const layout=await popup.evaluate(()=>{
     const result=document.querySelector('.result').getBoundingClientRect(),footer=document.querySelector('.foot').getBoundingClientRect();
     return {width:document.body.scrollWidth,height:document.body.getBoundingClientRect().height,result:result.height,footerBottom:footer.bottom,marker:getComputedStyle(document.querySelector('.time')).backgroundColor};
    });
-   assert.equal(layout.width,440);assert.ok(layout.height<=600);assert.ok(layout.result>170);assert.ok(layout.footerBottom<=601);
+   assert.equal(layout.width,440);assert.ok(layout.height<=600);assert.ok(layout.result>100,'the best match is larger than a compact row');assert.ok(layout.footerBottom<=601);
    assert.ok(layout.marker.includes('255, 211, 77')||layout.marker.includes('242, 201, 76'));
    await popup.locator('body').screenshot({path:path.join(output,'recall-v3.3.8-popup-'+theme+'.png')});
   }

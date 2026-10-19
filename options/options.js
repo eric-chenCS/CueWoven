@@ -307,7 +307,6 @@ async function loadSettings() {
   $('dwellSeconds').value = String(s.dwellSeconds);
   selectRetention('maxAgeDays', s.maxAgeDays);
   $('sceneStorageMB').value = String(s.sceneStorageMB);
-  $('perVideo').value = String(s.perVideo);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
 }
@@ -328,7 +327,6 @@ async function saveSettings(event) {
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
     sceneStorageMB,
-    perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
@@ -340,7 +338,7 @@ async function saveSettings(event) {
   savedTimer = setTimeout(() => (status.textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

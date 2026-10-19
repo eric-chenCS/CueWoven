@@ -92,17 +92,28 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 .match-sources span { background: var(--sunken); border-radius: 3px; padding: 2px 6px; color: var(--ink-2); font-size: 11px; font-weight: 500; }
 .meta { color: var(--ink-3); font-size: 11.5px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* One result at a time: give the best match a large preview. */
-body:has(#single-video:checked) .result { flex-direction: column; gap: 10px; padding: 10px; }
-body:has(#single-video:checked) .thumb { flex: none; width: 100%; height: 120px; }
-body:has(#single-video:checked) .time { font-size: 14px; padding: 5px 8px; left: 8px; bottom: 8px; }
-body:has(#single-video:checked) .title { font-size: 15px; }
-body:has(#single-video:checked) .snippet { font-size: 13px; -webkit-line-clamp: 4; }
+/* The best match gets a larger preview beside its text, short enough that other matches stay in view. */
+.best .result { gap: 12px; padding: 10px 10px 12px; }
+.best .thumb { flex-basis: 150px; height: 84px; }
+.best .time { font-size: 13px; padding: 4px 7px; }
+.best .title { font-size: 15px; }
+.best .snippet { font-size: 13px; }
+.best .meta { padding-right: 64px; }
 
-.result-pages { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 16px 10px; }
-.result-pages button { width: 36px; min-height: 30px; padding: 0; }
-.result-pages svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#page-label { color: var(--ink-2); font-size: 12px; font-weight: 500; text-align: center; }
+/* Other matches: one glanceable row per video. */
+.others-head { display: flex; align-items: center; gap: 6px; margin: 10px 8px 4px; padding: 2px 0; border: 0; background: none; cursor: pointer; color: var(--ink-3); font: 600 11.5px var(--font); letter-spacing: .02em; text-transform: uppercase; }
+.others-head:hover { color: var(--ink); }
+.others-head:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--focus); border-radius: 3px; }
+.others-head::after { content: ''; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); transition: transform .12s; }
+.others-head[aria-expanded="true"]::after { transform: rotate(45deg) translate(-1px, -1px); }
+.compact .result { gap: 10px; padding: 6px 8px; align-items: center; }
+.compact .thumb { flex-basis: 72px; height: 40px; }
+.compact .time { left: 3px; bottom: 3px; font-size: 10.5px; padding: 2px 4px; }
+.compact .title { font-size: 13px; -webkit-line-clamp: 1; }
+.compact .snippet, .compact .match-sources { display: none; }
+.compact .meta { margin-top: 2px; }
+.almost { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 3px; background: var(--action-soft); color: var(--ink); font-size: 10.5px; font-weight: 600; vertical-align: 1px; }
+.results .show-more { display: block; margin: 6px 8px 4px; font-weight: 600; color: var(--action); }
 
 /* Empty and idle states */
 .empty { padding: 28px 28px 20px; text-align: center; color: var(--ink-2); }
@@ -126,7 +137,7 @@ body:has(#single-video:checked) .snippet { font-size: 13px; -webkit-line-clamp: 
 .tab-actions { display: flex; gap: 6px; }
 
 /* Footer */
-.foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 16px 10px; border-top: 1px solid var(--line); font-size: 12px; }
+.foot { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding: 8px 16px 10px; border-top: 1px solid var(--line); font-size: 12px; }
 .view-option { display: flex; align-items: center; gap: 6px; color: var(--ink-2); cursor: pointer; }
 .view-option input { margin: 0; accent-color: var(--action); }
 .foot-actions { display: flex; align-items: center; gap: 14px; }
@@ -144,10 +155,12 @@ body { overflow-y: auto; }
 .search-extras .view-option { padding:4px 0; }
 #search-retry { margin:6px 0; }
 .result-wrap + .result-wrap { border-top:1px solid var(--line); }
-/* Per-result actions: small icons in the card's corner, shown on hover or focus (always for the single best match). */
+/* Per-result actions: small icons in the card's corner; always on the best match, on hover or focus for other rows. */
 .result-wrap { position:relative; }
 .result-actions { position:absolute; right:8px; bottom:8px; display:flex; gap:4px; opacity:0; transition:opacity .12s; }
-.result-wrap:hover .result-actions, .result-wrap:focus-within .result-actions, .result-wrap:has(.result.active) .result-actions, body:has(#single-video:checked) .result-actions { opacity:1; }
+.best .result-actions, .result-wrap:hover .result-actions, .result-wrap:focus-within .result-actions, .result-wrap:has(.result.active) .result-actions { opacity:1; }
+.compact .result-actions { top:50%; bottom:auto; transform:translateY(-50%); }
+.compact .icon-btn { width:24px; height:24px; }
 .icon-btn { display:grid; place-items:center; width:28px; height:28px; padding:0; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); color:var(--ink-2); cursor:pointer; }
 .icon-btn:hover { color:var(--ink); border-color:var(--line-strong); }
 .icon-btn:focus-visible { outline:none; box-shadow:0 0 0 2px var(--focus); }
@@ -164,7 +177,5 @@ body { overflow-y: auto; }
 
 .thumb img.website-icon { object-fit: contain; padding: 20px; }
 
-/* Near-tie hint and "Related" tag (close vs related matches, as in Microsoft Recall). */
+/* "Related" tag (close vs related matches, as in Microsoft Recall). */
 .match-sources span.related { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-3); }
-.tie-hint { margin: 0 16px 8px; padding: 8px 10px; border-radius: var(--r-sm); background: var(--sunken); color: var(--ink-2); font-size: 12px; line-height: 1.45; }
-.tie-hint .link-btn { font-weight: 600; color: var(--action); }

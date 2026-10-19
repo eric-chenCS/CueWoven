@@ -332,13 +332,14 @@ const handlers = {
   'video-status':({videoId},sender)=>{requirePopup(sender);return engine('has',{videoId});},
   'load-samples':(_data,sender)=>{requirePopup(sender);return engine('load-samples');},
   'forget-recent':async({hours},sender)=>{requireLibrary(sender);if(![1,24,168].includes(hours))throw Error('Invalid recent range.');const jobs=await getTranscriptJobs();jobs.pause();await jobs.wait();await engine('speech-stop',{reason:'Forgetting recent items.'});const result=await engine('forget-recent',{hours});chrome.runtime.sendMessage({type:'index-changed'}).catch(()=>{});return result;},
-  async search({ query, sinceDays, sinceMs, untilMs, exclude, singleVideo, offset = 0,kind,videoId,inferFilters }) {
+  async search({ query, sinceDays, sinceMs, untilMs, exclude, singleVideo, distinct, offset = 0,kind,videoId,inferFilters }) {
     const s = await getSettings();
     if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
     const range={...(sinceMs?{sinceMs}:{}),...(untilMs?{untilMs}:{}),...(exclude?{exclude}:{})};
-    if (singleVideo === true) {
+    if (singleVideo === true || distinct === true) {
       if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid search position.');
-      return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: 1, limit: 2, offset,...(kind?{kind}:{}) });
+      // The popup pages through distinct videos 12 at a time; singleVideo keeps the older two-result window.
+      return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: 1, limit: distinct === true ? 12 : 2, offset,...(kind?{kind}:{}) });
     }
     return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
   },

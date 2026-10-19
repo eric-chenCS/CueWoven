@@ -93,8 +93,11 @@ test('single-video searches use unique video pages while list searches retain th
   assert.equal(page.offset, 13);
   assert.equal(page.sinceDays, 7);
   assert.equal((await request({type: 'search', singleVideo: true})).offset, 0);
+  const distinct = await request({type: 'search', query: 'battery', distinct: true, offset: 12, exclude: ['aaaaaaaaaaa']});
+  assert.deepEqual([distinct.perVideo, distinct.limit, distinct.offset, distinct.exclude], [1, 12, 12, ['aaaaaaaaaaa']]);
   for (const offset of [-1, 0.5, '1', NaN, Number.MAX_SAFE_INTEGER + 1]) {
     assert.match((await request({type: 'search', singleVideo: true, offset})).error, /position/);
+    assert.match((await request({type: 'search', distinct: true, offset})).error, /position/);
   }
 });
 
