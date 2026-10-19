@@ -44,6 +44,7 @@ let videoTitles=new Map();
 async function loadLibrary() {
   const res = await send({ type: 'list' });
   videos = (res && res.videos) || [];
+  $('scene-storage').textContent = res?.sceneStorageFull ? 'Image storage is full, so the oldest scenes and images are removed before your “Forget what I watch or read after” time. Choose a shorter time, or turn on Lite mode to stop saving new scenes.' : '';
   videoTitles=new Map(videos.map(video=>[video.videoId,video.title]));
   const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
   $('welcome').hidden = !!onboardingComplete || videos.length > 0;
@@ -305,6 +306,7 @@ async function loadSettings() {
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   selectRetention('maxAgeDays', s.maxAgeDays);
+  $('sceneStorageMB').value = String(s.sceneStorageMB);
   $('perVideo').value = String(s.perVideo);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
@@ -313,6 +315,8 @@ async function loadSettings() {
 let savedTimer;
 async function saveSettings(event) {
   const {settings:stored={}}=await chrome.storage.local.get('settings');
+  const storedMB=stored.sceneStorageMB??DEFAULTS.sceneStorageMB,sceneStorageMB=Number($('sceneStorageMB').value);
+  if(sceneStorageMB<storedMB&&!confirm(`Lower image storage to ${sceneStorageMB>=1024?'1 GB':sceneStorageMB+' MB'}? If your saved images don't fit, the oldest scenes and article images are deleted now. This can't be undone.`)){$('sceneStorageMB').value=String(storedMB);return;}
   const settings = {
     ...stored,
     enabled: $('enabled').checked,
@@ -323,6 +327,7 @@ async function saveSettings(event) {
     screenTextEnabled:$('screenTextEnabled').checked,
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
+    sceneStorageMB,
     perVideo: Number($('perVideo').value),
     transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
@@ -333,9 +338,9 @@ async function saveSettings(event) {
   status.textContent = 'Saved';
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => (status.textContent = ''), 1500);
-  if (settings.maxAgeDays||settings.importMaxAgeDays) send({ type: 'prune' }).then(loadLibrary);
+  if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'perVideo', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
