@@ -110,11 +110,11 @@ export function createWebEngine({ db, embed, onChange = () => {
     },
     // Add every saved website passage to a shared ranking pool (see lib/search.js). Passages of
     // filtered-out items still count toward word frequencies, like the YouTube index.
-    async collect(pool, vector, { sinceMs = 0, untilMs = 0, kind = "all", videoId, source } = {}) {
+    async collect(pool, vector, { sinceMs = 0, untilMs = 0, kind = "all", videoId, source, hidden } = {}) {
       const records = await cache();
       await db.items.searchScan((item) => {
         const video = records.get(item.id);
-        const eligible = video && matchesSource(video,source) && !(videoId && video.videoId !== videoId) && !(kind !== "all" && video.kind !== kind) && watchedWithin(video, { sinceMs, untilMs });
+        const eligible = video && !hidden?.has(video.videoId) && matchesSource(video,source) && !(videoId && video.videoId !== videoId) && !(kind !== "all" && video.kind !== kind) && watchedWithin(video, { sinceMs, untilMs });
         for (const row of item.passages) addPassage(pool, row, eligible ? video : null, eligible ? packedDot(vector, row) : NaN, eligible ? webHitBuilder(video, row) : null, 0);
       });
       return pool;

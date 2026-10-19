@@ -36,7 +36,39 @@ let currentTab = null;
 let currentMedia = null;
 let resultOffset = 0;
 let submittedQuery = null;
-const searchText = () => [q.value.trim(), !refinePanel.hidden && details.value.trim()].filter(Boolean).join('. ');
+// Details build on the search typed above them; "Not this one" hides results. Both belong to this search only.
+let clues = [];
+const excluded = new Set();
+const searchText = () => [q.value.trim(), ...clues].filter(Boolean).join('. ');
+function renderClues() {
+  const bar = $('clues');
+  bar.textContent = '';
+  const tag = (label, name, remove) => {
+    const el = document.createElement('span'), text = document.createElement('span'), x = document.createElement('button');
+    el.className = 'clue'; text.textContent = label;
+    x.type = 'button'; x.textContent = '✕'; x.title = name; x.setAttribute('aria-label', name);
+    x.addEventListener('click', () => { remove(); renderClues(); searchAgain(); q.focus(); });
+    el.append(text, x); bar.append(el);
+  };
+  clues.forEach((clue, i) => tag('+ ' + clue, `Remove detail: ${clue}`, () => clues.splice(i, 1)));
+  if (excluded.size) tag(`${excluded.size} hidden`, 'Show hidden results again', () => excluded.clear());
+  bar.hidden = !bar.childElementCount;
+}
+function searchAgain() { resultOffset = 0; submittedQuery = searchText(); runSearch(); }
+function setRefineOpen(open, focus = open) {
+  refinePanel.hidden = !open;
+  refineToggle.setAttribute('aria-expanded', String(open));
+  if (focus) details.focus();
+}
+function showRefine(noMatch) {
+  $('refine').hidden = false;
+  refineToggle.textContent = noMatch ? 'No match? Add a detail you remember' : 'Not it? Add a detail';
+  if (noMatch && refinePanel.hidden) setRefineOpen(true, false);
+}
+function resetRefine() {
+  clues = []; excluded.clear(); renderClues();
+  details.value = ''; setRefineOpen(false); $('refine').hidden = true;
+}
 
 const send = (msg) => chrome.runtime.sendMessage(msg);
 
@@ -118,11 +150,19 @@ function render(results, query) {
       e.preventDefault();
       openResult(url, e.ctrlKey || e.metaKey);
     });
+    const title=node.querySelector('.title').textContent;
+    wrap.querySelector('.not-this').addEventListener('click',()=>{
+      excluded.add(r.videoId);renderClues();searchAgain();
+      // Say what was hidden, since the next match can look much like it.
+      $('hidden-text').textContent=`Hid “${title}”.`;$('hidden-undo').dataset.videoId=r.videoId;$('hidden-note').hidden=false;
+    });
     const copy=wrap.querySelector('.copy-link');
     copy.addEventListener('click',async()=>{
-      try{await navigator.clipboard.writeText(url);copy.textContent='Copied';}
-      catch{copy.textContent='Copy failed';}
-      setTimeout(()=>{copy.textContent='Copy link';},2000);
+      let label='Copied';
+      try{await navigator.clipboard.writeText(url);copy.classList.add('copied');}
+      catch{label='Copy failed';}
+      copy.title=label;copy.setAttribute('aria-label',label);
+      setTimeout(()=>{copy.classList.remove('copied');copy.title='Copy link to this moment';copy.setAttribute('aria-label',copy.title);},2000);
     });
     resultsEl.append(wrap);
   }
@@ -138,18 +178,20 @@ function openResult(url, background) {
 // ---------------------------------------------------------------------------
 async function runSearch() {
   const seq = ++searchSeq;
+  $('hidden-note').hidden=true;
   $('search-retry').hidden=true;
   $('applied-filters').hidden=true;
   $('ignore-inferred').hidden=true;
   const original = q.value.trim();
   const query = searchText();
   if (query !== submittedQuery) {
+    $('refine').hidden = true;
     if (original) empty('Press Enter to search'); else showIdle();
     return;
   }
   // Refinement belongs to this open popup; reopening starts with an independent query.
   chrome.storage.session.set({ lastQuery: original, sinceDays, customRange, inferFilters }).catch(() => {});
-  if (!original) { showIdle(); return; }
+  if (!original) { $('refine').hidden = true; showIdle(); return; }
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
   $('page-label').textContent = 'Searching…';
@@ -161,13 +203,14 @@ async function runSearch() {
       if(state.error)throw Error(state.error);
       if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
     }
-    return send({ type: 'search', query,videoId, sinceDays, ...customMs(), inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
+    return send({ type: 'search', query,videoId, sinceDays, ...customMs(), ...(excluded.size ? { exclude: [...excluded] } : {}), inferFilters, singleVideo: singleVideo.checked, offset: resultOffset,kind:$('kind-filter').value });
   })())
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
     empty('Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
     $('search-retry').hidden=false;
+    $('refine').hidden = true;
     return;
   }
   $('applied-filters').textContent=res.filtersRelaxed?'No matches with the suggested filters. Showing results without them.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
@@ -176,15 +219,17 @@ async function runSearch() {
   showChips(res.appliedSinceDays ?? sinceDays);
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
-  if (res.empty) {showIdle();return;}
+  if (res.empty) {$('refine').hidden = true;showIdle();return;}
   if (!res.results.length) {
     if (singleVideo.checked && resultOffset > 0) {
       resultOffset = 0; // The library may have changed while browsing matches.
       return runSearch();
     }
     empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays||customRange) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
+    showRefine(true);
     return;
   }
+  showRefine(false);
   render(singleVideo.checked ? res.results.slice(0, 1) : res.results, query);
   showTie(res.nearTie === true);
   renderedSeq=seq;
@@ -211,6 +256,7 @@ function prepareSearch() {
   renderedSeq = -1;
   $('applied-filters').hidden = true;
   $('ignore-inferred').hidden = true;
+  $('hidden-note').hidden = true;
   resultOffset = 0;
   $('previous-video').disabled = true;
   $('next-video').disabled = true;
@@ -228,37 +274,28 @@ function prepareSearch() {
 
 q.addEventListener('input', () => {
   inferFilters = true;
-  details.value = '';
-  refinePanel.hidden = true;
-  refineToggle.setAttribute('aria-expanded', 'false');
-  refineToggle.disabled = !q.value.trim();
+  resetRefine();
   prepareSearch();
 });
 
-details.addEventListener('input', prepareSearch);
 details.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
-    e.preventDefault();
-    resultOffset = 0;
-    submittedQuery = searchText();
-    runSearch();
-  }
+  if (e.key !== 'Enter' || e.isComposing) return;
+  e.preventDefault();
+  const detail = details.value.trim();
+  if (!detail) return;
+  clues.push(detail);
+  details.value = '';
+  renderClues();
+  searchAgain();
 });
 
-refineToggle.addEventListener('click', () => {
-  resultOffset = 0;
-  const open = refinePanel.hidden;
-  refinePanel.hidden = !open;
-  refineToggle.setAttribute('aria-expanded', String(open));
-  if (open) {
-    details.focus();
-  } else {
-    const hadDetails = !!details.value.trim();
-    details.value = '';
-    if (hadDetails) prepareSearch();
-    q.focus();
-  }
-});
+refineToggle.addEventListener('click', () => setRefineOpen(refinePanel.hidden));
+$('hidden-undo').addEventListener('click', e => { excluded.delete(e.currentTarget.dataset.videoId); renderClues(); searchAgain(); q.focus(); });
+document.querySelectorAll('.hint-chip').forEach(chip => chip.addEventListener('click', () => {
+  document.querySelectorAll('.hint-chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
+  details.placeholder = chip.dataset.hint;
+  details.focus();
+}));
 
 q.addEventListener('keydown', async (e) => {
   const items = Array.from(resultsEl.querySelectorAll('.result'));
@@ -421,7 +458,7 @@ $('start-samples').addEventListener('click',async()=>{
   const result=await send({type:'load-samples'}).catch(error=>({error:error.message}));
   button.disabled=false;button.textContent='Try sample videos';
   if(result.error){empty('Could not load samples',[result.error]);return;}
-  await refreshStatus();q.value='why do batteries wear out';refineToggle.disabled=false;prepareSearch();q.focus();
+  await refreshStatus();q.value='why do batteries wear out';prepareSearch();q.focus();
 });
 $('start-empty').addEventListener('click', async () => {
   await chrome.storage.local.set({ onboardingComplete: true });
@@ -455,7 +492,6 @@ $('start-empty').addEventListener('click', async () => {
   }
   if (saved && saved.lastQuery) {
     q.value = saved.lastQuery;
-    refineToggle.disabled = !q.value.trim();
     q.select();
     prepareSearch();
   } else {

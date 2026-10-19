@@ -127,8 +127,10 @@ async function indexVideo({ video, segments, method }) {
 }
 
 const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
-async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,offset=0,kind='all',videoId,inferFilters=true}){
+async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,exclude=[],offset=0,kind='all',videoId,inferFilters=true}){
   if(![sinceMs,untilMs].every(ms=>Number.isSafeInteger(ms)&&ms>=0))throw Error('Invalid date range.');
+  if(!Array.isArray(exclude)||exclude.length>100||!exclude.every(id=>policy.ownerId(id)))throw Error('Invalid hidden results.');
+  exclude=[...new Set(exclude)].sort();
   const custom=sinceMs||untilMs?{sinceMs,untilMs}:null;
   const intent=searchIntent(query,{sinceDays,infer:inferFilters,manualRange:!!custom});
   const q=intent.query;
@@ -136,7 +138,7 @@ async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,o
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
   // A date range chosen in the popup survives relaxing typed filters; a typed one does not.
-  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),kind,source:filters.source});
+  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),exclude,kind,source:filters.source});
   // Only an empty first page relaxes inferred filters; reaching the last page does not.
   const first=offset?await queryCache.get(keyFor(intent),0,1):null;
   const result=await searchWithFallback(intent,sinceDays,async filters=>{
@@ -148,12 +150,13 @@ async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,o
   // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
   return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!!q&&offset===0&&nearTie(results)};
 }
-async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, untilMs=0, offset=0,kind='all',videoId,source='' }) {
+async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, untilMs=0, exclude=[], offset=0,kind='all',videoId,source='' }) {
   const q = String(query || '').trim();
   if (!q&&!source&&!sinceDays&&!sinceMs&&!untilMs) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
-  const { videos:youtube, index,indexedIds,overflow } = await getIndex(),metadata=await web.metadata();
-  const videos=new Map([...youtube,...metadata].filter(([id,v])=>matchesSource(v,source)&&(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
+  const { videos:youtube, index,indexedIds,overflow } = await getIndex(),metadata=await web.metadata(),hidden=new Set(exclude);
+  // Items hidden with "Not this one" leave this map, so YouTube, image and title results skip them.
+  const videos=new Map([...youtube,...metadata].filter(([id,v])=>!hidden.has(id)&&matchesSource(v,source)&&(!videoId||id===videoId)&&(kind==='all'||(v.kind||'video')===kind)));
   const range={sinceMs:sinceMs||(sinceDays?Date.now()-sinceDays*864e5:0),untilMs};
   if(!q) {
     const recent=[...videos.values()].filter(v=>watchedWithin(v,range)).sort((a,b)=>(b.watchedAt||b.indexedAt||0)-(a.watchedAt||a.indexedAt||0));
@@ -166,7 +169,7 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, u
   // (YouTube, websites, Reels/TikTok and older batches) and all scores share one scale.
   const pool=createPool(prepareQuery(q));
   addIndex(pool,qv,index,videos,range);
-  await web.collect(pool,qv,{...range,kind,videoId,source});
+  await web.collect(pool,qv,{...range,kind,videoId,source,hidden});
   if(overflow)await db.scanChunks(rows=>{
     const batch=rows.filter(row=>!indexedIds.has(row.id)&&videos.has(row.videoId)&&row.vec?.length===DIM);
     addIndex(pool,qv,packIndex(batch),videos,range);

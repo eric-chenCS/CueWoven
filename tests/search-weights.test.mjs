@@ -170,3 +170,12 @@ test('the near-tie hint only compares scores from the same model', () => {
   assert.equal(searchModule.nearTie([{videoId: 'a', start: 0, score: .62, matchSources: ['Transcript']}, {videoId: 'a', start: 90, score: .61, matchSources: ['Transcript']}, {videoId: 'b', start: 0, score: .6, matchSources: ['Page text']}]), true);
   assert.equal(searchModule.nearTie([{videoId: 'a', start: 0, score: .62, matchSources: ['Transcript', 'Scene']}, {videoId: 'b', start: 0, score: .61, matchSources: ['Transcript']}]), false);
 });
+
+test('"Not this one" hides an item from website ranking while others still rank',async()=>{
+  const {engine,label}=webFixture(distractorRows);
+  const bread=(await engine.search('hot sourdough',vector(1),{kind:'video',perVideo:1})).find(hit=>label(hit.videoId)==='bread').videoId;
+  const pool=searchModule.createPool(prepareQuery('hot sourdough'));
+  await engine.collect(pool,vector(1),{kind:'video',hidden:new Set([bread])});
+  const ranked=searchModule.rankPool(pool,{perVideo:1,limit:20});
+  assert.ok(ranked.length>0);assert.ok(ranked.every(hit=>hit.videoId!==bread));
+});

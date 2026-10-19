@@ -31,21 +31,19 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
    await page.waitForFunction(query=>document.querySelector('.result .title')?.textContent===query,query);
    assert.equal(await page.locator('.result').getAttribute('href'),'https://www.youtube.com/watch?v=aaaaaaaaaaa&t=42s');
   };
-  assert.equal(await page.locator('#refine-panel').isVisible(),false);
-  assert.equal(await page.locator('#refine-toggle').isDisabled(),true);
+  assert.equal(await page.locator('#refine').isVisible(),false,'details are offered only after a search');
   await page.locator('#q').fill('black holes');await page.locator('#q').press('Enter');await result('black holes');
   await page.locator('#q').fill('a trap');await page.locator('#q').press('Enter');await result('a trap');
   assert.equal(await page.evaluate(()=>searchCalls.at(-1).query),'a trap');
-  // Keyboard opening and focus, then editable additional clues.
-  await page.locator('#q').focus();await page.keyboard.press('Tab');
-  assert.equal(await page.evaluate(()=>document.activeElement.id),'refine-toggle');
-  await page.keyboard.press('Enter');
+  // Keyboard opening and focus, then details that build up as removable tags.
+  await page.locator('#refine-toggle').focus();await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(()=>document.activeElement.id),'details');
   assert.equal(await page.locator('#refine-toggle').getAttribute('aria-expanded'),'true');
   await page.locator('#details').fill('Minecraft');await page.locator('#details').press('Enter');await result('a trap. Minecraft');
-  await page.locator('#details').fill('Minecraft with redstone');await page.locator('#details').press('Enter');
-  await result('a trap. Minecraft with redstone');
-  await page.locator('.chip[data-days="7"]').click();await result('a trap. Minecraft with redstone');
+  await page.locator('#details').fill('with redstone');await page.locator('#details').press('Enter');
+  await result('a trap. Minecraft. with redstone');
+  assert.deepEqual(await page.locator('.clue > span').allInnerTexts(),['+ Minecraft','+ with redstone']);
+  await page.locator('.chip[data-days="7"]').click();await result('a trap. Minecraft. with redstone');
   await page.waitForFunction(()=>searchCalls.at(-1).sinceDays===7);
   // Reopening defaults to an independent base query, without hidden previous clues.
   await page.reload();await page.locator('#q').press('Enter');await result('a trap');
@@ -61,13 +59,14 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   await result('battery aging');
   await page.locator('#refine-toggle').click();
   await page.locator('#details').fill('phone');await page.locator('#details').press('Enter');await result('battery aging. phone');
-  await page.locator('#refine-toggle').click();await page.locator('#q').press('Enter');await result('battery aging');
+  await page.locator('.clue button').click();await result('battery aging');
+  assert.equal(await page.locator('#clues').isVisible(),false);
   assert.equal(await page.locator('#details').inputValue(),'');
   await page.locator('#q').fill('');
   await page.waitForFunction(()=>document.querySelector('.empty'));
   await page.reload();
   assert.equal(await page.locator('#q').inputValue(),'');
-  assert.equal(await page.locator('#refine-toggle').isDisabled(),true);
+  assert.equal(await page.locator('#refine').isVisible(),false);
   // Capture the actual popup layout in both themes and check for horizontal overflow.
   await page.locator('#q').fill('the video explaining a trap');await page.locator('#q').press('Enter');await result('the video explaining a trap');
   await page.locator('#refine-toggle').click();
@@ -101,6 +100,6 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   assert.equal(await page.locator('#refine-panel').isVisible(),false);
   assert.equal(await page.locator('.result').first().getAttribute('href'),'https://www.youtube.com/watch?v=bbbbbbbbbbb&t=42s');
   assert.deepEqual(errors,[]);
-  console.log('REFINE_SEARCH_PASS: independent default, combined details, editable clues, keyboard controls, date filters, popup reopen, clearing, toggle-off and stale response protection. Controlled responses test UI races; real model and ranker find transcript fixtures at 1:12 and 0:42.');
+  console.log('REFINE_SEARCH_PASS: offered after a search, details build up as removable tags, keyboard controls, date filters, popup reopen, clearing, toggle-off and stale response protection. Controlled responses test UI races; real model and ranker find transcript fixtures at 1:12 and 0:42.');
  } finally {await context.close();}
 })().catch(e=>{console.error(e);process.exitCode=1});

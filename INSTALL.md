@@ -5,7 +5,7 @@ CueWoven runs in desktop Chrome and Microsoft Edge (Chromium 116 or newer). It i
 ## Download and load
 
 1. Open [Releases](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest).
-2. Download **cuewoven-v3.3.26.zip** under Assets. Extract it into a permanent folder.
+2. Download **cuewoven-v3.3.27.zip** under Assets. Extract it into a permanent folder.
 3. Open `chrome://extensions` or `edge://extensions`.
 4. Enable **Developer mode**, click **Load unpacked**, and select the extracted folder containing `manifest.json`.
 5. Pin CueWoven in the browser's extensions menu if you want quick toolbar access.
