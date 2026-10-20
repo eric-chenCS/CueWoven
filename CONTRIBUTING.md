@@ -33,5 +33,3 @@ Run `pnpm run zip` after building the runtime. The ZIP includes `vendor/` and ca
 ## Collaboration
 
 Create a branch from current main, commit your work, push the branch and open a pull request. Teammates pull after merge and reload their installed checkout. Content-script changes also need a page refresh. Owner/admin permissions can differ from contributor permissions; follow the repository's active rules.
-
-Keep commit history intact and describe project provenance truthfully in hackathon submissions. Do not rewrite dates or claim a build timeline solely from test counts or this documentation. Never include personal browser screenshots, history exports, tokens or library backups in a PR.
