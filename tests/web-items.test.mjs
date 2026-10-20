@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { policy, cleanItem, itemIdentity, pagePassages, quantize, packedDot, itemLink, webHit } from "../lib/web-items.js";
+import { policy, cleanItem, itemIdentity, canonicalKey, duplicateItems, pagePassages, quantize, packedDot, itemLink, webHit } from "../lib/web-items.js";
 import { restoreBackup } from "../lib/backup.js";
 import { fuseMatches } from "../lib/scenes.js";
 test("private addresses, credentials, local networks and sensitive paths are excluded", () => {
@@ -73,4 +73,49 @@ test("backup restores web parents before their scene and OCR children", async ()
   assert.equal(calls[0].items.length, 1);
   assert.equal(calls[1].scenes.length, 1);
   assert.equal(calls[2].screenText.length, 1);
+});
+
+test("one page reached by different addresses is saved once", async () => {
+  const same = [
+    ["https://www.bbc.com/news/world-1/", "http://bbc.com/news/world-1?utm_source=x&smid=tw"],
+    ["https://en.m.wikipedia.org/wiki/Coral_reef", "https://en.wikipedia.org/wiki/Coral_reef#Ecology"],
+    ["https://example.com/story/amp", "https://example.com/story?share=1"],
+    ["https://example.com/list?b=2&a=1", "https://example.com/list?a=1&b=2&fbclid=z"],
+    ["https://www.instagram.com/reel/AbC123/", "https://www.instagram.com/p/AbC123/?igsh=q"],
+    ["https://twitter.com/user/status/42?s=20&t=abc", "https://x.com/user/status/42"],
+    ["https://old.reddit.com/r/science/comments/1/x/?context=3", "https://www.reddit.com/r/science/comments/1/x/"],
+  ];
+  for (const [a, b] of same) {
+    assert.equal(canonicalKey(a), canonicalKey(b), a);
+    assert.equal((await itemIdentity(a)).videoId, (await itemIdentity(b)).videoId, a);
+  }
+  // Different content stays different: other pages, meaningful parameters (GitHub branches), other feed videos.
+  assert.notEqual(canonicalKey("https://example.com/a"), canonicalKey("https://example.com/b"));
+  assert.notEqual(canonicalKey("https://github.com/o/r?ref=main"), canonicalKey("https://github.com/o/r?ref=dev"));
+  assert.notEqual(canonicalKey("https://example.com/watch?t=10"), canonicalKey("https://example.com/watch?t=20"));
+  assert.notEqual((await itemIdentity("https://www.tiktok.com/foryou", "a")).videoId, (await itemIdentity("https://www.tiktok.com/foryou", "b")).videoId);
+  // The saved link keeps the original cleaned address.
+  assert.equal((await itemIdentity("https://www.bbc.com/news/world-1/?utm_source=x")).url, "https://www.bbc.com/news/world-1/");
+});
+
+test("backups saved with address-hashed IDs still restore", async () => {
+  const url = "https://www.example.com/article/", bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url + "|"));
+  const legacy = "web_" + Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+  assert.notEqual(legacy, (await itemIdentity(url)).videoId);
+  const item = await cleanItem({ kind: "page", url, videoId: legacy, title: "Old backup page", watchedAt: Date.now() });
+  assert.equal(item.videoId, legacy);
+  await assert.rejects(cleanItem({ kind: "page", url, videoId: "web_" + "b".repeat(64), title: "Forged", watchedAt: Date.now() }), /identity/);
+});
+
+test("cleanup keeps the most recently watched copy of a duplicated page or feed video", () => {
+  const items = [
+    { videoId: "old", url: "https://www.bbc.com/news/1/", watchedAt: 10 },
+    { videoId: "new", url: "https://bbc.com/news/1", watchedAt: 20 },
+    { videoId: "other", url: "https://bbc.com/news/2", watchedAt: 5 },
+    { videoId: "clipA", url: "https://tiktok.com/foryou", mediaKey: "a", watchedAt: 1 },
+    { videoId: "clipB", url: "https://tiktok.com/foryou", mediaKey: "b", watchedAt: 2 },
+    { videoId: "bad", url: "not a url", watchedAt: 99 },
+  ];
+  assert.deepEqual(duplicateItems(items), ["old"]);
+  assert.deepEqual(duplicateItems([items[1], items[0]]), ["old"]);
 });

@@ -29,7 +29,7 @@ test('removed history import and scan messages have no public handler',()=>{
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 6, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 3, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {
