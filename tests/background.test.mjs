@@ -119,3 +119,37 @@ test('excluding YouTube blocks its imports, manual indexing and live scene saves
  assert.deepEqual(await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
  assert.deepEqual(await request({type:'speech-pcm',id:'excluded',pcm:[0],clock:{}},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
 });
+
+test('paused caption and metadata saves stop before reaching the engine',async()=>{
+  chrome.storage.local.get=async()=>({settings:{enabled:false}});
+  const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return {};};
+  const sender={id:'x',tab:{id:1},frameId:0,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'};
+  for(const manual of [false,true])assert.deepEqual(await request({type:'should-index',videoId:'aaaaaaaaaaa',watchedAt:Date.now(),manual},sender),{index:false,reason:'Indexing is paused'});
+  for(const type of ['index-video','index-metadata'])assert.match((await request({type,video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).error,/paused/);
+  assert.equal(calls.length,0);
+});
+
+test('only the offscreen engine can check the final YouTube saving gate',async()=>{
+  assert.match((await request({type:'youtube-saving-status'})).error,/Invalid capture status/);
+  const sender={id:'x',url:'offscreen/offscreen.html'};
+  for(const [settings,webCapture,allowed] of [[{enabled:true},{},true],[{enabled:false},{},false],[{enabled:true},{blocked:['youtube.com']},false]]){
+    chrome.storage.local.get=async()=>({settings,webCapture});
+    assert.deepEqual(await request({type:'youtube-saving-status'},sender),{allowed});
+  }
+});
+
+test('caption saves require the current top-level YouTube video',async()=>{
+  chrome.storage.local.get=async()=>({settings:{enabled:true}});
+  const url='https://www.youtube.com/watch?v=aaaaaaaaaaa',sender={id:'x',tab:{id:1},frameId:0,url};
+  let tab={id:1,url};chrome.tabs.get=async()=>tab;
+  const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return {chunkCount:1};};
+  chrome.action={setBadgeText:async()=>{},setBadgeBackgroundColor:async()=>{},setTitle:async()=>{}};
+  for(const type of ['index-video','index-metadata']){
+    const msg={type,video:{videoId:'aaaaaaaaaaa'},segments:[]};
+    for(const patch of [{url:'https://example.com/watch?v=aaaaaaaaaaa'},{url:undefined},{tab:undefined},{frameId:1}])assert.match((await request(msg,{...sender,...patch})).error,/Invalid video capture source/);
+    for(const changed of [{url:'https://www.youtube.com/watch?v=bbbbbbbbbbb'},{url,incognito:true}]){tab=changed;assert.match((await request(msg,sender)).error,/video changed/);}
+  }
+  assert.equal(calls.length,0);
+  tab={id:1,url};assert.equal((await request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).chunkCount,1);
+  assert.equal(calls.filter(msg=>msg.type==='index').length,1);
+});

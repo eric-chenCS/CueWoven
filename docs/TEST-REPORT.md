@@ -1,6 +1,10 @@
 # CueWoven test report
 
-## Current baseline — v3.3.32
+## Current baseline — v3.3.33
+
+All 273 Node tests pass. See [v3.3.33 validation](UPDATE-3.3.33.md) for the pause regressions, packaged-browser checks and real-network test scope. Direct live YouTube caption retrieval was unavailable in the tested sessions; local English speech fallback and real public article capture were exercised.
+
+## v3.3.32 baseline
 
 All 265 Node tests pass, and the refine, Enter-search, single-video, theme, minimal-UI, v3.3 feature, backup and preference browser checks pass; see [v3.3.32 validation](UPDATE-3.3.32.md). Historical counts below apply to their named versions.
 
