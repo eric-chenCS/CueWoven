@@ -48,7 +48,7 @@ Press **Enter** to search after editing your query. Semantic search combines loc
 
 Your library and search index stay in the current browser profile. CueWoven does not send your queries, transcripts, captured audio or saved library to an AI service or the developer. Model files download from Hugging Face; normal website, caption, image and thumbnail requests still occur. Download services receive ordinary network connection information. CueWoven does not request browser-history permission.
 
-Use settings to pause saving, exclude sites, choose retention and image-storage limits, delete items, or export and restore a backup. Incognito capture is excluded. Sensitive-page filters and text redaction reduce unwanted capture but cannot detect every private page, and captured images are not redacted.
+Use settings to pause saving, exclude sites, choose retention and image-storage limits, delete items, or export and restore a backup. Incognito capture is excluded. Sensitive-page filters and shared text redaction (including recognizable API keys, tokens and private-key blocks) reduce unwanted capture but cannot detect every private page, and captured images are not redacted.
 
 Available captions can cover more of a video than you have played. Speech, scene and on-screen-text capture depend on playback and cannot recover earlier audio or guarantee every brief scene. **Lite mode** keeps text capture while pausing new speech, scene, image and OCR capture. Local models use CPU, memory and disk space.
 

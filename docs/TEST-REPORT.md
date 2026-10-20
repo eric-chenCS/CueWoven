@@ -1,6 +1,10 @@
 # CueWoven test report
 
-## Current baseline — v3.3.33
+## Current baseline — v3.3.34
+
+All 280 Node tests pass. Chromium checks cover shared secret redaction before storage, sender isolation, normal semantic retrieval, OCR backup redaction, backup restore, article capture, and UI behavior. The real-model benchmark returns the correct video first for all 121/121 fixture queries. Models, ranking rules and extension permissions are unchanged. See [v3.3.34 validation](UPDATE-3.3.34.md).
+
+## v3.3.33 baseline
 
 All 273 Node tests pass. See [v3.3.33 validation](UPDATE-3.3.33.md) for the pause regressions, packaged-browser checks and real-network test scope. Direct live YouTube caption retrieval was unavailable in the tested sessions; local English speech fallback and real public article capture were exercised.
 

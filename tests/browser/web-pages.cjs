@@ -45,7 +45,8 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await popup.locator("#q").fill("why corals turn white in warm seas");await popup.locator("#q").press("Enter");
     await wait(async () => await popup.locator(".result").count());
     const href = await popup.locator(".result").first().getAttribute("href");
-    assert.match(href, /^https:\/\/articles\.example\.com\/reef#:~:text=/);
+    assert.equal(new URL(href).origin + new URL(href).pathname, "https://articles.example.com/reef");
+    assert.match(new URL(href).hash, /^#recall-text=.+:~:text=.+/);
     assert.match(await popup.locator(".match-sources").first().textContent(), /Page text/);
     assert.match(await popup.locator(".result img").first().getAttribute("src"), /_favicon\//);
     if (process.env.RECALL_SCREENSHOT_DIR) {

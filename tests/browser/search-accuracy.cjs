@@ -33,7 +33,7 @@ if(!models)throw Error('Set RECALL_MODEL_DIR to a folder containing Xenova/all-M
   await options.goto(`${base}/options/options.html`);
   const t0=Date.now();
   await options.evaluate(async({videos,ids})=>{
-   await chrome.storage.local.set({onboardingComplete:true,settings:{enabled:false,maxAgeDays:0,perVideo:2}});
+   await chrome.storage.local.set({onboardingComplete:true,settings:{enabled:true,maxAgeDays:0,perVideo:2}});
    const ready=await chrome.runtime.sendMessage({type:'warmup'});if(ready?.error)throw Error(ready.error);
    for(const [i,v] of videos.entries()){
     const r=await chrome.runtime.sendMessage({target:'offscreen',type:'index',method:'controlled-test',video:{videoId:ids[i],title:v.title,channel:v.channel,watchedAt:Date.now()-i*36e5},segments:v.chunks.map(c=>({start:c.start,dur:20,text:c.text}))});

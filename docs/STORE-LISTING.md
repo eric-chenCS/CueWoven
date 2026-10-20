@@ -33,7 +33,7 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 > Private by design
 > • Everything is saved and searched on your computer with local AI models. There is no account, no server and no tracking.
 > • YouTube is the only site saved at first. Other sites are saved only after you allow them.
-> • Incognito capture is excluded. Filters skip known private services and sensitive routes and redact some email, phone and card-number patterns. They cannot recognize every sensitive page or text pattern, and captured images are not redacted.
+> • Incognito capture is excluded. Filters skip known private services and sensitive routes and redact some email, phone, card-number, API-key, token and private-key patterns. They cannot recognize every sensitive page or text pattern, and captured images are not redacted.
 > • Pause saving, exclude a site, forget recent items or clear everything at any time. Choose how long items are kept.
 >
 > Open search with Ctrl+Shift+F (⌘+Shift+K on Mac) or the toolbar icon. Model files download from Hugging Face when a feature first needs them, then are cached. Search over saved evidence works offline once the required models are cached. Opening the original page or video requires its normal network access.
