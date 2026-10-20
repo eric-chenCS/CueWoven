@@ -4,6 +4,7 @@ import {DEFAULT_SETTINGS as DEFAULTS, resetPreferences} from '../lib/settings.js
 import {resultLink} from '../lib/result-link.js';
 import {sampleFor} from '../lib/samples.js';
 import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js';
+import {openShortcut,isPinned} from '../lib/shortcut.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
@@ -29,11 +30,6 @@ function updateTranscriptButton() {
 }
 
 $('welcome-restore').addEventListener('click', () => { $('backup-controls').scrollIntoView({block:'center'}); $('import').click(); });
-$('welcome-empty').addEventListener('click', async () => {
-  await chrome.storage.local.set({ onboardingComplete: true });
-  $('welcome').hidden = true;
-  $('startup-msg').textContent = 'Ready. CueWoven will build your library from new videos. You can restore a backup later.';
-});
 
 // ---------------------------------------------------------------------------
 // Library
@@ -383,6 +379,18 @@ $('clear').addEventListener('click', async () => {
 onLibraryBusy(()=>{setBulkControls(bulkBusy);if(!libraryBusy()&&libraryDirty)scheduleLibraryRefresh();});
 loadSettings();
 loadLibrary();
+
+// Show the real shortcut and pin state; refresh when returning from Chrome's shortcut page.
+async function showHowToOpen() {
+  const key = await openShortcut();
+  $('shortcut-key').textContent = key || 'Not set';
+  $('welcome-shortcut').textContent = key;
+  $('welcome-shortcut-line').hidden = !key;
+  $('welcome-pin').hidden = await isPinned();
+}
+showHowToOpen();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) showHowToOpen(); });
+$('shortcut-change').addEventListener('click', () => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }));
 
 send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(response?.job)).catch(() => {});
 

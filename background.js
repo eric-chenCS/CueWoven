@@ -1,6 +1,5 @@
 // Service worker: routes messages between YouTube tabs, the popup/library pages
 // and the offscreen document that holds the model and the index.
-import {resultLink,escapeSuggestion} from './lib/result-link.js';
 import {captureLabel} from './lib/capture-reason.js';
 import { videoIdFromUrl } from './lib/video.js';
 import { createCaptureWindow } from './lib/capture-window.js';
@@ -448,26 +447,4 @@ chrome.storage?.onChanged?.addListener((changes, area) => {
   if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.articleImagesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
   if (area === 'local' && settings && (settings.lightMode || settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});
-});
-
-let omniboxSeq=0;
-chrome.omnibox?.onInputChanged.addListener(async(text,suggest)=>{
-  const seq=++omniboxSeq,query=text.trim().slice(0,1000);
-  if(!query){suggest([]);return;}
-  try{
-    const result=await engine('search',{query,limit:5,perVideo:1});
-    if(seq!==omniboxSeq)return;
-    suggest(result.results.map(hit=>({content:resultLink(hit),description:'<match>'+escapeSuggestion(hit.title)+'</match> — '+escapeSuggestion(String(hit.text||'').slice(0,120))})));
-  }catch{if(seq===omniboxSeq)suggest([]);}
-});
-chrome.omnibox?.onInputCancelled.addListener(()=>{omniboxSeq++;});
-chrome.omnibox?.onInputStarted.addListener(()=>chrome.omnibox.setDefaultSuggestion({description:'Search your local CueWoven library: <match>%s</match>'}));
-chrome.omnibox?.onInputEntered.addListener(async(text,disposition)=>{
-  try{
-    let url;
-    if(text.startsWith(chrome.runtime.getURL('samples/player.html'))||policy.safeUrl(text))url=text;
-    else{const result=await engine('search',{query:text.slice(0,1000),limit:1,perVideo:1});if(!result.results.length)return;url=resultLink(result.results[0]);}
-    if(disposition==='currentTab')await chrome.tabs.update({url});
-    else await chrome.tabs.create({url,active:disposition!=='newBackgroundTab'});
-  }catch{chrome.omnibox.setDefaultSuggestion({description:'CueWoven search failed. Open the popup to retry.'});}
 });

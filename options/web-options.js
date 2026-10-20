@@ -174,6 +174,35 @@ $("web-restore").addEventListener("click", () => run(async () => {
   await save({ domains: [...settings.domains, ...add] }, `Added ${add.length} suggested ${add.length === 1 ? "site" : "sites"}.`);
 }));
 
+// First run: suggested site groups are opt-in, and Chrome is asked once for just the chosen ones.
+const groupSites = (group) => SUGGESTED_SITES[group].filter((site) => site !== "youtube.com");
+for (const group of Object.keys(SUGGESTED_SITES)) {
+  const sites = groupSites(group), label = document.createElement("label"), text = document.createElement("span");
+  const name = document.createElement("strong"), hint = document.createElement("span"), input = document.createElement("input");
+  label.className = "setting"; text.className = "setting-text"; hint.className = "hint";
+  name.textContent = group;
+  hint.textContent = `${sites.slice(0, 3).join(", ")} and ${sites.length - 3} more`;
+  Object.assign(input, { type: "checkbox", className: "switch" });
+  input.setAttribute("role", "switch"); input.dataset.group = group;
+  text.append(name, hint); label.append(text, input); $("welcome-groups").append(label);
+}
+$("welcome-empty").addEventListener("click", async () => {
+  $("welcome-msg").textContent = "";
+  try {
+    const chosen = [...document.querySelectorAll("#welcome-groups input:checked")].flatMap((input) => groupSites(input.dataset.group));
+    const add = chosen.filter((site) => !settings.domains.includes(site) && !policy.matches(site, settings.blocked || []));
+    await requestAccess(siteOrigins(add));
+    if (add.length) await save({ enabled: true, paused: false, domains: [...settings.domains, ...add] }, `Added ${add.length} suggested sites.`);
+    await chrome.storage.local.set({ onboardingComplete: true });
+    $("welcome").hidden = true;
+    $("startup-msg").textContent = add.length
+      ? `Ready. CueWoven will save new videos, and pages you read on ${add.length} more sites. Reload any open tabs on those sites.`
+      : "Ready. CueWoven will build your library from new videos. You can add websites anytime under Websites.";
+  } catch (error) {
+    $("welcome-msg").textContent = error.message;
+  }
+});
+
 $("web-fix").addEventListener("click", () => run(async () => {
   await requestAccess(settings.allSites ? ALL_ORIGINS : siteOrigins(missing));
   await save({}, "Access given. Reload any open tabs on these sites.");

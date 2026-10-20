@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CueWoven v3.3.28 · Library &amp; settings</title>
+    <title>CueWoven v3.3.29 · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>CueWoven</h1></div>
-        <span class="version">v3.3.28</span>
+        <span class="version">v3.3.29</span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -27,11 +27,24 @@
       <main id="main" class="main" tabindex="-1">
         <section id="welcome" class="welcome" aria-labelledby="welcome-heading" hidden>
           <h2 id="welcome-heading">Build your memory as you browse</h2>
-          <p>Watch a video or enable your websites to start saving searchable moments. You can also restore a CueWoven backup.</p>
-          <div class="row">
-            <button id="welcome-restore" class="btn">Restore backup</button>
-            <button id="welcome-empty" class="btn ghost">Start saving</button>
+          <p>CueWoven saves the YouTube videos you watch so you can search them later. Everything stays on this computer.</p>
+          <div class="welcome-how">
+            <h3>To search later</h3>
+            <ul>
+              <li id="welcome-shortcut-line">Press <kbd id="welcome-shortcut">Ctrl+Shift+F</kbd> on any page</li>
+              <li>Or click the CueWoven icon in your toolbar<span id="welcome-pin">. It starts inside the puzzle-piece menu; pin it there to keep it visible</span></li>
+            </ul>
           </div>
+          <fieldset class="welcome-sites">
+            <legend>Also save articles and posts you read on these sites?</legend>
+            <div id="welcome-groups" class="sheet"></div>
+            <p class="hint">Off unless you turn them on. Chrome asks once for access to the sites you pick, and you can change them anytime under Websites.</p>
+          </fieldset>
+          <div class="row">
+            <button id="welcome-empty" class="btn">Start saving</button>
+            <button id="welcome-restore" class="btn ghost">Restore backup</button>
+          </div>
+          <p id="welcome-msg" class="msg" role="status" aria-live="polite"></p>
         </section>
         <p id="startup-msg" class="msg" role="status" aria-live="polite"></p>
 
@@ -123,8 +136,9 @@
           </div>
           <div class="sheet">
             <label class="setting"><span class="setting-text">Appearance<span class="hint">Choose the theme for CueWoven.</span></span><select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause images, scenes, on-screen text and speech.</span></span><input type="checkbox" id="lightMode" /></label>
-            <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" id="enabled" /></label>
+            <div class="setting"><span class="setting-text">Keyboard shortcut<span class="hint">Opens CueWoven on any page. You can also click its toolbar icon.</span></span><span class="shortcut-control"><kbd id="shortcut-key">Not set</kbd><button id="shortcut-change" class="btn ghost small" type="button">Change</button></span></div>
+            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause images, scenes, on-screen text and speech.</span></span><input type="checkbox" role="switch" class="switch" id="lightMode" /></label>
+            <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" role="switch" class="switch" id="enabled" /></label>
             <label class="setting">
               <span class="setting-text">Watch time before saving</span>
               <select id="dwellSeconds">
@@ -135,10 +149,10 @@
                 <option value="60">1 min</option>
               </select>
             </label>
-            <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" id="speechEnabled" /></label>
-            <label class="setting"><span class="setting-text">Save article images<span class="hint">Up to 3 visible images per page. Shares the 240 MB visual storage limit.</span></span><input type="checkbox" id="articleImagesEnabled" /></label>
-            <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" id="scenesEnabled" /></label>
-            <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" id="screenTextEnabled" /></label>
+            <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" role="switch" class="switch" id="speechEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save article images<span class="hint">Up to 3 visible images per page. Counts toward Image storage under Your data.</span></span><input type="checkbox" role="switch" class="switch" id="articleImagesEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" role="switch" class="switch" id="scenesEnabled" /></label>
+            <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" role="switch" class="switch" id="screenTextEnabled" /></label>
             <details class="fold">
               <summary><span class="fold-title">Advanced</span><span class="fold-sub">Results and speed</span></summary>
               <div class="fold-body flush">

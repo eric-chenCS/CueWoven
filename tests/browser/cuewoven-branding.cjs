@@ -2,9 +2,10 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
 (async()=>{const f=await fixture();try{
  const manifest=await f.options.evaluate(()=>chrome.runtime.getManifest());
  assert.match(manifest.name,/^CueWoven /);assert.match(manifest.short_name,/^CueWoven /);assert.equal(manifest.action.default_title,'CueWoven');
- assert.equal(manifest.commands._execute_action.suggested_key.default,'Ctrl+Shift+F');assert.equal(manifest.omnibox.keyword,'rc');
+ assert.equal(manifest.commands._execute_action.suggested_key.default,'Ctrl+Shift+F');assert.equal(manifest.omnibox,undefined,'no address-bar keyword');
  assert.equal(await f.options.locator('.brand h1').innerText(),'CueWoven');assert.match(await f.options.title(),/^CueWoven /);
  const oldTitle='Recall techniques in psychology',videoId='rename00001';
+ await f.send({type:'status'}); // starts the offscreen engine before talking to it directly
  const added=await f.send({target:'offscreen',type:'import-history',videos:[{videoId,title:oldTitle,channel:'Fixture',watchedAt:Date.now()}]});assert.ok(!added.error,added.error);
  await f.options.evaluate(()=>chrome.storage.local.set({theme:'dark',onboardingComplete:true,settings:{enabled:false,maxAgeDays:0,importMaxAgeDays:0}}));
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#theme').value==='dark');
