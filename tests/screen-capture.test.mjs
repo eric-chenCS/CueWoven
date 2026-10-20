@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 function fixture({blocked=false,reply=()=>({ok:true})}={}) {
   let now=100000,serial=0,storageListener,shade=null;const timers=new Map(),messages=[];
-  const context={video:{videoId:'aaaaaaaaaaa'},time:42,paused:false,visible:true,ad:false,seeking:false,forced:false};
+  const context={video:{videoId:'aaaaaaaaaaa'},time:42,paused:false,visible:true,ad:false,seeking:false};
   const media={readyState:4,videoWidth:1920,videoHeight:1080};
   const canvas={getContext:()=>({fillRect(){},drawImage(){},getImageData(){if(blocked)throw Error('Tainted canvas');return {data:Uint8ClampedArray.from([shade??now%251,1,2,255])};}}),toDataURL:(format,quality)=>{assert.equal(format,'image/jpeg');assert.equal(quality,.95);assert.equal(canvas.width,1280);assert.equal(canvas.height,720);if(blocked)throw Error('Tainted canvas');return 'data:image/jpeg;base64,test'+now}};
   const sandbox={crypto:webcrypto,TextEncoder,Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),
@@ -26,8 +26,7 @@ test('paused, hidden, ad and seeking states never save a frame',async()=>{
     const f=fixture();f.context[key]=value;await f.tick();assert.equal(f.messages.length,0);f.api.stop();
   }
 });
-test('history capture tabs and disabled capture never save frames',async()=>{
-  const f=fixture();f.context.forced=true;await f.tick();assert.equal(f.messages.length,0);
+test('disabled capture never saves frames',async()=>{
   const off=fixture();off.disable();await off.tick();assert.equal(off.messages.length,0);assert.equal(off.timers.size,0);
 });
 test('leaving a video clears screen capture timers',async()=>{

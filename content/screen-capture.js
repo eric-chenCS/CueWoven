@@ -6,7 +6,7 @@
   async function tick(){
     if(busy){schedule();return;}
     const state=clock?.(),video=(globalThis.__recallMediaElement ? globalThis.__recallMediaElement() : document.querySelector('video'));
-    if(!state?.video || state.forced)return;
+    if(!state?.video)return;
     if(!state.visible || state.paused || state.seeking || state.ad || !video || video.readyState<2 || !video.videoWidth || !video.videoHeight){schedule();return;}
     const bucket=Math.floor(state.time/5);
     if(!Number.isFinite(state.time)||state.time<0||seen.has(bucket)||Date.now()-lastAttempt<5000){schedule();return;}

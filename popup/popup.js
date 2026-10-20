@@ -544,7 +544,7 @@ function renderEmbedding(state={}) {
 }
 function renderSpeech(state = {}) {
   const active = ['preparing', 'recording', 'stopping'].includes(state.status);
-  const videoTab = !!currentMedia || !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url) && !new URL(currentTab.url).searchParams.has('recall_index');
+  const videoTab = !!currentMedia || !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url);
   $('speech').hidden = !active && !videoTab;
   $('speech-heading').textContent=state.status==='recording'?'Speech-to-text · listening':state.status==='preparing'?'Speech-to-text · loading model':'Speech-to-text';
   $('speech-start').disabled = active || !videoTab;

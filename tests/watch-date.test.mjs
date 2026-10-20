@@ -28,8 +28,7 @@ test('live captures send a current watch date in both eligibility and indexing m
   assert.ok(messages.find(m=>m.type==='should-index').watchedAt>=started);
   assert.ok(messages.find(m=>m.type==='index-video').video.watchedAt>=started);
 });
-test('background transcript additions do not replace the imported watch date',async()=>{
+test('a leftover recall_index link is treated as a normal watch',async()=>{
   const messages=await capture(true);
-  assert.equal(messages.find(m=>m.type==='should-index').watchedAt,undefined);
-  assert.equal(messages.find(m=>m.type==='index-video').video.watchedAt,undefined);
+  assert.ok(messages.find(m=>m.type==='should-index').watchedAt>0);
 });

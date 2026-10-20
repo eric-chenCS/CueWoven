@@ -5,7 +5,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
  try{
   await f.options.setViewportSize({width:1280,height:900});await f.options.emulateMedia({reducedMotion:'reduce'});
   await f.options.waitForFunction(()=>document.querySelector('#welcome').hidden===false);
-  assert.equal(await f.options.locator('.nav a').count(),5);
+  assert.equal(await f.options.locator('.nav a').count(),4);
   assert.equal(await f.options.locator('.nav a[href="#sec-capture"]').innerText(),'Settings');
   const help=f.options.locator('#moments-help');assert.equal(await help.evaluate(node=>node.open),false);
   await help.locator('summary').click();assert.match(await help.innerText(),/timestamp/);await help.locator('summary').click();
@@ -13,7 +13,6 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   assert.equal(await f.options.locator('#importMaxAgeDays').count(),0);
   assert.match(await f.options.locator('label').filter({has:f.options.locator('#lightMode')}).innerText(),/Lite mode/);
   for(const id of ['takeout-import','history-scan','web-history-file','web-history-scan'])assert.equal(await f.options.locator('#'+id).count(),0);
-  assert.equal(await f.options.locator('#sec-add > .sheet > details').count(),1);
   const picker=f.options.waitForEvent('filechooser');await f.options.locator('#welcome-restore').click();await picker;
   await f.options.locator('#import').focus();assert.equal(await f.options.evaluate(()=>document.activeElement.id),'import');
   // Load real local sample data via its first-run button, then show its matched moment.

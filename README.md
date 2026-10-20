@@ -14,7 +14,7 @@ Built for SwampHacks XII as a local-first Chrome and Microsoft Edge extension. N
 
 ## Install and try it
 
-1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.31.zip** asset. Extract it to a permanent folder.
+1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.32.zip** asset. Extract it to a permanent folder.
 2. Open `chrome://extensions` or `edge://extensions` and enable **Developer mode**.
 3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
 4. Open CueWoven from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
@@ -27,7 +27,7 @@ The release ZIP includes the browser runtime. GitHub's **Code → Download ZIP**
 
 - **Video moments:** search captions, played English speech, sampled scenes and on-screen text. Open a timestamp link or copy it to share.
 - **Articles and pages:** search saved text, visible images and image captions on websites you allow. Open a matching passage where text highlighting is supported.
-- **Bring a specific video:** paste YouTube links to index available captions. Export a CueWoven backup to take your saved library to another installation.
+- **Take your library along:** export a CueWoven backup and restore it in another installation.
 - **More precise results:** refine a query, filter by source or date, search inside the current YouTube video, and use ← / → to browse ranked matches.
 
 YouTube is the only default site. Under **Library & settings → Websites**, add suggested sites or individual domains and grant browser access. Compatible browser video players on other sites can contribute content; native mobile apps, login walls and protected players are not supported.

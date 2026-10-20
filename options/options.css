@@ -124,15 +124,6 @@ textarea { width: 100%; resize: vertical; margin: 0 0 10px; font-family: ui-mono
 /* History found in this browser */
 
 /* Transcript job log */
-.log { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12.5px; }
-.log li { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 12px; padding: 7px 0; border-top: 1px solid var(--line); transition: opacity 300ms ease; }
-.log li.fading { opacity: 0; }
-.log .what { font-weight: 600; overflow-wrap: anywhere; }
-.log .st { font-weight: 600; }
-.log .done { color: var(--good); }
-.log .failed { color: var(--bad); }
-.log .working, .log .skipped { color: var(--ink-3); }
-.log .why { grid-column: 1 / -1; color: var(--ink-3); overflow-wrap: anywhere; }
 
 /* Diagnostics */
 #sec-diagnostics > .row { margin-bottom: 12px; }

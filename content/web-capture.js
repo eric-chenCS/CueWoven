@@ -50,7 +50,7 @@
   }
   function clock() {
     const current = eligible(), same = sameMedia();
-    return { reason: skipReason() || lastReason, private: !current, video: current && same ? videoInfo : null, time: selected?.currentTime, paused: !current || !same || !selected || selected.paused, visible: current && !document.hidden && (!selected || visible(selected)), seeking: !!selected?.seeking, rate: selected?.playbackRate || 1, ad: !!selected?.closest('.ad-showing,.ad-interrupting,[data-ad="true"]'), revision, forced: false };
+    return { reason: skipReason() || lastReason, private: !current, video: current && same ? videoInfo : null, time: selected?.currentTime, paused: !current || !same || !selected || selected.paused, visible: current && !document.hidden && (!selected || visible(selected)), seeking: !!selected?.seeking, rate: selected?.playbackRate || 1, ad: !!selected?.closest('.ad-showing,.ad-interrupting,[data-ad="true"]'), revision };
   }
   function sameMedia() {
     return selected && selected.currentSrc === selectedSrc && choose() === selected && mediaAddress(selected).url === videoInfo?.url;

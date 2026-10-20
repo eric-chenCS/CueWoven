@@ -29,7 +29,7 @@ test('removed history import and scan messages have no public handler',()=>{
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, transcriptConcurrency: 3, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {
@@ -47,18 +47,11 @@ test('speech controls and audio forwarding reject unrelated pages', async () => 
   }
 });
 
-test('import capture tabs never start automatic speech', async () => {
-  chrome.tabs = {get: async () => ({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})};
-  assert.match((await request({type:'speech-auto-start'}, {id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})).error, /normal YouTube/);
-});
-
 test('scene capture respects off switches and validates the sending page',async()=>{
   chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:false}})}};
   assert.deepEqual(await request({type:'scene-frame'}),{disabled:true});
   chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:true}})}};
   assert.match((await request({type:'scene-frame'})).error,/Invalid scene source/);
-  chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})};
-  assert.match((await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1'})).error,/normal YouTube/);
 });
 
 test('videoIdFromUrl rejects malformed IDs, extra path data and unsupported schemes', () => {
@@ -101,35 +94,6 @@ test('single-video searches use unique video pages while list searches retain th
   }
 });
 
-test('background transcript jobs are controlled only from Library & settings', async () => {
-  for (const type of ['transcript-job-start', 'transcript-job-status', 'transcript-job-pause']) {
-    assert.match((await request({type, urls: ['aaaaaaaaaaa']}, {id: 'x', url: 'popup/popup.html'})).error, /Library/);
-    assert.match((await request({type}, {id: 'x', url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa'})).error, /Library/);
-  }
-  assert.match((await request({type: 'transcript-job-start', urls: 'not a list'})).error, /video links/);
-});
-
-test('interrupted-job cleanup closes only tracked tabs still showing their capture URL', async () => {
-  const closed = [];
-  chrome.storage.session = {remove: async () => {},get: async () => ({transcriptJob: {
-    id: 'interrupted', revision: 2, status: 'running', total: 5, completed: 1, done: 1, failed: 0, skipped: 0, results: [],
-    active: [{videoId: 'aaaaaaaaaaa', tabId: 10}, {videoId: 'bbbbbbbbbbb', tabId: 11}, {videoId: 'ccccccccccc', tabId: 12}],
-  }})};
-  chrome.tabs = {
-    get: async id => ({id, url: {
-      10: 'https://www.youtube.com/watch?v=aaaaaaaaaaa&recall_index=1',
-      11: 'https://www.youtube.com/watch?v=ddddddddddd&recall_index=1',
-      12: 'https://www.youtube.com/watch?v=ccccccccccc',
-    }[id]}),
-    remove: async id => {closed.push(id);},
-  };
-  const response = await request({type: 'transcript-job-status'});
-  assert.deepEqual(closed, [10]);
-  assert.equal(response.job.status, 'interrupted');
-  assert.equal(response.job.completed, 1);
-  assert.deepEqual(response.job.active, []);
-});
-
 test('automatic non-English audio is skipped but manual Start can override metadata',async()=>{
  chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),sendMessage:async()=>({video:{videoId:'aaaaaaaaaaa',audioLanguage:'es'},paused:false,visible:true})};
  const calls=[];chrome.storage.local.get=async()=>({settings:{enabled:true,speechEnabled:true}});chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);return msg.type==='speech-status'?{status:'idle'}:{...msg,id:'manual-test'}};
@@ -148,10 +112,10 @@ test('on-screen text verifies active playback, timing revision and off switches'
  assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:42,revision:0},sender),{inactive:true});
  assert.deepEqual(await request({type:'screen-frame',video:clock.video,start:12,revision:1},sender),{inactive:true});
 });
-test('excluding YouTube blocks its imports, manual indexing, new jobs and live scene saves',async()=>{
+test('excluding YouTube blocks its imports, manual indexing and live scene saves',async()=>{
  chrome.storage.local.get=async()=>({settings:{enabled:true},webCapture:{blocked:['youtube.com']}});
  assert.deepEqual(await request({type:'should-index',videoId:'aaaaaaaaaaa',manual:true}),{index:false,reason:'YouTube is excluded.'});
- for(const message of [{type:'transcript-job-start',urls:['aaaaaaaaaaa']},{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
+ for(const message of [{type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]}])assert.match((await request(message)).error,/excluded/i);
  assert.deepEqual(await request({type:'scene-frame'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
  assert.deepEqual(await request({type:'speech-pcm',id:'excluded',pcm:[0],clock:{}},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),{disabled:true});
 });

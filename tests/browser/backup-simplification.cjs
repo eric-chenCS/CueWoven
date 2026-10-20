@@ -2,7 +2,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
 (async()=>{const f=await fixture(),errors=[];f.context.on('weberror',e=>errors.push(e.error().message));try{
  const manifest=await f.options.evaluate(()=>chrome.runtime.getManifest());assert.ok(!manifest.permissions.includes('history'));assert.ok(!manifest.optional_permissions.includes('history'));
  for(const id of ['takeout-import','history-scan','web-history-file','web-history-scan','importMaxAgeDays','welcome-import','welcome-web'])assert.equal(await f.options.locator('#'+id).count(),0,id);
- assert.equal(await f.options.locator('.nav a[href="#sec-add"]').innerText(),'Add videos');
+ assert.equal(await f.options.locator('.nav a[href="#sec-add"]').count(),0);
  assert.doesNotMatch(await f.options.locator('#backup-controls').innerText(),/original video files/);await f.options.locator('#backup-help summary').click();
  assert.match(await f.options.locator('#backup-controls').innerText(),/original video files, audio recordings or complete websites/);assert.match(await f.options.locator('#backup-controls').innerText(),/can't bring the original back/);
  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,importMaxAgeDays:90},webCapture:{enabled:false,paused:true,domains:['youtube.com'],blocked:[]}}));

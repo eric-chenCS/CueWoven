@@ -247,7 +247,7 @@
   }
 
   // Last resort: open YouTube's own "Show transcript" panel and read it.
-  // Only used for manual/bulk indexing because it visibly opens a side panel.
+  // Only used for manual indexing because it visibly opens a side panel.
   async function fromTranscriptDom(videoId) {
     if (currentVideoId() !== videoId) return [];
     const readPanel = () => P.parseTranscriptDom(document);
