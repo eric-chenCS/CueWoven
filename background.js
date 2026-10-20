@@ -1,5 +1,6 @@
 // Service worker: routes messages between YouTube tabs, the popup/library pages
 // and the offscreen document that holds the model and the index.
+import {isExtensionPage} from './lib/message-source.js';
 import {captureLabel} from './lib/capture-reason.js';
 import { videoIdFromUrl } from './lib/video.js';
 import './lib/scene-policy.js';
@@ -87,7 +88,7 @@ async function currentCaptureStatus(tabId){
 async function refreshIndicator(tabId){const status=await currentCaptureStatus(tabId).catch(()=>({reason:'no-permission'}));captureIndicator(tabId,status.reason);}
 
 function requireLibrary(sender) {
-  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to manage saved data.');
+  if (!isExtensionPage(sender,chrome.runtime,['options/options.html'])) throw new Error('Open Library & settings to manage saved data.');
 }
 
 async function requireSpeechIdle() {
@@ -109,7 +110,7 @@ async function requireYouTubeCapture(sender, videoId) {
 // ---------------------------------------------------------------------------
 
 function requirePopup(sender) {
-  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('popup/popup.html')) throw new Error('Use the CueWoven popup to control speech-to-text.');
+  if (!isExtensionPage(sender,chrome.runtime,['popup/popup.html'])) throw new Error('Use the CueWoven popup to control speech-to-text.');
 }
 async function speechContext(tabId) {
   const tab = await chrome.tabs.get(tabId);
@@ -299,6 +300,8 @@ chrome.permissions?.onAdded?.addListener(()=>webAccess.sync().catch(()=>{}));
 chrome.permissions?.onRemoved?.addListener(async removed=>{if(removed.origins?.length||removed.permissions?.includes('scripting')){const settings=await webAccess.config();await chrome.storage.local.set({webCapture:{...settings,paused:true}});}webAccess.sync().catch(()=>{});});
 chrome.runtime.onStartup?.addListener(()=>webAccess.sync().catch(()=>{}));
 
+const LIBRARY_COMMANDS = new Set(['list','delete','clear','export','import','prune']);
+const UI_COMMANDS = new Set(['search','status','warmup','index-tab','vision-status','speech-status']);
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || msg.target === 'offscreen') return false;
   if (sender.id !== chrome.runtime.id) return false;
@@ -312,10 +315,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
     return false;
   }
-  const fn = handlers[msg.type];
+  const fn = Object.hasOwn(handlers,msg.type) && handlers[msg.type];
   if (!fn) return false; // e.g. broadcasts from the offscreen document
   Promise.resolve()
-    .then(() => fn(msg, sender))
+    .then(() => {
+      if (LIBRARY_COMMANDS.has(msg.type)) requireLibrary(sender);
+      if (UI_COMMANDS.has(msg.type) && !isExtensionPage(sender,chrome.runtime,['popup/popup.html','options/options.html'])) throw Error('Open the CueWoven popup or Library & settings.');
+      return fn(msg, sender);
+    })
     .then((r) => sendResponse(r))
     .catch((e) => sendResponse({ error: String((e && e.message) || e) }));
   return true;

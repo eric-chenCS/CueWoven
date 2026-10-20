@@ -153,3 +153,26 @@ test('caption saves require the current top-level YouTube video',async()=>{
   tab={id:1,url};assert.equal((await request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).chunkCount,1);
   assert.equal(calls.filter(msg=>msg.type==='index').length,1);
 });
+
+test('website scripts cannot read or mutate the library or start UI work',async()=>{
+  const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return {status:'idle'};};
+  const commands=['list','delete','clear','export','import','prune','search','status','warmup','index-tab','vision-status','speech-status'];
+  for(const url of ['https://example.com/','popup/fake.html','options/options.html/extra'])for(const type of commands){
+    const result=await request({type,data:{format:'recall-export',videos:[]}},{id:'x',tab:{id:1},url});
+    assert.match(result.error,/CueWoven|Library/);
+  }
+  assert.equal(calls.length,0,'denied commands never reach the engine');
+  for(const type of ['toString','constructor','__proto__'])assert.equal(onMessage({type},{id:'x'},()=>assert.fail('inherited handler replied')),false);
+  assert.equal(onMessage({type:'export'},{id:'other',url:'options/options.html'},()=>assert.fail('foreign extension replied')),false);
+});
+test('Library tabs retain backup and data controls while popup retains search',async()=>{
+  chrome.storage.local.get=async()=>({settings:{enabled:true}});
+  chrome.runtime.getContexts=async()=>[{}];
+  chrome.runtime.sendMessage=async msg=>msg.type==='speech-status'?{status:'idle'}:msg;
+  for(const type of ['list','export','import','delete','prune']){
+    const result=await request({type,data:{format:'recall-export',videos:[]},videoId:'aaaaaaaaaaa'},{id:'x',url:'options/options.html#sec-data',tab:{id:5}});
+    assert.equal(result.type,type);
+    assert.match((await request({type},{id:'x',url:'popup/popup.html'})).error,/Library/);
+  }
+  assert.equal((await request({type:'search',query:'coral'},{id:'x',url:'popup/popup.html'})).type,'search');
+});

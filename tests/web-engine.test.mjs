@@ -90,3 +90,12 @@ test("backup restoration keeps original indexing dates and packed audio ranges",
   assert.equal(call.passages.find((p) => p.source === "Audio").speechStart, 10);
   assert.ok(call.passages.every((p) => p.vec instanceof Int8Array));
 });
+
+test('captured and restored secrets are redacted before embeddings and persistence',async()=>{
+  const secret='sk-'+ 'a'.repeat(30),embeddings=[],f=fixture(async texts=>{embeddings.push(...texts);return texts.map(()=>new Float32Array(384));});
+  await f.engine.capture({...input,title:'Coral '+secret,text:'Coral reefs contain algae. Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456'});
+  await f.engine.restore({...input,url:'https://example.com/restored',passages:[{source:'Page text',start:0,text:'Marine science '+secret}]});
+  const output=JSON.stringify({embeddings,calls:f.calls});
+  assert.equal(output.includes(secret),false);assert.equal(output.includes('abcdefghijklmnopqrstuvwxyz123456'),false);
+  assert.ok(output.includes('redacted'));assert.ok(embeddings.some(text=>text.includes('Coral')));
+});

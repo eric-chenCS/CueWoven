@@ -1,3 +1,4 @@
+import {isExtensionPage} from '../lib/message-source.js';
 import {warmLexical,lexicalCache} from '../lib/lexical-cache.js';
 import {searchIntent,matchesSource,searchWithFallback} from '../lib/search-intent.js';
 // Offscreen document: owns the embedding model and the local vector index.
@@ -474,8 +475,8 @@ const handlers = {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.target !== 'offscreen') return false;
-  if(_sender.id!==chrome.runtime.id||_sender.tab&&!_sender.url?.startsWith(chrome.runtime.getURL('')))return false;
-  const fn = handlers[msg.type];
+  if(!isExtensionPage(_sender,chrome.runtime,['background.js','popup/popup.html','options/options.html']))return false;
+  const fn = Object.hasOwn(handlers,msg.type) && handlers[msg.type];
   if (!fn) return false;
   fn(msg)
     .then((r) => sendResponse(r))
