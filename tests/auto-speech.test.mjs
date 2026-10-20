@@ -37,3 +37,7 @@ test('known non-English videos never start the English-only fallback',async()=>{
  const f=await fixture({language:'es'});await f.play();assert.equal(f.messages.some(row=>row.type==='speech-auto-start'),false);
  const english=await fixture({language:'en-GB'});assert.equal(english.messages.some(row=>row.type==='speech-auto-start'),true);
 });
+
+test('undetermined language uses the automatic English fallback without a popup action',async()=>{
+ const f=await fixture({language:'und'});assert.equal(f.messages.filter(msg=>msg.type==='speech-auto-start').length,1);
+});

@@ -15,9 +15,8 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     }, tab);
     await popup.goto(f.base + "/popup/popup.html");
     await popup.waitForFunction(() => document.querySelector("#page-capture-status").textContent.includes("Saved"));
-    assert.equal(await popup.locator("#index-now").isVisible(), false, "article uses Save page rather than duplicate video controls");
+    assert.equal(await popup.locator("#index-now,#page-save-now,#speech").count(), 0, "capture is automatic and manual controls are absent");
     await article.bringToFront();
-    await popup.evaluate(() => document.querySelector("#page-save-now").click());
     await popup.waitForFunction(() => document.querySelector("#page-capture-status").textContent.includes("Saved"));
     await f.options.locator("#sec-diagnostics > summary").click();
     await f.options.locator("#diagnostics-refresh").click();
@@ -33,8 +32,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     const blocked = await f.options.evaluate(async () => (await chrome.storage.local.get("webCapture")).webCapture.blocked);
     assert.ok(blocked.includes("www.example.com"));
     await f.send({ target:'offscreen',type: "web-import", items: [{ kind: "page", url: "https://old.example.com/article", title: "Old imported article", watchedAt: Date.now() - 400 * 864e5 }, { kind: "page", url: "https://recent.example.com/article", title: "Recent imported article", watchedAt: Date.now() - 10 * 864e5 }] });
-    await f.options.locator("#maxAgeDays").selectOption("0");
-    await f.options.locator("#importMaxAgeDays").selectOption("28");
+    await f.options.evaluate(async()=>{const {settings={}}=await chrome.storage.local.get("settings");await chrome.storage.local.set({settings:{...settings,maxAgeDays:0,importMaxAgeDays:28}});await chrome.runtime.sendMessage({type:"prune"});});
     await f.wait(async () => {
       const rows = (await f.send({ type: "list" })).videos;
       return rows.some((row) => row.title === "Recent imported article") && !rows.some((row) => row.title === "Old imported article");
@@ -45,7 +43,7 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     }
     await f.options.locator("#diagnostics-clear").click();
     assert.equal((await f.options.evaluate(async () => (await chrome.storage.session.get("captureLog")).captureLog || [])).length, 0);
-    console.log("DIAGNOSTICS_PASS", JSON.stringify({ logEvents: log.length, protectedStorage: storage.permission, quota: storage.estimate.quota, popupSaveAndForget: true, originalDateImportRetention: true }));
+    console.log("DIAGNOSTICS_PASS", JSON.stringify({ logEvents: log.length, protectedStorage: storage.permission, quota: storage.estimate.quota, automaticSaveAndForget: true, originalDateImportRetention: true }));
   } finally {
     await f.close();
   }

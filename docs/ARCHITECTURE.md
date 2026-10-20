@@ -19,7 +19,7 @@ The service worker coordinates permissions, capture status, transcript jobs and 
 | Scenes and article images | `Xenova/clip-vit-base-patch32` | Sampled visual similarity can be ambiguous |
 | Burned-in text | Tesseract English OCR | Small, brief or low-contrast text can fail |
 
-Transformers.js and ONNX Runtime Web run bundled browser code locally; model weights download on demand. OCR worker code and English data ship with the extension. Search combines semantic vectors, normalized word/phrase matches and source/title/date context. Evidence types stay visible in results. Scores are ranking signals, not calibrated probabilities.
+Transformers.js and ONNX Runtime Web run bundled browser code locally; model weights download on demand. OCR worker code and English data ship with the extension. Search combines semantic vectors, normalized word/phrase matches and source/title/date context. Text, speech, OCR, title and page evidence stay primary when a result has close lexical evidence or a score of at least 0.45, the existing strong-text cutoff. Only when that check finds nothing does search query CLIP and use eligible scenes/article images as the fallback pool. Text and image ranks are not blended. Fallback selection uses the full ranked text pool before pagination. Evidence types stay visible in results. Scores are ranking signals, not calibrated probabilities.
 
 ## Performance choices
 
@@ -33,7 +33,7 @@ Resident video vectors use 8-bit storage, with recent full-transcript content bo
 | --- | --- |
 | `manifest.json`, `background.js` | Browser configuration, service worker and job coordination |
 | `content/` | Page/player extraction, playback timing, audio and sampled frames |
-| `capture/` | Transcript-fetch window |
+| `capture/` | Legacy capture assets; background transcript-fetch workflows are removed |
 | `offscreen/` | Local engine and inference workers |
 | `lib/` | Ranking, storage, privacy policy, queues, retention and shared utilities |
 | `popup/`, `options/`, `styles/` | Search and settings interface |
@@ -44,6 +44,6 @@ Resident video vectors use 8-bit storage, with recent full-transcript content bo
 
 ## Validation
 
-The current suite has 277 Node tests. Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
+The current working-source suite has 289 Node tests; released test counts are recorded separately in the [test report](TEST-REPORT.md). Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
 
 Historical measurements and evaluations live in [the documentation index](README.md). Read their named versions and fixture limits: synthetic tests and controlled player responses do not prove live transcript availability, universal site support or a general accuracy percentage. No test evidence should be read as a claim that the extension continuously records every page or frame.

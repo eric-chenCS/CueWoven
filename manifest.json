@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CueWoven \u2013 Search Your History",
   "short_name": "CueWoven",
-  "version": "3.3.34",
+  "version": "3.3.35",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {

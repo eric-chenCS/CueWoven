@@ -389,7 +389,7 @@ const EXAMPLE = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)];
 let shortcut = '';
 const shortcutReady = openShortcut().then(key => { shortcut = key; });
 function showIdle() {
-  if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, add a link or try the samples.']);
+  if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video or try the samples.']);
   else empty('Describe what you remember',[],`Try: ${EXAMPLE}`);
   if (shortcut) {
     const tip = document.createElement('p');
@@ -425,7 +425,6 @@ async function refreshStatus() {
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.target === 'offscreen') return false;
-  if (msg.type === 'speech-state') renderSpeech(msg.state);
   if (msg.type === 'vision-state') renderVision(msg.state);
   if (msg.type === 'ocr-state') {const state=msg.state,message=state.status==='loading'?'Loading on-screen text reader…':state.status==='working'?'Reading on-screen text on this device…':state.status==='error'?state.error:'';$('ocr-status').textContent=message;$('ocr-status').hidden=!message;}
   if (msg.type === 'embedding-status') renderEmbedding(msg.state);
@@ -435,50 +434,29 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 // ---------------------------------------------------------------------------
-// "Index this video now" for the current YouTube tab
+// Current-tab context and automatic capture status
 // ---------------------------------------------------------------------------
-async function setupIndexNow() {
+async function setupCaptureContext() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if(currentTab&&/^https?:/.test(currentTab.url||''))send({type:'capture-status',tabId:currentTab.id}).then(state=>{$('capture-indicator').textContent=captureLabel(state.reason);$('capture-indicator').hidden=!$('page-capture').hidden;}).catch(()=>{});
   if(currentTab&&/^https?:/.test(currentTab.url||'')&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
   if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
-  $('index-now').hidden = false;
   try {
     const { video } = await chrome.tabs.sendMessage(currentTab.id, { type: 'get-video' });
     currentMedia=video;
     if(!currentMedia&&videoIdFromUrl(currentTab.url))currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};
     $('video-scope-row').hidden=!currentMedia;
-    if(!currentTab.url.startsWith('https://www.youtube.com/'))$('index-now').hidden=!video;
-    if (video && video.title) $('index-now-text').textContent = video.title;
   } catch (_) {
     if(videoIdFromUrl(currentTab.url)){currentMedia={videoId:videoIdFromUrl(currentTab.url),title:currentTab.title||'this video'};$('video-scope-row').hidden=false;}
   }
 }
 
-$('index-now-btn').addEventListener('click', async () => {
-  const btn = $('index-now-btn');
-  btn.disabled = true;
-  btn.textContent = 'Saving…';
-  const res = await send({ type: 'index-tab', tabId: currentTab.id });
-  btn.disabled = false;
-  if (res && res.ok) {
-    btn.textContent = 'Saved';
-    $('index-now-text').textContent = res.chunkCount ? `Saved ${res.chunkCount} moments` : 'Saved';
-    refreshStatus();
-  } else {
-    btn.textContent = 'Retry';
-    $('index-now-text').textContent = (res && (res.reason || res.error)) || 'Couldn’t index this video.';
-  }
-});
-
 async function refreshPageCapture(){
   if(!currentTab)return;
   const status=await send({type:'web-page-status',tabId:currentTab.id}).catch(()=>({reason:'refresh-required'}));
   $('page-capture-status').textContent=captureLabel(status.reason);
-  $('page-save-now').disabled=!['saved','duplicate','waiting','too-short'].includes(status.reason);
   $('page-forget').disabled=!status.host||status.incognito;
 }
-$('page-save-now').addEventListener('click',async()=>{const result=await send({type:'index-tab',tabId:currentTab.id}).catch(error=>({error:error.message}));$('page-capture-status').textContent=result.ok?'Saved on this device':result.reason||result.error||'Page capture is busy.';});
 $('page-forget').addEventListener('click',async()=>{const result=await send({type:'web-forget-current',tabId:currentTab.id}).catch(error=>({error:error.message}));if(result.error)$('page-capture-status').textContent=result.error;else{await refreshPageCapture();refreshStatus();}});
 $('open-library').addEventListener('click', (e) => {
   e.preventDefault();
@@ -511,8 +489,7 @@ $('start-empty').addEventListener('click', async () => {
   refreshWebPause();
   const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
   $('start-choice').hidden = !!onboardingComplete || (stats.total||stats.videos) > 0;
-  await setupIndexNow();
-  refreshSpeech();
+  await setupCaptureContext();
   send({type:'vision-status'}).then(renderVision).catch(()=>{});
   inferFilters = saved?.inferFilters !== false;
   if (saved?.customRange) {
@@ -533,7 +510,7 @@ $('start-empty').addEventListener('click', async () => {
   if (stats.total||stats.videos) send({ type: 'warmup',scenes:stats.scenes>0 }).catch(()=>{}); // no model download is needed for an empty library
 })();
 
-// Caption failures start speech automatically; the popup exposes status and controls.
+// Capture processing can report progress without adding manual controls to search.
 function renderVision(state={}) {
   const message=state.status==='loading'?'Downloading scene model… '+Math.round((state.progress || 0)*100)+'%':state.status==='working'?'Processing scenes on this device…':state.status==='error'?state.error:'';
   $('scene-status').textContent=message;$('scene-status').hidden=!message;
@@ -542,30 +519,3 @@ function renderEmbedding(state={}) {
   const message=state.status==='running'?`Improving saved text matches… ${state.done}/${state.total}. Search remains available.`:state.status==='error'?'Saved-match update paused: '+state.error:'';
   $('embedding-status').textContent=message;$('embedding-status').hidden=!message;
 }
-function renderSpeech(state = {}) {
-  const active = ['preparing', 'recording', 'stopping'].includes(state.status);
-  const videoTab = !!currentMedia || !!currentTab?.url && /^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url);
-  $('speech').hidden = !active && !videoTab;
-  $('speech-heading').textContent=state.status==='recording'?'Speech-to-text · listening':state.status==='preparing'?'Speech-to-text · loading model':'Speech-to-text';
-  $('speech-start').disabled = active || !videoTab;
-  $('speech-stop').hidden = !active;$('speech-stop').disabled = state.status === 'stopping';
-  const label = state.video?.title ? '“' + state.video.title + '”' : 'this video';
-  $('speech-status').textContent = state.status === 'preparing' ? 'Loading speech model… ' + Math.round((state.progress || 0) * 100) + '%' :
-    state.status === 'recording' ? 'Listening to ' + label + ' · ' + (state.saved || 0) + ' speech segments saved. Only played portions are captured.' :
-    state.status === 'stopping' ? 'Finishing captured audio…' : state.reason || (state.saved ? 'Saved ' + state.saved + ' speech segments from ' + label + '.' : 'Starts automatically when captions cannot be captured. Start retries with the English model even if language metadata is uncertain or wrong; recognition errors are possible.');
-}
-async function refreshSpeech() {
-  const state = await send({type: 'speech-status'}).catch(error => ({reason: error.message}));renderSpeech(state);
-}
-$('speech-start').addEventListener('click', async () => {
-  const button = $('speech-start');button.disabled = true;
-  try {
-    const response = await send({type: 'speech-start', tabId: currentTab.id});
-    if (response?.error) throw new Error(response.error);
-    renderSpeech(response);
-  } catch (error) {renderSpeech({reason: error.message});}
-});
-$('speech-stop').addEventListener('click', async () => {
-  $('speech-stop').disabled = true;
-  const response = await send({type: 'speech-stop'}).catch(error => ({reason: error.message}));renderSpeech(response);
-});

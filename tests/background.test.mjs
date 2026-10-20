@@ -176,3 +176,11 @@ test('Library tabs retain backup and data controls while popup retains search',a
   }
   assert.equal((await request({type:'search',query:'coral'},{id:'x',url:'popup/popup.html'})).type,'search');
 });
+
+test('automatic speech accepts undetermined language while retaining the English-only model',async()=>{
+ chrome.storage.local.get=async()=>({settings:{enabled:true,speechEnabled:true}});
+ chrome.tabs={get:async()=>({id:1,active:true,url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'}),sendMessage:async()=>({video:{videoId:'aaaaaaaaaaa',audioLanguage:'und'},paused:false,visible:true})};
+ const calls=[];chrome.runtime.getContexts=async()=>[{}];chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);return msg.type==='speech-status'?{status:'idle'}:{...msg,id:'automatic-unknown'};};
+ const result=await request({type:'speech-auto-start'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});
+ assert.equal(result.type,'speech-start');assert.ok(calls.includes('speech-prepare'));
+});

@@ -2,13 +2,13 @@
 <html lang="en">
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
-    <title>CueWoven v3.3.34</title>
+    <title>CueWoven v3.3.35</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <header class="top">
-      <div class="brand" title="CueWoven v3.3.34">
+      <div class="brand" title="CueWoven v3.3.35">
         <img src="../icons/icon32.png" alt="" width="20" height="20" />
         <span>CueWoven</span>
       </div>
@@ -91,26 +91,13 @@
 
     <section class="tab-tools" aria-label="This tab">
       <p id="capture-indicator" class="tab-caption" role="status" hidden></p>
-      <div id="index-now" class="tab-item" hidden>
-        <span class="tab-label">This video</span>
-        <span id="index-now-text" class="tab-text"></span>
-        <button id="index-now-btn" class="btn small">Save now</button>
-      </div>
 
       <section id="page-capture" class="tab-item page-capture" aria-label="This page" hidden>
         <span class="tab-label">This page</span>
         <p id="page-capture-status" class="tab-text" role="status"></p>
-        <div class="tab-actions"><button id="page-save-now" class="btn ghost small">Save page</button><button id="page-forget" class="btn ghost small" title="Delete what CueWoven saved from this site and stop saving it">Forget site</button></div>
+        <div class="tab-actions"><button id="page-forget" class="btn ghost small" title="Delete what CueWoven saved from this site and stop saving it">Forget site</button></div>
       </section>
 
-      <details id="speech" class="speech" hidden>
-        <summary id="speech-heading">Speech-to-text</summary>
-        <div class="speech-body">
-          <p class="hint">English player audio, on this device. Only played portions are saved. First use downloads a model.</p>
-          <p id="speech-status" role="status" aria-live="polite"></p>
-          <div class="speech-actions"><button id="speech-start" class="btn ghost small">Start English transcription</button><button id="speech-stop" class="btn small" hidden>Stop</button></div>
-        </div>
-      </details>
     </section>
 
     <footer class="foot">

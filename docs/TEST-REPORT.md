@@ -1,6 +1,10 @@
 # CueWoven test report
 
-## Current baseline — v3.3.34
+## Current baseline — v3.3.35
+
+All 289 Node tests pass. Edge checks cover real Whisper speech saved automatically after playback (including undetermined language), settings-only speech stop/resume, the cleaner popup, text-first selection with real CLIP fallback, unchanged 121/121 text retrieval, diagnostics and themes. See [v3.3.35 validation](UPDATE-3.3.35.md) for scope and limitations.
+
+## v3.3.34 baseline
 
 All 280 Node tests pass. Chromium checks cover shared secret redaction before storage, sender isolation, normal semantic retrieval, OCR backup redaction, backup restore, article capture, and UI behavior. The real-model benchmark returns the correct video first for all 121/121 fixture queries. Models, ranking rules and extension permissions are unchanged. See [v3.3.34 validation](UPDATE-3.3.34.md).
 

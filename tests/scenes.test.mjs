@@ -7,20 +7,20 @@ test('fusion includes visual-only matches without comparing raw cosine scales',(
   const out=fuseMatches([hit('weak-title',0,0.3,{titleOnly:true})],[hit('cats',20,0.27,{scene:true})],{perVideo:1});
   assert.equal(out[0].videoId,'cats');assert.deepEqual(out[0].matchSources,['Scene']);
 });
-test('strong transcript matches keep their timestamp and nearby scene evidence',()=>{
+test('strong transcript matches keep their timestamp without scene blending',()=>{
   const out=fuseMatches([hit('battery',42,0.8)],[hit('battery',40,0.28,{scene:true,key:'snapshot'})],{perVideo:1});
-  assert.equal(out[0].start,42);assert.equal(out[0].sceneStart,40);assert.deepEqual(out[0].matchSources,['Transcript','Scene']);
+  assert.equal(out[0].start,42);assert.equal(out[0].sceneStart,undefined);assert.deepEqual(out[0].matchSources,['Transcript']);
 });
 test('distant scene evidence does not claim to confirm a transcript moment',()=>{
   const out=fuseMatches([hit('battery',42,0.8)],[hit('battery',200,0.28,{scene:true})],{perVideo:1});
   assert.equal(out[0].start,42);assert.deepEqual(out[0].matchSources,['Transcript']);
 });
-test('fusion paginates across all matching videos, with stable unique-video pages',()=>{
+test('text-first selection paginates matching text videos without adding scenes',()=>{
   const words=Array.from({length:25},(_,i)=>hit('word'+i,i*20,0.8));
   const scenes=Array.from({length:25},(_,i)=>hit('scene'+i,i*20,0.28,{scene:true}));
   const all=fuseMatches(words,scenes,{limit:100,perVideo:1});
-  assert.equal(new Set(all.map(h=>h.videoId)).size,50);
-  for(let i=0;i<50;i++)assert.equal(fuseMatches(words,scenes,{offset:i,limit:1,perVideo:1})[0].videoId,all[i].videoId);
+  assert.equal(new Set(all.map(h=>h.videoId)).size,25);
+  for(let i=0;i<25;i++)assert.equal(fuseMatches(words,scenes,{offset:i,limit:1,perVideo:1})[0].videoId,all[i].videoId);
 });
 test('scene ranking filters weak, orphan, wrong-dimension and old matches',()=>{
   const videos=new Map([['a',{watchedAt:10}],['old',{watchedAt:1}]]);
@@ -58,7 +58,7 @@ test('article images have stable distinct keys and cannot masquerade as video fr
  assert.equal(results[0].articleImage,true);assert.equal(results[0].caption,'A diagram');
  assert.deepEqual(results[0].matchSources,['Article image']);
  const words=[hit(video.videoId,0,.6,{kind:'page',titleOnly:true,matchSources:['Title']})];
- const fused=fuseMatches(words,results,{perVideo:1});assert.equal(fused[0].articleImage,true);assert.deepEqual(fused[0].matchSources,['Title','Article image']);
+ const fused=fuseMatches(words,results,{perVideo:1});assert.equal(fused[0].articleImage,undefined);assert.deepEqual(fused[0].matchSources,['Title']);
 });
 
 // In-memory stand-in for the scenes/videos stores, spread over 84 videos so each stays under its per-video cap.

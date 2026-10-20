@@ -33,7 +33,7 @@ test('accent folding and Unicode terms work without dropping saved titles',()=>{
   assert.deepEqual(queryTerms('lithium-ion 京都'),['lithium','ion','京都']);
   const out=search([{videoId:'cafe',start:35,text:'Café Lumière uses a burr grinder.',similarity:.01}],'"cafe lumiere"');assert.equal(out[0].videoId,'cafe');
 });
-test('scene and audio indicators remain attached to nearby matching evidence',()=>{
+test('primary audio evidence retains its indicator without scene blending',()=>{
   const out=fuseMatches([{videoId:'a',start:42,score:.8,speechGenerated:true}],[{videoId:'a',start:40,score:.3,scene:true,key:'a:2'}],{perVideo:1});
-  assert.deepEqual(out[0].matchSources,['Audio','Scene']);assert.equal(out[0].start,42);
+  assert.deepEqual(out[0].matchSources,['Audio']);assert.equal(out[0].start,42);
 });

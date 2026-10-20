@@ -44,7 +44,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   console.log('SCENE_RESULTS',JSON.stringify(visual.results.map(({videoId,start,matchSources,score,scene})=>({videoId,start,matchSources,score,scene}))));
   assert.equal(visual.results[0].videoId,'aaaaaaaaaaa');assert.ok(visual.results[0].matchSources.includes('Scene'));assert.ok(visual.results[0].image.startsWith('data:image/jpeg;base64,'));assert.ok(visual.results[0].start>0);
   const spoken=await options.evaluate(()=>chrome.runtime.sendMessage({type:'search',query:'why phone batteries store less charge after repeated charging',singleVideo:true}));
-  assert.equal(spoken.results[0].videoId,'bbbbbbbbbbb');assert.equal(spoken.results[0].start,42);assert.ok(spoken.results[0].matchSources.includes('Transcript'));
+  assert.equal(spoken.results[0].videoId,'bbbbbbbbbbb');assert.equal(spoken.results[0].start,42);assert.ok(spoken.results[0].matchSources.includes('Transcript'));assert.ok(spoken.results.every(hit=>!hit.scene&&!hit.matchSources.includes('Scene')));
   const another=await context.newPage();await another.goto('https://www.youtube.com/watch?v=eeeeeeeeeee');await another.locator('#play').click();
   await wait(async()=>{const r=await options.evaluate(()=>chrome.runtime.sendMessage({type:'list'}));return r.videos.find(v=>v.videoId==='eeeeeeeeeee'&&v.sceneCount>0)});
   await another.evaluate(()=>document.querySelector('video').pause());

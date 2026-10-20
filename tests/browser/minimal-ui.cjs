@@ -16,7 +16,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   const picker=f.options.waitForEvent('filechooser');await f.options.locator('#welcome-restore').click();await picker;
   await f.options.locator('#import').focus();assert.equal(await f.options.evaluate(()=>document.activeElement.id),'import');
   // Load real local sample data via its first-run button, then show its matched moment.
-  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
+  const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');assert.equal(await popup.locator('#index-now,#page-save-now,#speech,#speech-start,#speech-stop').count(),0);await popup.locator('#start-samples').click();await popup.waitForFunction(()=>document.querySelector('#q').value==='why do batteries wear out');await popup.locator('#q').press('Enter');
   await popup.waitForFunction(()=>document.querySelector('.result .title')?.textContent.includes('batteries'));
   assert.equal(await popup.locator('.best .copy-link').isVisible(),true);
   assert.equal(await popup.locator('.best .result').isVisible(),true);

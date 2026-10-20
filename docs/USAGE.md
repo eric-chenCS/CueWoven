@@ -10,7 +10,7 @@
 
 Describe an idea, phrase, image or scene, then press **Enter**. Typing alone does not run a search or show matches. Editing the query hides old matches until you submit again. Each search is independent. After a search, **Not it? Add a detail** below the results adds one thing you remember (something said, something on screen, a channel or site, or when), and it opens on its own when nothing matches. Details build up as tags under the search box; ✕ removes one and searches again. **Not this one** on a result hides that item and searches again; the "hidden" tag brings it back. Editing the search clears its details and hidden items. Source/date filters narrow the results: **Any time**, **Today**, **7 days**, **30 days** or **Custom**, which shows From/To dates for an exact range. You can also type when you saw something: "3 days ago", "3-4 days ago", "between 1 and 2 months ago", "a few weeks ago", or, with words like "I watched", "yesterday", "last 3 days" or "in September". Typed dates are padded because memory is fuzzy, appear under the search box as "Using: …", and can be turned off with **Ignore suggested filters**; if nothing matches, results without them are shown. A date chosen in the popup always wins over a typed one. Results show the best match as a larger card. **Other matches** below it opens up to three more videos or pages as compact rows, one row each; it starts folded when the best match is confident and opens by itself when the top two nearly tie (the second row says **Almost as good**) or when the best match is only related in meaning. **Show more** reveals more rows and loads further ranked matches as needed. ↑ and ↓ move through all results, and Enter opens the selected one, or the best match.
 
-A moment is a saved passage or observation at a video time. Indicators identify the evidence: Transcript, Audio, Scene, On-screen text, Article image, Image caption or Title. Title-only results open a source without claiming a matching spoken timestamp. Scores express ranking, not probability.
+A moment is a saved passage or observation at a video time. Indicators identify the evidence: Transcript, Audio, Scene, On-screen text, Article image, Image caption or Title. Title-only results open a source without claiming a matching spoken timestamp. Relevant text and speech matches take priority over image similarity. Scenes and saved screenshots are used as a fallback when no strong text match is found; weak incidental text does not prevent visual searches. Scores express ranking, not probability.
 
 Press Enter once to search; press Enter again to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed.
 
@@ -22,7 +22,7 @@ The × beside a site excludes future capture while keeping saved items searchabl
 
 Allowed pages contribute up to 2,000 visible words and up to three accessible article images. Compatible visible video players can contribute native captions, played speech, scene snapshots and on-screen OCR. Website audio transcription is separately off by default. Native social-media apps, inaccessible frames, protected media and login walls are outside coverage. Feed URLs may reopen a feed rather than an exact clip.
 
-Speech fallback is local and English-only. Known non-English or ambiguous mixed-language metadata skips automatic fallback; manual Start English transcription can override incorrect metadata. It processes only audio played after starting, one player at a time. Audio is not saved as a recording.
+Speech fallback is local and English-only. It starts automatically when captions are unavailable; no Save now or speech-start button is needed. Missing/undetermined language metadata permits an English attempt, which can be inaccurate if the actual audio is not English. Known non-English audio is skipped. Pause saving or use **Settings → Transcribe when there are no captions** to control it; Lite mode also pauses speech. It processes only audio played after starting, one player at a time. Audio is not saved as a recording.
 
 Visual capture samples frames; it does not continuously archive a video. Short events and small or stylized text may be missed. **Lite mode** pauses new article images, scenes, OCR and speech while keeping captions and article text. Settings also provide individual controls, light/dark/system appearance and **Reset settings to default**. Reset preserves the library, site choices and retention preferences.
 
@@ -30,7 +30,7 @@ Visual capture samples frames; it does not continuously archive a video. Short e
 
 CueWoven saves videos as you watch them; there is no link pasting, Takeout importer or browser-history scan. A video saved as a title only, or with AI speech for just the parts you played, tries its captions again the next time you watch it. Older title-only entries stay searchable by title, and old CueWoven/Recall/Momento backups still restore.
 
-
+## Privacy and data
 
 Your library, vectors and settings are stored in the current browser profile. Local models process search text, audio and images on your device. Model weights download from Hugging Face on first use; normal website/YouTube requests and thumbnails still use the network. No personal YouTube API key is required.
 

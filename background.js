@@ -92,7 +92,7 @@ function requireLibrary(sender) {
 }
 
 async function requireSpeechIdle() {
-  if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
+  if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Pause automatic saving in Settings before changing saved data.');
 }
 
 async function requireYouTubeCapture(sender, videoId) {
@@ -128,7 +128,7 @@ async function speechContext(tabId) {
 async function startSpeech(tabId, manual=false) {
   if (!Number.isInteger(tabId)) throw new Error('Invalid video tab.');
   const {tab, clock} = await speechContext(tabId);
-  if (!manual && clock.video.audioLanguage && !/^en(?:-|$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
+  if (!manual && clock.video.audioLanguage && !/^(?:en(?:-|$)|und$)/i.test(clock.video.audioLanguage)) throw new Error('Automatic speech-to-text supports English audio only. Captions and scenes remain available.');
   if (!tab.active || clock.paused || !clock.visible) throw new Error('Play a video in the active tab first.');
   const ready = await engine('speech-prepare', {tabId, video: clock.video});
   try {

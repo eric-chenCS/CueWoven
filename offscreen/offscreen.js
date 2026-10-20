@@ -9,7 +9,7 @@ import {createVisionModel} from './vision-model.js';
 import {createOcrModel} from './ocr-model.js';
 import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
-import {validateScene, rankScenes,sceneCaps, fuseMatches} from '../lib/scenes.js';
+import {validateScene, rankScenes,sceneCaps, fuseMatches,hasRelevantText} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
 import { prepareQuery, createPool, addIndex, rankPool, nearTie, watchedWithin, dropTwins } from '../lib/search.js';
 import * as db from '../lib/db.js';
@@ -185,7 +185,7 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, u
   const {hits:words,twins}=dropTwins(rankPool(pool,{perVideo}));
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   const finish=results=>({results});
-  if(!hasScenes)return finish(select(words));
+  if(!hasScenes||hasRelevantText(words))return finish(select(words));
   try {
     const visual = await visualBudget(searchScenes(q,{limit:2000,perVideo,...range},videos));
     const scenes=visual.results.filter(hit=>!twins.has(hit.videoId));

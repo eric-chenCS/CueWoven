@@ -164,8 +164,8 @@ test('title and channel evidence is computed with the final word weights', () =>
 test('the near-tie hint only compares scores from the same model', () => {
   const words = [{videoId: 'b', start: 0, score: .95, matchSources: ['Transcript']}, {videoId: 'a', start: 0, score: .5, matchSources: ['Transcript']}];
   const fused = fuseMatches(words, [{videoId: 'a', start: 0, score: .3}], {perVideo: 1});
-  assert.equal(fused[0].videoId, 'a', 'scene evidence moved "a" first');
-  assert.equal(searchModule.nearTie(fused), false, 'a scene-boosted result is not a tie with a 0.95 transcript match');
+  assert.equal(fused[0].videoId, 'b', 'visual evidence cannot boost a lower text result');
+  assert.equal(searchModule.nearTie(fused), false, 'the original comparable text scores stay in order');
   assert.equal(searchModule.nearTie(words), false);
   assert.equal(searchModule.nearTie([{videoId: 'a', start: 0, score: .62, matchSources: ['Transcript']}, {videoId: 'a', start: 90, score: .61, matchSources: ['Transcript']}, {videoId: 'b', start: 0, score: .6, matchSources: ['Page text']}]), true);
   assert.equal(searchModule.nearTie([{videoId: 'a', start: 0, score: .62, matchSources: ['Transcript', 'Scene']}, {videoId: 'b', start: 0, score: .61, matchSources: ['Transcript']}]), false);

@@ -155,7 +155,7 @@
 
   async function trySpeech() {
     if (!speechPending || speechPending !== current?.videoId) return;
-    if (current.audioLanguage && !/^en(?:-|$)/i.test(current.audioLanguage)) {speechPending=null;return;}
+    if (current.audioLanguage && !/^(?:en(?:-|$)|und$)/i.test(current.audioLanguage)) {speechPending=null;return;}
     const clock = speechClock();
     if (!clock.visible || clock.paused || clock.ad) return;
     const id = speechPending;
@@ -246,7 +246,7 @@
     if(area!=='local')return;
     if(changes.settings){
       if(changes.settings.newValue?.enabled===false){captureRevision++;clearDwell();speechPending=null;}
-      if(current)settings().then(s=>{if(current){startVisual(s);if(s.enabled&&changes.settings.oldValue?.enabled===false)startDwell(dwellSeconds(s,current),current.videoId);}});
+      if(current)settings().then(s=>{if(current){startVisual(s);if(s.enabled&&(changes.settings.oldValue?.enabled===false||changes.settings.oldValue?.speechEnabled===false&&s.speechEnabled!==false||changes.settings.oldValue?.lightMode===true&&!s.lightMode))startDwell(dwellSeconds(s,current),current.videoId);}});
     }
     if(!changes.webCapture)return;
     const previous=excluded;excluded=excludedSite(changes.webCapture.newValue);

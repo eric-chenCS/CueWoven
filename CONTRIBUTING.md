@@ -2,7 +2,7 @@
 
 ## Build from source
 
-Use Node.js 22+ and pnpm 11.25.0. Run `pnpm install --frozen-lockfile --ignore-scripts` followed by `pnpm run vendor` on a fresh clone, then load the repository root as an unpacked extension. The generated `vendor/` runtime is required but stays out of Git.
+Use Node.js 22+ and pnpm 11.25.0. Run `pnpm install --frozen-lockfile --ignore-scripts` followed by `pnpm run vendor` on a fresh clone, then load the repository root as an unpacked extension. The generated `vendor/` runtime is required but stays out of Git. This applies to both clones and GitHub source ZIPs. To install without a development toolchain, use the named [release asset](https://github.com/eric-chenCS/CueWoven/releases/latest) instead. See [INSTALL.md](INSTALL.md) for the complete loading, refresh and troubleshooting steps.
 
 ## Make a change
 
@@ -20,6 +20,8 @@ node tests/browser/refine-search.cjs
 node tests/browser/single-video.cjs
 node tests/browser/enter-search.cjs
 node tests/browser/adaptive-scenes.cjs
+node tests/browser/security-hardening.cjs
+node tests/browser/visual-fallback.cjs
 ```
 
 These use controlled YouTube/transcript outcomes with the real local embedding/search engine. They can download model weights, create isolated temporary browser profiles, and do not use your normal browser history or cookies. The background test uses the real service worker and temporary tabs to verify processing continues after settings closes.

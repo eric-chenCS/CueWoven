@@ -9,7 +9,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
   await f.options.locator('#theme').selectOption(theme);
   await popup.waitForFunction(t=>document.documentElement.dataset.theme===t,theme);
   await popup.locator('#q').focus();
-  const colors=await popup.evaluate(()=>{const q=getComputedStyle(document.querySelector('#q')),button=getComputedStyle(document.querySelector('#page-save-now'));return{paper:getComputedStyle(document.body).backgroundColor,surface:q.backgroundColor,focus:q.borderTopColor,ring:q.boxShadow,border:button.borderTopColor}});
+  const colors=await popup.evaluate(()=>{const q=getComputedStyle(document.querySelector('#q')),button=getComputedStyle(document.querySelector('#page-forget'));return{paper:getComputedStyle(document.body).backgroundColor,surface:q.backgroundColor,focus:q.borderTopColor,ring:q.boxShadow,border:button.borderTopColor}});
   assert.equal(colors.paper,rgb(paper));assert.equal(colors.surface,rgb(surface));assert.equal(colors.focus,rgb(focus));assert.ok(colors.ring.includes(rgb(focus)));assert.equal(colors.border,rgb(border));
   assert.equal(await f.options.locator('.sheet').first().evaluate(el=>getComputedStyle(el).backgroundColor),rgb(surface));
   assert.equal(await f.options.locator('#clear').evaluate(el=>getComputedStyle(el).borderTopColor),rgb(danger));

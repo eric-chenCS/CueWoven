@@ -61,7 +61,9 @@ test("text fragment anchors stay within one captured text block rather than cros
 test("page word offsets are never treated as video times during scene fusion", () => {
   const words = [{ videoId: "aaaaaaaaaaa", start: 0, score: 0.8, pageText: true, matchSources: ["Page text"] }], scenes = [{ videoId: "aaaaaaaaaaa", start: 3, score: 0.4, key: "a", scene: true }];
   const result = fuseMatches(words, scenes, { perVideo: 2 });
-  assert.equal(result.length, 2);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].start, 0);
+  assert.equal(result[0].sceneStart, undefined);
   assert.equal(result[0].matchSources.includes("Scene"), false);
 });
 test("backup restores web parents before their scene and OCR children", async () => {
