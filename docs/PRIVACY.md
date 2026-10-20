@@ -14,7 +14,7 @@ Only on YouTube and on websites you choose to allow, CueWoven saves:
 - **Page text:** up to 2,000 visible words from allowed pages, up to three visible article images, and their captions.
 - **Google searches:** only if you turn on "Save my Google searches" (off by default).
 
-CueWoven does not capture incognito windows, and it skips known private services, sign-in and account pages, and sensitive routes. It also removes some text patterns that look like personal data, such as email addresses, phone numbers and card numbers. These filters reduce unwanted capture but cannot recognize every private page, and saved images are not redacted.
+CueWoven does not capture incognito windows, and it skips known private services, sign-in and account pages, and sensitive routes. It also removes some text patterns that look like personal data, such as email addresses, phone numbers, card numbers, recognizable API keys, authorization tokens and private-key blocks. Secret detection is best-effort and does not cover every credential format. These filters reduce unwanted capture but cannot recognize every private page, and saved images are not redacted.
 
 ## Where it is stored and who can see it
 
