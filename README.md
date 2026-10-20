@@ -1,63 +1,84 @@
 # CueWoven
 
-**Find what you watched or read—even when you only remember a detail.**
+**Find a video or page from the detail you remember.**
 
-Browser history remembers URLs. CueWoven helps you remember what was in them. Describe a quote, idea or scene to find a saved video moment or article passage, then jump back to the source.
+Describe a quote, idea, scene or passage. CueWoven searches a library saved in your browser and links back to a matching video moment or page.
 
-Built for SwampHacks XII as a local-first Chrome and Microsoft Edge extension. No personal YouTube API key is required.
+CueWoven is a local-first extension for desktop Chrome and Microsoft Edge, built for SwampHacks XII. No account or personal YouTube API key is required.
 
-[Download CueWoven](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [For developers](CONTRIBUTING.md)
+[Download](https://github.com/eric-chenCS/CueWoven/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [Privacy policy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md)
 
-<img src="docs/assets/search-demo.png" width="440" alt="CueWoven finds a timestamped battery explanation from a natural-language query, using an original demo video." />
+<img src="docs/assets/search-demo.png" width="440" alt="CueWoven finds a timestamped battery explanation using original demo content." />
 
-*Actual extension UI with original sample content, not personal browsing history.*
+*Extension UI with original sample content, without personal browsing history.*
 
 ## Install and try it
 
-1. Open the [latest release](https://github.com/eric-chenCS/SwampHacks-XII/releases/latest) and download the **cuewoven-v3.3.32.zip** asset. Extract it to a permanent folder.
+1. Open the [latest release](https://github.com/eric-chenCS/CueWoven/releases/latest) and download the `cuewoven-v<version>.zip` asset. Extract it to a permanent folder.
 2. Open `chrome://extensions` or `edge://extensions` and enable **Developer mode**.
-3. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
-4. Open CueWoven from the toolbar. Choose **Try sample videos** for a quick demo, or watch a YouTube video to start your own library.
+3. Choose **Load unpacked** and select the extracted folder containing `manifest.json`.
+4. Open CueWoven from the toolbar and choose **Try sample videos**.
+5. Search **“why do batteries wear out”**, then press **Enter** to show matches. Open a result to visit the matching moment.
 
-Try searching **“why does a phone battery hold less charge as it ages”** with the samples. Press **Enter** to show matches. First use downloads the local search model, so allow time for setup. Click the result to open the matching moment.
+The first use of a model requires an internet connection to download its files. Setup time depends on the connection and your computer.
 
-The release ZIP includes the browser runtime. GitHub's **Code → Download ZIP** is source code and needs the [developer build steps](CONTRIBUTING.md#build-from-source) before loading. CueWoven is currently installed as an unpacked extension, not through a browser store.
+Open the popup with **Ctrl+Shift+F** on Windows/Linux or **Command+Shift+K** on macOS. If the shortcut is unavailable, change it on your browser's extensions shortcuts page or use the toolbar icon.
 
-## What you can find
+The release asset includes the browser runtime. GitHub's **Code → Download ZIP** contains source code and needs the build steps below. These instructions install an unpacked extension; they do not require a browser-store listing.
 
-- **Video moments:** search captions, played English speech, sampled scenes and on-screen text. Open a timestamp link or copy it to share.
-- **Articles and pages:** search saved text, visible images and image captions on websites you allow. Open a matching passage where text highlighting is supported.
-- **Take your library along:** export a CueWoven backup and restore it in another installation.
-- **More precise results:** refine a query, filter by source or date, search inside the current YouTube video, and use ← / → to browse ranked matches.
+## Build your library
 
-YouTube is the only default site. Under **Library & settings → Websites**, add suggested sites or individual domains and grant browser access. Compatible browser video players on other sites can contribute content; native mobile apps, login walls and protected players are not supported.
+Watch YouTube videos as usual. YouTube is the only default capture site. After the watch delay, CueWoven attempts to save available captions and video information. When captions are unavailable, local English speech recognition can transcribe audio you play. If the language is uncertain, use **Start English transcription** in the popup for English audio. Enabled visual features sample scenes and read on-screen text.
 
-## How it works
+To save pages from other websites, choose sites during first-run setup or add them under **Library & settings → Websites**, grant browser access, and refresh already-open tabs. Website audio transcription and saving Google searches are off by default. Only compatible browser video players are supported; protected players may prevent capture.
 
-1. **Capture:** allowed pages and videos contribute text and selected visual evidence while you browse. Backup restore brings back previously saved evidence.
-2. **Index on your device:** MiniLM turns passages into semantic vectors; exact words, titles and context also contribute to ranking. Whisper handles English speech fallback, CLIP compares images and scenes, and Tesseract reads on-screen text.
-3. **Recall the source:** your description is compared with saved evidence. Results show why they matched and link to a video moment or page passage.
+Videos are saved as you watch them. CueWoven does not scan previous browser visits, import Google Takeout files, or accept pasted video links for background transcript fetching. You can restore a library previously exported from CueWoven.
 
-Semantic search can match related meaning rather than identical words. Rankings are estimates, not probabilities or guaranteed identification. [Architecture and model details →](docs/ARCHITECTURE.md)
+## Search what you remember
 
-## Privacy and practical limits
+- **Words and ideas:** search captions, locally transcribed English speech, saved page passages and image captions.
+- **Visual details:** search sampled video scenes, saved article images and recognized on-screen text.
+- **Source and date:** narrow results with filters or phrases such as “last week”; search within the current YouTube video.
+- **Follow a match:** open a timestamp or a page passage where supported, copy its link, or browse other matches with the arrow keys.
+- **Refine a result:** add another detail when the first match is not the one you meant.
 
-Your library and search index stay in the current browser profile. CueWoven does not upload your history, queries, transcripts or captured audio to an AI service. Model weights download on first use; websites and YouTube still receive normal content requests. Optional site access is requested when you add websites. CueWoven does not request browser-history permission.
+Press **Enter** to search after editing your query. Semantic search combines local embeddings with words, titles and context. Results are estimates, and a matching detail may be absent from the saved evidence. [How indexing and ranking work →](docs/ARCHITECTURE.md)
 
-Pause saving, exclude sites, choose retention periods, export a backup or delete saved items in settings. Uninstalling or clearing the profile can erase the library. Backups preserve saved evidence, not original video files or complete websites. Live Google-search capture and website audio transcription start off. Sensitive-page filters and text redaction help, but cannot recognize every private page or redact captured images. [Privacy and data controls →](docs/USAGE.md#privacy-and-data)
+## Privacy and controls
 
-Live capture covers played or read portions. It cannot recover unwatched audio, guarantee every brief scene, or retrieve captions that YouTube does not provide. It does not scan your past browser visits or import Google Takeout files. Models use CPU and memory; **Lite mode** keeps text capture while pausing new image, scene, OCR and speech capture.
+Your library and search index stay in the current browser profile. CueWoven does not send your queries, transcripts, captured audio or saved library to an AI service or the developer. Model files download from Hugging Face; normal website, caption, image and thumbnail requests still occur. Download services receive ordinary network connection information. CueWoven does not request browser-history permission.
 
-## Build and contribute
+Use settings to pause saving, exclude sites, choose retention and image-storage limits, delete items, or export and restore a backup. Incognito capture is excluded. Sensitive-page filters and text redaction reduce unwanted capture but cannot detect every private page, and captured images are not redacted.
+
+Available captions can cover more of a video than you have played. Speech, scene and on-screen-text capture depend on playback and cannot recover earlier audio or guarantee every brief scene. **Lite mode** keeps text capture while pausing new speech, scene, image and OCR capture. Local models use CPU, memory and disk space.
+
+Backups contain saved evidence, not original video files or complete websites. Export a backup before uninstalling, clearing a browser profile or switching installation folders. Unpacked installations need manual updates; keep the same folder, reload the extension, and refresh open tabs. [Privacy policy](docs/PRIVACY.md) · [Data controls and backup limits](docs/USAGE.md#privacy-and-data)
+
+## Build from source
+
+Requires **Node.js 22+** and **pnpm 11.25.0**.
 
 ```sh
-git clone https://github.com/eric-chenCS/SwampHacks-XII.git
-cd SwampHacks-XII
+git clone https://github.com/eric-chenCS/CueWoven.git
+cd CueWoven
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm run vendor
 pnpm test
 ```
 
-Requires Node.js 22+ and pnpm 11.25.0. Load this folder as an unpacked extension after building. See [CONTRIBUTING.md](CONTRIBUTING.md) for branches, browser tests and packaging.
+Load the repository folder as an unpacked extension after building. The generated `vendor/` directory contains the bundled JavaScript, WebAssembly and OCR runtime. AI model weights download separately when needed.
 
-The current unit suite has **277 tests**. Isolated browser checks cover search, capture, backups, permissions and the interface. Controlled fixtures are regression checks, not a guarantee of real-world retrieval accuracy. [Validation and technical documentation →](docs/README.md)
+For isolated browser regression checks, see [CONTRIBUTING.md](CONTRIBUTING.md). Unit tests and controlled browser fixtures help catch regressions; they do not guarantee live caption availability or retrieval accuracy on arbitrary websites.
+
+## Package for distribution
+
+After building and testing:
+
+```sh
+pnpm run zip
+node scripts/zip.mjs --store
+```
+
+`cuewoven-v<version>.zip` includes the runtime, documentation and development files for a downloadable release. `cuewoven-store-v<version>.zip` contains the runtime files for a store submission. Rebuild both archives after changing files they contain.
+
+The [store listing draft](docs/STORE-LISTING.md) and `docs/store/` assets support submission. Before uploading, verify that the privacy-policy URL is publicly accessible, disclosures match actual behavior, screenshots match the current UI, and the submitted archive passes browser checks. Store approval is determined by the store's review.

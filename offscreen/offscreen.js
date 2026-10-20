@@ -83,6 +83,11 @@ function cleanVideo(v) {
   };
 }
 
+async function requireYouTubeSaving() {
+  const state = await chrome.runtime.sendMessage({type:'youtube-saving-status'});
+  if (!state?.allowed) throw Error('Video capture is paused or excluded.');
+}
+
 async function storeChunks(video, chunks, method, indexedAt) {
   chunks = chunks.map(row=>({...row,text:policy.redactText(row.text)}));
   const vecs = await embed(chunks.map(c=>embeddingText({...video,method},c.text)));
@@ -91,6 +96,7 @@ async function storeChunks(video, chunks, method, indexedAt) {
   if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
   if(indexedAt===undefined && video.watchedAt>0)record.historyImported=false;
+  if(indexedAt===undefined)await requireYouTubeSaving();
   const saved=await db.replaceVideo(
     record,
     chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION })),
@@ -112,6 +118,7 @@ async function importHistory({ videos, historyImported=true }) {
   const vecs = await embed(pending.map(v => `${v.title}. ${v.channel}`));
   let imported = 0;
   for (const [i, v] of pending.entries()) {
+    if(!historyImported)await requireYouTubeSaving();
     const record = {...cleanVideo(v), indexedAt: Date.now(), savedAt:Date.now(),chunkCount: 1, method: 'history-title',historyImported};
     const added = await db.addVideoIfAbsent(record, [{videoId:v.videoId, start:0, text:v.title, vec:vecs[i],embeddingVersion:EMBEDDING_VERSION}]);
     if (added) { imported++; invalidate(false); }
