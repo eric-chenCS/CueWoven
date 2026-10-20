@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CueWoven v3.3.28 \u2013 Search Your History",
-  "short_name": "CueWoven v3.3.28",
-  "version": "3.3.28",
+  "name": "CueWoven v3.3.29 \u2013 Search Your History",
+  "short_name": "CueWoven v3.3.29",
+  "version": "3.3.29",
   "description": "Find watched videos, articles and searches from a vague memory. Optional website capture; local text, audio and scene search.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -89,8 +89,5 @@
         "http://*/*"
       ]
     }
-  ],
-  "omnibox": {
-    "keyword": "rc"
-  }
+  ]
 }

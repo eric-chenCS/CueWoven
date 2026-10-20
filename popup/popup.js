@@ -6,6 +6,7 @@ import {withTimeout} from '../lib/request-timeout.js';
 import {resultLink} from '../lib/result-link.js';
 import {sampleFor} from '../lib/samples.js';
 import {videoIdFromUrl} from '../lib/video.js';
+import {openShortcut} from '../lib/shortcut.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -366,9 +367,18 @@ async function refreshWebPause(){const {webCapture={}}=await chrome.storage.loca
 // ---------------------------------------------------------------------------
 let stats = { videos: 0, chunks: 0 };
 
+// The real shortcut, so people who clicked the icon learn the faster way in.
+let shortcut = '';
+const shortcutReady = openShortcut().then(key => { shortcut = key; });
 function showIdle() {
   if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, add a link or try the samples.']);
   else empty('Describe what you remember',[],'Like “the part about why batteries wear out”');
+  if (shortcut) {
+    const tip = document.createElement('p');
+    tip.className = 'hint shortcut-tip';
+    tip.append('Tip: press ', Object.assign(document.createElement('kbd'), { textContent: shortcut }), ' on any page to open CueWoven.');
+    resultsEl.querySelector('.empty').append(tip);
+  }
 }
 
 function showModel(state) {
@@ -478,6 +488,7 @@ $('start-empty').addEventListener('click', async () => {
   const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays', 'customRange', 'inferFilters']).catch(() => ({}));
   const today = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   $('range-from').max = $('range-to').max = today;
+  await shortcutReady;
   await refreshStatus();
   refreshWebPause();
   const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');

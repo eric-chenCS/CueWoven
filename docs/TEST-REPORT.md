@@ -1,8 +1,8 @@
 # CueWoven test report
 
-## Current baseline — v3.3.28
+## Current baseline — v3.3.29
 
-All 287 Node tests pass, and the refine, Enter-search, single-video, theme, minimal-UI, v3.3 feature, backup and preference browser checks pass; see [v3.3.28 validation](UPDATE-3.3.28.md). Historical counts below apply to their named versions.
+All 286 Node tests pass, and the refine, Enter-search, single-video, theme, minimal-UI, v3.3 feature, backup and preference browser checks pass; see [v3.3.29 validation](UPDATE-3.3.29.md). Historical counts below apply to their named versions.
 
 ## v3.3.22 baseline
 

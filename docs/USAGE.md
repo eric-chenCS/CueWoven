@@ -1,6 +1,6 @@
 # Using CueWoven
 
-[Install first](../INSTALL.md), then open the toolbar popup to search. Your library can start empty or with optional original sample videos.
+[Install first](../INSTALL.md), then open the search popup either way: press **Ctrl+Shift+F** (**⌘+Shift+K** on Mac), or click the CueWoven toolbar icon (pin it from Chrome's puzzle-piece menu to keep it visible). Chrome skips the shortcut if another extension already uses it; Settings shows the current one and **Change** opens Chrome's shortcut page. Your library can start empty or with optional original sample videos.
 
 ![CueWoven library populated only with five original demo videos](assets/library-demo.png)
 
@@ -12,11 +12,11 @@ Describe an idea, phrase, image or scene, then press **Enter**. Typing alone doe
 
 A moment is a saved passage or observation at a video time. Indicators identify the evidence: Transcript, Audio, Scene, On-screen text, Article image, Image caption or Title. Title-only results open a source without claiming a matching spoken timestamp. Scores express ranking, not probability.
 
-Press Enter once to search; press Enter again to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed. The `rc` address-bar keyword also searches your library.
+Press Enter once to search; press Enter again to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed.
 
 ## Choose what gets saved
 
-Saving is enabled with YouTube as the only starter site. Add the other suggested sites or your own domains under Websites. Browser access is requested on a user click; already granted access may not show a new prompt. Refresh existing tabs afterward.
+Saving is enabled with YouTube as the only starter site. On first run, the welcome screen offers the suggested sites as three groups (News, Reference, Social), all off; choosing any and pressing **Start saving** asks the browser once for just those sites. Add them later, or your own domains, under Websites. Browser access is requested on a user click; already granted access may not show a new prompt. Refresh existing tabs afterward.
 
 The × beside a site excludes future capture while keeping saved items searchable. The popup's **Forget site** action deletes saved items for that site and blocks future capture. The site list and extra options can be collapsed. Broader public-website access is optional.
 
