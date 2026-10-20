@@ -16,6 +16,7 @@
   for (const event of ['seeking', 'ratechange', 'pause', 'play']) document.addEventListener(event, () => {playbackRevision++;}, true);
 
   let current = null;       // { videoId, title, channel, lengthSeconds }
+  let captureRevision = 0;
   let excluded=false;
   const excludedSite=config=>(config?.blocked||[]).some(site=>['www.youtube.com','youtu.be'].some(host=>host===site||host.endsWith('.'+site)));
   let speechPending = null;
@@ -167,6 +168,7 @@
   const running = new Map();
   async function run(manual) {
     const id = current?.videoId;
+    const revision = captureRevision;
     if (running.has(id)) return running.get(id);
     const task = (async () => {
       if (!current) return { ok: false, reason: 'Open a YouTube video first.' };
@@ -174,9 +176,15 @@
       const check = await send({ type: 'should-index', videoId: video.videoId, manual, watchedAt: video.watchedAt });
       if (check && check.error) return { ok: false, reason: check.error };
       if(!check||!check.index){logCapture(check?.reason==='Indexing is paused'?'paused':'duplicate');return {ok:true,skipped:true,reason:check&&check.reason};}
+      if(captureRevision!==revision || current?.videoId!==video.videoId)return {ok:false,reason:'The capture was cancelled.'};
 
       const metadata = send({type:'index-metadata', video});
       const t = await requestTranscript(video.videoId, manual);
+      const latest = await settings();
+      if (!latest.enabled || captureRevision !== revision || current?.videoId !== video.videoId) {
+        if(latest.enabled && current?.videoId===video.videoId)startDwell(dwellSeconds(latest,current),video.videoId);
+        return {ok:false,reason:'Saving was paused, excluded, or the video changed.'};
+      }
       const segments = (t.segments || []).slice(0, MAX_SEGMENTS);
       if (!segments.length) {
         const reason = t.error || 'This video has no captions.';
@@ -202,7 +210,7 @@
     if (event.source !== window || event.origin !== location.origin) return;
     const d = event.data;
     if (!d || d.source !== FROM_MAIN) return;
-    if (d.type === 'video-reset') {current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();}
+    if (d.type === 'video-reset') {captureRevision++;current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();}
     else if (d.type === 'video') onVideo(d.video);
     else if (d.type === 'transcript' && pending.has(d.reqId)) {
       const resolve = pending.get(d.reqId);
@@ -236,10 +244,13 @@
 
   chrome.storage.onChanged?.addListener((changes,area)=>{
     if(area!=='local')return;
-    if(changes.settings&&current)settings().then(s=>{if(current)startVisual(s);});
+    if(changes.settings){
+      if(changes.settings.newValue?.enabled===false){captureRevision++;clearDwell();speechPending=null;}
+      if(current)settings().then(s=>{if(current){startVisual(s);if(s.enabled&&changes.settings.oldValue?.enabled===false)startDwell(dwellSeconds(s,current),current.videoId);}});
+    }
     if(!changes.webCapture)return;
     const previous=excluded;excluded=excludedSite(changes.webCapture.newValue);
-    if(excluded){clearDwell();speechPending=null;globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();globalThis.__recallPageAudio?.stop(undefined,true).catch(()=>{});}
+    if(excluded){captureRevision++;clearDwell();speechPending=null;globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();globalThis.__recallPageAudio?.stop(undefined,true).catch(()=>{});}
     else if(previous&&current)settings().then(s=>{if(current){startVisual(s);if(s.enabled)startDwell(dwellSeconds(s,current),current.videoId);}});
   });
   // yt-main.js may have announced the video before this script loaded.

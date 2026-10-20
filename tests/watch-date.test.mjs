@@ -6,9 +6,9 @@ import vm from 'node:vm';
 async function capture(forced) {
   let runtimeListener;let browserWindow;const messages=[];const events=new Map();
   const location=new URL(`https://www.youtube.com/watch?v=aaaaaaaaaaa${forced?'&recall_index=1':''}`);
-  const ctx={URLSearchParams,location,Date,setTimeout,clearTimeout,
+  const ctx={URLSearchParams,location,Date,setTimeout:(fn,ms)=>{const timer=setTimeout(fn,ms);timer.unref();return timer;},clearTimeout,
     document:{hidden:false,addEventListener(){},removeEventListener(){}},
-    chrome:{storage:{local:{get:async()=>({settings:{enabled:false}})}},runtime:{
+    chrome:{storage:{local:{get:async()=>({settings:{enabled:true}})}},runtime:{
       onMessage:{addListener:fn=>{runtimeListener=fn;}},
       sendMessage:async msg=>{messages.push(msg);return msg.type==='should-index'?{index:true}:{chunkCount:1};},
     }},

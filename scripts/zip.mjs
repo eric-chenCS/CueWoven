@@ -1,5 +1,6 @@
 // Packs the extension (with vendor/) into a versioned ZIP for local sharing
 // or for copying to another machine. Uses system zip or Windows' built-in tar.
+// --store packs only the runtime files for Chrome Web Store / Edge Add-ons upload.
 import { execFileSync } from 'node:child_process';
 import { existsSync, unlinkSync, readFileSync } from 'node:fs';
 
@@ -8,8 +9,10 @@ if (!runtime.every(file=>existsSync('vendor/'+file))) {
   console.error('Run "pnpm run setup" first so vendor/ exists.');
   process.exit(1);
 }
-const items = ['samples', 'manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses', 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];
-const archive = `cuewoven-v${JSON.parse(readFileSync('manifest.json','utf8')).version}.zip`;
+const store = process.argv.includes('--store');
+const extension = ['samples', 'manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses'];
+const items = store ? extension : [...extension, 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];
+const archive = `cuewoven-${store ? 'store-' : ''}v${JSON.parse(readFileSync('manifest.json','utf8')).version}.zip`;
 if (existsSync(archive)) unlinkSync(archive);
 if (process.platform === 'win32') {
   execFileSync('tar.exe', ['-a', '-cf', archive, ...items], { stdio: 'inherit' });

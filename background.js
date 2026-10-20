@@ -94,6 +94,16 @@ async function requireSpeechIdle() {
   if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
 }
 
+async function requireYouTubeCapture(sender, videoId) {
+  if (sender.tab?.incognito) throw Error('Incognito capture is excluded.');
+  const settings = await getSettings();
+  if (!settings.enabled || settings.youtubeBlocked) throw Error('Video capture is paused or excluded.');
+  const matches = url => typeof url === 'string' && url.startsWith('https://www.youtube.com/') && videoIdFromUrl(url) === videoId;
+  if (!sender.tab || sender.frameId > 0 || !/^[\w-]{11}$/.test(videoId || '') || !matches(sender.url)) throw Error('Invalid video capture source.');
+  const tab = await chrome.tabs.get(sender.tab.id);
+  if (tab.incognito || !matches(tab.url)) throw Error('The video changed before its captions were saved.');
+}
+
 // ---------------------------------------------------------------------------
 // Message router
 // ---------------------------------------------------------------------------
@@ -131,6 +141,11 @@ async function startSpeech(tabId, manual=false) {
 }
 
 const handlers = {
+  async 'youtube-saving-status'(_input,sender) {
+    if(sender.url!==chrome.runtime.getURL(OFFSCREEN_PATH))throw Error('Invalid capture status request.');
+    const settings=await getSettings();
+    return {allowed:settings.enabled&&!settings.youtubeBlocked};
+  },
   async 'screen-frame'(input,sender){
     const settings=await getSettings();if(!settings.enabled || settings.screenTextEnabled===false)return {disabled:true};
     if(settings.youtubeBlocked&&sender.url?.startsWith('https://www.youtube.com/'))return {disabled:true};
@@ -199,9 +214,7 @@ const handlers = {
   },
   // From YouTube tabs
   async 'index-metadata'({video}, sender) {
-    if (!sender.tab || sender.frameId > 0 || new URL(sender.url).origin !== 'https://www.youtube.com' || !/^[\w-]{11}$/.test(video?.videoId)) throw Error('Invalid video metadata source.');
-    const s = await getSettings();
-    if (sender.tab?.incognito || s.youtubeBlocked || !s.enabled) throw Error('Video capture is paused or excluded.');
+    await requireYouTubeCapture(sender, video?.videoId);
     const result = await engine('import-history', {videos:[video], historyImported:false});
     chrome.runtime.sendMessage({type:'index-changed'}).catch(() => {});
     return result;
@@ -210,7 +223,7 @@ const handlers = {
     if(sender?.tab?.incognito)return {index:false,reason:'Incognito capture is excluded.'};
     const s = await getSettings();
     if(s.youtubeBlocked)return {index:false,reason:'YouTube is excluded.'};
-    if (!manual && !s.enabled) return { index: false, reason: 'Indexing is paused' };
+    if (!s.enabled) return { index: false, reason: 'Indexing is paused' };
     if (Number.isFinite(watchedAt) && watchedAt > 0 && watchedAt <= Date.now() + 60000) {
       await engine('touch-watch', { videoId, watchedAt });
     }
@@ -219,8 +232,7 @@ const handlers = {
     return { index: !has, reason: has ? 'Already indexed' : undefined };
   },
   async 'index-video'({ video, segments, method }, sender) {
-    if(sender.tab?.incognito)throw Error('Incognito capture is excluded.');
-    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded.');
+    await requireYouTubeCapture(sender, video?.videoId);
     const res = await engine('index', { video, segments, method });
     flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});

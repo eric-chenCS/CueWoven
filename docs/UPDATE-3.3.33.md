@@ -1,0 +1,9 @@
+# CueWoven v3.3.33
+
+Pausing saving now cancels pending YouTube caption requests, including a pause followed by resume. Excluding YouTube or navigating away also invalidates the pending request. The background handler checks the current top-level video, and the offscreen engine rechecks saving permission immediately before writing results after inference. Backup restores remain available while automatic saving is paused.
+
+The privacy policy now explains local processing, normal network requests, temporary audio buffering, sensitive-page filter limitations and Limited Use. The public policy is hosted on the dedicated [`privacy-policy` branch](https://github.com/eric-chenCS/CueWoven/blob/privacy-policy/docs/PRIVACY.md). Keep that branch available for the store's policy link. Installation and developer instructions no longer refer to removed background transcript fetching.
+
+Validation: 273 unit tests pass. New regressions cover pause, pause/resume, exclusion, navigation, sender validation and the offscreen saving gate. An intentionally inverted saving guard is caught by the tests. Isolated browser checks cover a cold remote model download, cancellation during inference and delayed caption delivery, offline search, backup recovery, settings, first-run permissions, layout and branding. Real public Wikipedia content is captured; real English YouTube audio is transcribed locally and searched with timestamps. YouTube did not supply caption text in the tested logged-out sessions, so successful direct live caption retrieval is not claimed.
+
+Model-dependent controlled fixtures and live network checks have different scopes. The live article fixture grants test site access; it does not exercise the native optional-permission dialog. Browser-store approval and Edge certification remain separate from these checks.

@@ -19,7 +19,6 @@ node tests/browser/backup-simplification.cjs
 node tests/browser/refine-search.cjs
 node tests/browser/single-video.cjs
 node tests/browser/enter-search.cjs
-node tests/browser/background-transcripts.cjs
 node tests/browser/adaptive-scenes.cjs
 ```
 
