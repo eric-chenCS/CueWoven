@@ -307,6 +307,7 @@ async function loadSettings() {
   $('sceneStorageMB').value = String(s.sceneStorageMB);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
   $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 3);
+  $('bulk-rate').textContent = $('transcriptConcurrency').value;
 }
 
 let savedTimer;
@@ -337,6 +338,7 @@ async function saveSettings(event) {
   if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
 }
 for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+$('transcriptConcurrency').addEventListener('change', () => { $('bulk-rate').textContent = $('transcriptConcurrency').value; });
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

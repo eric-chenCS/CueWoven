@@ -367,12 +367,30 @@ async function refreshWebPause(){const {webCapture={}}=await chrome.storage.loca
 // ---------------------------------------------------------------------------
 let stats = { videos: 0, chunks: 0 };
 
+// One example per popup open, each showing something search understands (moments, sites, typed dates,
+// scenes, on-screen text, channels, exact quotes), so people learn it without reading instructions.
+const EXAMPLES = [
+  'the part about why batteries wear out',
+  'that TikTok about tire rotation last week',
+  'a red car on a mountain road',
+  'the article about coral bleaching 3 days ago',
+  'the recipe video where they whisk the eggs',
+  'the thread I read on Reddit yesterday about mechanical keyboards',
+  'that Instagram reel I saw a few weeks ago about meal prep',
+  'the Veritasium video about why the sky is blue',
+  'the lecture slide with the supply and demand graph',
+  'the part where they said “compound interest”',
+  'a whiteboard drawing of a neural network',
+  'the video I watched between 1 and 2 months ago about budgeting',
+];
+const EXAMPLE = EXAMPLES[Math.floor(Math.random() * EXAMPLES.length)];
+
 // The real shortcut, so people who clicked the icon learn the faster way in.
 let shortcut = '';
 const shortcutReady = openShortcut().then(key => { shortcut = key; });
 function showIdle() {
   if (!(stats.total||stats.videos)) empty('Nothing saved yet',['Watch a video, add a link or try the samples.']);
-  else empty('Describe what you remember',[],'Like “the part about why batteries wear out”');
+  else empty('Describe what you remember',[],`Try: ${EXAMPLE}`);
   if (shortcut) {
     const tip = document.createElement('p');
     tip.className = 'hint shortcut-tip';
