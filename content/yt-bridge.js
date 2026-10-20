@@ -49,10 +49,6 @@
     });
   }
 
-  function isForcedIndex() {
-    return new URLSearchParams(location.search).get('recall_index') === '1';
-  }
-
   async function settings() {
     try {
       const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
@@ -107,7 +103,7 @@
     if (!document.hidden) tick();
   }
 
-  function logCapture(reason){if(!isForcedIndex())send({type:'capture-outcome',kind:'video',reason,outcome:reason==='saved'?'saved':'skipped'}).catch(()=>{});}
+  function logCapture(reason){send({type:'capture-outcome',kind:'video',reason,outcome:reason==='saved'?'saved':'skipped'}).catch(()=>{});}
   async function onVideo(video) {
     if (!video || typeof video.videoId !== 'string' || !/^[\w-]{6,20}$/.test(video.videoId)) return;
     if (current && current.videoId === video.videoId) {
@@ -122,10 +118,6 @@
     current = video;
     speechPending = null;
     clearDwell();
-    if (isForcedIndex()) {
-      run(true);
-      return;
-    }
     const s = await settings();
     if (current?.videoId !== video.videoId) return;
     startVisual(s);
@@ -157,11 +149,11 @@
 
   function speechClock() {
     const media = activeMedia();
-    return {video: current, time: media?.currentTime, paused: excluded || !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!media?.closest('.ad-showing, .ad-interrupting'), revision: playbackRevision, forced: isForcedIndex(), visible: !excluded && !document.hidden};
+    return {video: current, time: media?.currentTime, paused: excluded || !media || media.paused, seeking: !!media?.seeking, rate: media?.playbackRate || 1, ad: !!media?.closest('.ad-showing, .ad-interrupting'), revision: playbackRevision, visible: !excluded && !document.hidden};
   }
 
   async function trySpeech() {
-    if (!speechPending || speechPending !== current?.videoId || isForcedIndex()) return;
+    if (!speechPending || speechPending !== current?.videoId) return;
     if (current.audioLanguage && !/^en(?:-|$)/i.test(current.audioLanguage)) {speechPending=null;return;}
     const clock = speechClock();
     if (!clock.visible || clock.paused || clock.ad) return;
@@ -178,7 +170,7 @@
     if (running.has(id)) return running.get(id);
     const task = (async () => {
       if (!current) return { ok: false, reason: 'Open a YouTube video first.' };
-      const video = Object.assign({}, current, { watchedAt: isForcedIndex() ? undefined : Date.now() });
+      const video = Object.assign({}, current, { watchedAt: Date.now() });
       const check = await send({ type: 'should-index', videoId: video.videoId, manual, watchedAt: video.watchedAt });
       if (check && check.error) return { ok: false, reason: check.error };
       if(!check||!check.index){logCapture(check?.reason==='Indexing is paused'?'paused':'duplicate');return {ok:true,skipped:true,reason:check&&check.reason};}
@@ -191,7 +183,7 @@
         logCapture('captions-unavailable');
         const saved = await metadata;
         await send({ type: 'index-failed', videoId: video.videoId,title:video.title, reason, metadataSaved: !saved?.error });
-        if (!isForcedIndex() && current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
+        if (current?.videoId === video.videoId) {speechPending = video.videoId;trySpeech();}
         return { ok: !saved?.error, titleOnly: !saved?.error, reason: saved?.error || reason };
       }
       const res = await send({ type: 'index-video', video, segments, method: t.method });

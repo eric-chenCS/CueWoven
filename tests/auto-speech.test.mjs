@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const tick = () => new Promise(resolve => setImmediate(resolve));
-async function fixture({forced=false,paused=false,captions=false,language=null}={}) {
+async function fixture({paused=false,captions=false,language=null}={}) {
   const messages=[],events=new Map(),media={paused,currentTime:100,playbackRate:1,readyState:4,getBoundingClientRect:()=>({width:640,height:360,top:0,left:0,right:640,bottom:360}),closest:()=>null};let listener, browserWindow;
-  const location=new URL(`https://www.youtube.com/watch?v=aaaaaaaaaaa${forced?'&recall_index=1':''}`);
+  const location=new URL(`https://www.youtube.com/watch?v=aaaaaaaaaaa`);
   const add=(name,fn)=>{if(!events.has(name))events.set(name,[]);events.get(name).push(fn)};
   const ctx={URLSearchParams,location,Date,innerWidth:1000,innerHeight:800,
     setTimeout:(fn,ms)=>{const timer=setTimeout(fn,ms);timer.unref();return timer},clearTimeout,
@@ -27,9 +27,6 @@ test('caption failure automatically starts speech for a normal playing video',as
 test('successful captions avoid loading the speech model',async()=>{
   const f=await fixture({captions:true});assert.equal(f.messages.some(m=>m.type==='speech-auto-start'),false);
   assert.equal(f.messages.some(m=>m.type==='index-video'),true);
-});
-test('history capture tabs never fall back to speech',async()=>{
-  const f=await fixture({forced:true});assert.equal(f.messages.some(m=>m.type==='speech-auto-start'),false);
 });
 test('a caption failure while paused defers speech until playback, without another recording action',async()=>{
   const f=await fixture({paused:true});assert.equal(f.messages.some(m=>m.type==='speech-auto-start'),false);

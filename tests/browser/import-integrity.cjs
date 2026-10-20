@@ -1,10 +1,8 @@
-const {captureOptionsMessages}=require('./queue-fixture.cjs');
 const {chromium}=require(process.env.RECALL_PLAYWRIGHT||'playwright'),fs=require('fs'),path=require('path'),os=require('os'),assert=require('assert/strict');
 const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
 (async()=>{
  const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(),'recall-import-integrity-')),{headless:true,executablePath:process.env.RECALL_BROWSER,viewport:{width:960,height:900},args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
  try{
-  await captureOptionsMessages(context);
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),page=await context.newPage();await page.goto(`chrome-extension://${new URL(worker.url()).hostname}/options/options.html`);
   await page.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0,speechEnabled:false,screenTextEnabled:false,scenesEnabled:false}}));
   const results=await page.evaluate(async()=>{
@@ -38,14 +36,6 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   await page.waitForFunction(()=>document.querySelector('#data-msg').textContent==='Imported 1 videos.',null,{timeout:120000});
   assert.equal(await page.evaluate(()=>restoreAttempts),1,'capture hold drains the scene without a busy retry');
   await page.evaluate(async()=>{const result=await pendingScene;if(result.error)throw Error(result.error)});
-  // Real rendering/timers, controlled queue events: old notices must not reappear.
-  const job={id:'notice-test',revision:1,status:'done',total:2,completed:2,done:1,failed:1,skipped:0,active:[],results:[{videoId:'aaaaaaaaaaa',title:'Battery chemistry — why phones lose charge',status:'done',chunkCount:4},{videoId:'bbbbbbbbbbb',title:'Minecraft: building the gold-floor trap',status:'failed',reason:'Captions unavailable'}]};
-  await page.evaluate(job=>window.recallMessage({type:'transcript-job',job}),job);
-  assert.equal(await page.locator('#bulk-log .what').first().textContent(),job.results[0].title);assert.equal(await page.locator('#bulk-log .what').last().textContent(),job.results[1].title);
-  await page.locator('#bulk-log').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-title-notices.png')});
-  await page.waitForTimeout(3100);await page.evaluate(job=>window.recallMessage({type:'transcript-job',job:{...job,revision:2}}),job);
-  await page.waitForFunction(()=>document.querySelectorAll('#bulk-log li').length===0,null,{timeout:3000});
-  await page.evaluate(job=>window.recallMessage({type:'transcript-job',job:{...job,revision:3}}),job);assert.equal(await page.locator('#bulk-log li').count(),0);assert.match(await page.locator('#bulk-summary').textContent(),/1 failed/);
-  console.log('IMPORT_INTEGRITY_PASS: imported captions survive 31-day retention, Takeout repairs missing origin safely, concurrent watch wins, scene capture hold during restore, title notices fade after five seconds without resetting/reappearing.');
+  console.log('IMPORT_INTEGRITY_PASS: imported captions survive 31-day retention, Takeout repairs missing origin safely, concurrent watch wins, scene capture hold during restore.');
  }finally{await context.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

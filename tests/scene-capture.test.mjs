@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 function fixture({blocked=false,reply=()=>({ok:true})}={}){
  let now=100000,serial=0,storageListener,shade=0;const timers=new Map(),messages=[],sizes=[];
- const context={video:{videoId:'aaaaaaaaaaa'},time:42,paused:false,visible:true,ad:false,seeking:false,forced:false,revision:1},media={readyState:4,videoWidth:1920,videoHeight:1080};
+ const context={video:{videoId:'aaaaaaaaaaa'},time:42,paused:false,visible:true,ad:false,seeking:false,revision:1},media={readyState:4,videoWidth:1920,videoHeight:1080};
  const canvas=()=>{const node={getContext:()=>({fillRect(){},drawImage(){},getImageData:()=>({data:new Uint8ClampedArray(96*54*4).fill(shade)})}),toDataURL:()=>{if(blocked)throw Error('Tainted canvas');sizes.push([node.width,node.height]);return 'data:image/jpeg;base64,test'+shade}};return node;};
  const sandbox={Date:{now:()=>now},setTimeout:fn=>{timers.set(++serial,fn);return serial},clearTimeout:id=>timers.delete(id),window:{addEventListener(){}},document:{addEventListener(){},querySelector:()=>media,createElement:canvas},chrome:{storage:{onChanged:{addListener:fn=>storageListener=fn}},runtime:{sendMessage:async msg=>{messages.push(msg);return reply(msg)}}}};
  vm.createContext(sandbox);for(const file of ['../lib/scene-policy.js','../content/scene-capture.js'])vm.runInContext(readFileSync(new URL(file,import.meta.url),'utf8'),sandbox);
@@ -23,8 +23,8 @@ test('paused, hidden, ad and seeking states never save a frame',async()=>{
 test('minor visual noise stays quiet, but a cut after a quiet stretch captures immediately',async()=>{
  const f=fixture();await f.tick();for(let i=1;i<=80;i++){f.advance(.5);f.shade(i%2?8:0);await f.tick();}assert.equal(f.messages.length,1);f.advance(.5);f.shade(200);await f.tick();assert.equal(f.messages.length,2);assert.equal(f.messages[1].start,82.5);f.api.stop();
 });
-test('history capture tabs and disabled capture never save frames',async()=>{
- const f=fixture();f.context.forced=true;await f.tick();assert.equal(f.messages.length,0);const off=fixture();off.disable();await off.tick();assert.equal(off.messages.length,0);assert.equal(off.timers.size,0);
+test('disabled capture never saves frames',async()=>{
+ const off=fixture();off.disable();await off.tick();assert.equal(off.messages.length,0);assert.equal(off.timers.size,0);
 });
 test('leaving a video clears scene capture timers',async()=>{const f=fixture();f.api.stop();await f.tick();assert.equal(f.messages.length,0);assert.equal(f.timers.size,0);});
 test('a model failure backs off instead of retrying at every probe',async()=>{

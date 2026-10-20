@@ -35,7 +35,7 @@
   }
   function tick(){
     const state=clock?.(),video=(globalThis.__recallMediaElement ? globalThis.__recallMediaElement() : document.querySelector('video'));
-    if(!state?.video||state.forced)return;
+    if(!state?.video)return;
     if(!state.visible||state.paused||state.seeking||state.ad||!video||video.readyState<2||!video.videoWidth||!video.videoHeight||!Number.isFinite(state.time)||state.time<0){previous=null;pending=null;schedule();return;}
     const now=Date.now();
     if(now<retryAt){schedule();return;}

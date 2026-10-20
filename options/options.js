@@ -8,11 +8,7 @@ import {openShortcut,isPinned} from '../lib/shortcut.js';
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
-const needsTranscript = video => ['history-title', 'speech-local'].includes(video.method);
-let bulkBusy = false;
 let restoreBusy = false;
-let latestJob = null;
-let jobWaiter = null;
 let libraryRefresh;
 let libraryDirty=false;
 function scheduleLibraryRefresh(){
@@ -23,27 +19,17 @@ function scheduleLibraryRefresh(){
   },500);
 }
 
-function updateTranscriptButton() {
-  // Only offered when some saved videos are title-only or have AI speech for the played parts only.
-  const count = videos.filter(needsTranscript).length;
-  $('missing-transcripts').hidden = !count;
-  $('missing-transcripts').disabled = bulkBusy || restoreBusy || libraryBusy();
-  $('missing-transcripts').textContent = `Fetch missing transcripts (${count})`;
-}
-
 $('welcome-restore').addEventListener('click', () => { $('backup-controls').scrollIntoView({block:'center'}); $('import').click(); });
 
 // ---------------------------------------------------------------------------
 // Library
 // ---------------------------------------------------------------------------
 let videos = [];
-let videoTitles=new Map();
 
 async function loadLibrary() {
   const res = await send({ type: 'list' });
   videos = (res && res.videos) || [];
   $('scene-storage').textContent = res?.sceneStorageFull ? 'Image storage is full, so the oldest scenes and images are removed before your “Forget what I watch or read after” time. Choose a shorter time, or turn on Lite mode to stop saving new scenes.' : '';
-  videoTitles=new Map(videos.map(video=>[video.videoId,video.title]));
   const { onboardingComplete } = await chrome.storage.local.get('onboardingComplete');
   $('welcome').hidden = !!onboardingComplete || videos.length > 0;
   if (videos.length && !onboardingComplete) await chrome.storage.local.set({ onboardingComplete: true });
@@ -61,7 +47,6 @@ async function loadLibrary() {
     stats.append(s);
   }
   renderLibrary();
-  updateTranscriptButton();
 }
 
 function sizeLibrary() {
@@ -85,7 +70,7 @@ function renderLibrary() {
   if (!list.length) {
     const p = document.createElement('p');
     p.className = 'empty-lib';
-    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube, add a video link or enable website capture below.';
+    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube or enable website capture below.';
     lib.append(p);
     return;
   }
@@ -124,15 +109,7 @@ function renderLibrary() {
       loadLibrary();
     });
     actions.append(open, del);
-    if (needsTranscript(v)) {
-      const index = document.createElement('button');
-      index.className = 'btn ghost small';
-      index.textContent = 'Add transcript';
-      index.disabled = bulkBusy || restoreBusy || libraryBusy();
-      index.addEventListener('click', () => runBulk([v.videoId]));
-      actions.prepend(index);
-    }
-    del.disabled = restoreBusy || bulkBusy || libraryBusy();
+    del.disabled = restoreBusy || libraryBusy();
     row.append(img, info, actions);
     lib.append(row);
   }
@@ -148,117 +125,13 @@ chrome.runtime.onMessage.addListener((msg) => {
     libraryDirty=true;
     if(!restoreBusy&&!libraryBusy())scheduleLibraryRefresh();
   }
-  if (msg.type === 'transcript-job') applyTranscriptJob(msg.job);
-  if (msg.type === 'model-status' && msg.state.status === 'loading') {
-    $('bulk-summary').textContent = `Loading the model… ${Math.round(msg.state.progress * 100)}%`;
-  }
   return false;
 });
 
-$('missing-transcripts').addEventListener('click', () => runBulk(videos.filter(needsTranscript).sort((a,b)=>(b.watchedAt||0)-(a.watchedAt||0)).map(v=>v.videoId),true));
-
-// ---------------------------------------------------------------------------
-// Bulk pre-load
-// ---------------------------------------------------------------------------
-const logRows = new Map();
-const finishedRows=new Set(),logTimers=new Map();
-
-function onBulkProgress(p) {
-  if(finishedRows.has(p.videoId))return;
-  let li = logRows.get(p.videoId);
-  if (!li) {
-    li = document.createElement('li');
-    li.innerHTML = '<span class="what"></span><span class="st"></span><span class="why"></span>';
-    $('bulk-log').append(li);
-    logRows.set(p.videoId, li);
-    if (logRows.size > 100) {
-      const oldest = logRows.keys().next().value;
-      logRows.get(oldest).remove();
-      logRows.delete(oldest);
-      clearTimeout(logTimers.get(oldest));logTimers.delete(oldest);
-    }
-  }
-  const labels = { working: 'Indexing', done: 'Done', failed: 'Failed', skipped: 'Skipped' };
-  const st = li.querySelector('.st');
-  st.textContent = labels[p.status] || p.status;
-  st.className = 'st ' + p.status;
-  li.querySelector('.what').textContent = p.title || videoTitles.get(p.videoId) || 'YouTube video';
-  li.querySelector('.why').textContent = p.status === 'done' ? `· ${p.chunkCount} moments` : p.reason ? '· ' + p.reason : '';
-  if(p.status!=='working'){
-    finishedRows.add(p.videoId);
-    logTimers.set(p.videoId,setTimeout(()=>{
-      li.classList.add('fading');
-      logTimers.set(p.videoId,setTimeout(()=>{li.remove();logRows.delete(p.videoId);logTimers.delete(p.videoId);},300));
-    },5000));
-  }
-}
-
-function setBulkControls(busy) {
-  bulkBusy = busy;
-  for (const id of ['welcome-restore', 'import', 'export', 'clear', 'bulk-go']) $(id).disabled = busy || restoreBusy || libraryBusy();
-  $('bulk-go').textContent = busy ? 'Fetching…' : 'Add videos';
-  $('bulk-stop').hidden = !busy;
-  updateTranscriptButton();
+function setControls() {
+  for (const id of ['welcome-restore', 'import', 'export', 'clear']) $(id).disabled = restoreBusy || libraryBusy();
   renderLibrary();
 }
-
-function applyTranscriptJob(job) {
-  if (!job || latestJob?.id === job.id && job.revision < latestJob.revision) return;
-  const changed = latestJob?.id !== job.id;
-  if (changed) { for(const timer of logTimers.values())clearTimeout(timer);logTimers.clear();finishedRows.clear();$('bulk-log').textContent = ''; logRows.clear(); }
-  latestJob = job;
-  const busy = ['running', 'pausing'].includes(job.status);
-  if (changed || bulkBusy !== busy) setBulkControls(busy);
-  for (const result of job.results) onBulkProgress(result);
-  for (const active of job.active) onBulkProgress({...active, status: 'working'});
-  $('bulk-stop').disabled = job.status === 'pausing';
-  $('bulk-stop').textContent = job.status === 'pausing' ? 'Pausing active videos…' : 'Pause after active videos';
-  if (busy) {
-    $('bulk-summary').textContent = `${job.completed} of ${job.total} finished · ${job.active.length} fetching in background. You can close this settings page.`;
-  } else {
-    const label = {done: 'Finished', paused: 'Paused', interrupted: 'Interrupted'}[job.status] || job.status;
-    $('bulk-summary').textContent = `${label}: ${job.done} indexed${job.skipped ? `, ${job.skipped} already there` : ''}, ${job.failed} failed. ${job.total - job.completed} not attempted.${job.reason ? ' ' + job.reason : ''}`;
-    if (jobWaiter?.id === job.id) { jobWaiter.resolve({results: job.results}); jobWaiter = null; }
-    clearTimeout(libraryRefresh);
-    loadLibrary().catch(() => {});
-  }
-}
-
-async function runBulk(urls, all = false) {
-  if (bulkBusy || restoreBusy || libraryBusy()) return;
-  if (!urls.length) { $('bulk-summary').textContent = all ? 'No missing transcripts for these videos.' : 'Paste at least one YouTube link.'; return; }
-  setBulkControls(true);
-  $('bulk-summary').scrollIntoView({behavior: 'smooth', block: 'center'});
-  try {
-    const unique = Array.from(new Set(urls));
-    const response = await send({type: 'transcript-job-start', urls: all ? unique : unique.slice(0, 50)});
-    if (!response?.job || response.error) throw new Error(response?.error || 'Background fetching did not respond.');
-    return await new Promise(resolve => {
-      jobWaiter = {id: response.job.id, resolve};
-      applyTranscriptJob(latestJob?.id === response.job.id ? latestJob : response.job);
-    });
-  } catch (e) {
-    $('bulk-summary').textContent = `Indexing failed: ${e.message}`;
-    setBulkControls(false);
-    await loadLibrary();
-  }
-}
-
-$('bulk-stop').addEventListener('click', async () => {
-  $('bulk-stop').disabled = true;
-  try {
-    const response = await send({type: 'transcript-job-pause'});
-    if (response?.error) throw new Error(response.error);
-    applyTranscriptJob(response?.job);
-  } catch (e) {
-    $('bulk-stop').disabled = false;
-    $('bulk-summary').textContent = `Could not pause: ${e.message}`;
-  }
-});
-
-$('bulk-go').addEventListener('click', () => {
-  runBulk($('bulk-urls').value.split(/\s+/).filter(Boolean));
-});
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -306,8 +179,6 @@ async function loadSettings() {
   selectRetention('maxAgeDays', s.maxAgeDays);
   $('sceneStorageMB').value = String(s.sceneStorageMB);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
-  $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 3);
-  $('bulk-rate').textContent = $('transcriptConcurrency').value;
 }
 
 let savedTimer;
@@ -326,7 +197,6 @@ async function saveSettings(event) {
     dwellSeconds: Number($('dwellSeconds').value),
     maxAgeDays: Number($('maxAgeDays').value),
     sceneStorageMB,
-    transcriptConcurrency: Number($('transcriptConcurrency').value),
   };
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
   await chrome.storage.local.set({ settings });
@@ -337,8 +207,7 @@ async function saveSettings(event) {
   savedTimer = setTimeout(() => (status.textContent = ''), 1500);
   if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'transcriptConcurrency', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
-$('transcriptConcurrency').addEventListener('change', () => { $('bulk-rate').textContent = $('transcriptConcurrency').value; });
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe
@@ -359,9 +228,9 @@ $('import').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   e.target.value = '';
   if (!file) return;
-  if(restoreBusy || bulkBusy || libraryBusy())return;
+  if(restoreBusy || libraryBusy())return;
   const release=beginLibraryTask();
-  restoreBusy=true;setBulkControls(bulkBusy);
+  restoreBusy=true;setControls();
   $('data-msg').textContent='Reading file…';
   try {
     let data;try{data=JSON.parse(await file.text());}catch{throw Error('That file isn’t valid JSON.');}
@@ -369,7 +238,7 @@ $('import').addEventListener('change', async (e) => {
     const res=await restoreBackup(data,send,({done,total})=>{$('data-msg').textContent=`Restoring… ${done}/${total} items. Keep this page open.`;});
     $('data-msg').textContent=`Imported ${res.imported} ${data.items?.length?'items':'videos'}.`;
   }catch(error){$('data-msg').textContent=error.message;}
-  finally{restoreBusy=false;release();setBulkControls(bulkBusy);loadLibrary();}
+  finally{restoreBusy=false;release();setControls();loadLibrary();}
 });
 
 $('clear').addEventListener('click', async () => {
@@ -380,7 +249,7 @@ $('clear').addEventListener('click', async () => {
   loadLibrary();
 });
 
-onLibraryBusy(()=>{setBulkControls(bulkBusy);if(!libraryBusy()&&libraryDirty)scheduleLibraryRefresh();});
+onLibraryBusy(()=>{setControls();if(!libraryBusy()&&libraryDirty)scheduleLibraryRefresh();});
 loadSettings();
 loadLibrary();
 
@@ -395,8 +264,6 @@ async function showHowToOpen() {
 showHowToOpen();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) showHowToOpen(); });
 $('shortcut-change').addEventListener('click', () => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }));
-
-send({type: 'transcript-job-status'}).then(response => applyTranscriptJob(response?.job)).catch(() => {});
 
 $('forget-recent').addEventListener('click',async()=>{
   if(libraryBusy()||restoreBusy)return;

@@ -26,13 +26,11 @@ Speech fallback is local and English-only. Known non-English or ambiguous mixed-
 
 Visual capture samples frames; it does not continuously archive a video. Short events and small or stylized text may be missed. **Lite mode** pauses new article images, scenes, OCR and speech while keeping captions and article text. Settings also provide individual controls, light/dark/system appearance and **Reset settings to default**. Reset preserves the library, site choices and retention preferences.
 
-## Add specific videos
+## Videos saved without a transcript
 
-Paste YouTube links under **Add videos** to fetch available captions for videos you choose. There is no Takeout importer or browser-history scan. Background fetching uses a separate minimized window with muted player tabs; it is visible in the taskbar and must remain open. Under Settings → Advanced, **Pasted links fetched at once** chooses 1, 3 (default), 6 or 10 parallel videos; it only affects pasted links and Fetch missing transcripts, not videos you watch; fewer use less CPU and memory and keep the computer quieter. Settings can close after fetching starts, but the browser must stay open. Closing the capture window pauses new work. Retry unavailable captions later; this does not recover unwatched audio or scenes. Live capture can continue alongside the caption queue.
+CueWoven saves videos as you watch them; there is no link pasting, Takeout importer or browser-history scan. A video saved as a title only, or with AI speech for just the parts you played, tries its captions again the next time you watch it. Older title-only entries stay searchable by title, and old CueWoven/Recall/Momento backups still restore.
 
-Older saved title-only entries remain available and can use Add transcript. **Fetch missing transcripts (N)** under Add videos appears only when some saved videos are title-only or have AI speech for just the parts you played; it fetches full captions for them, newest first. Removing history import does not delete an existing library or reject an old CueWoven/Recall/Momento backup.
-
-## Privacy and data
+
 
 Your library, vectors and settings are stored in the current browser profile. Local models process search text, audio and images on your device. Model weights download from Hugging Face on first use; normal website/YouTube requests and thumbnails still use the network. No personal YouTube API key is required.
 
@@ -40,7 +38,7 @@ Site allowlists, exclusions, incognito avoidance, sensitive-route filtering and 
 
 Under **Your data**, export/import backups, clear the library, or forget items saved recently. One JSON backup contains saved transcripts, page passages, titles, source links, timestamps, OCR text and captured images. Treat it as private and do not commit it to the repo. It does not contain original video files, recorded audio, complete websites, settings, site permissions or downloaded models.
 
-Uninstalling the extension or clearing its browser profile can erase the library. There is no account or automatic cloud sync. Export before switching profiles/computers or uninstalling, then restore into the new installation. A source that disappears cannot be brought back online by the backup; only previously saved evidence can be restored. Keep settings open during restore; stop speech and pause transcript fetching before restoring. Completed batches remain if a restore is interrupted.
+Uninstalling the extension or clearing its browser profile can erase the library. There is no account or automatic cloud sync. Export before switching profiles/computers or uninstalling, then restore into the new installation. A source that disappears cannot be brought back online by the backup; only previously saved evidence can be restored. Keep settings open during restore; stop speech before restoring. Completed batches remain if a restore is interrupted.
 
 Retention choices are 24 hours, 7 days, 4 weeks, 12 months or Forever. Watched/read content uses the applicable recent capture/watch date. Existing legacy imported records retain their original protection and stored retention preference for compatibility; the old import setting is no longer shown. Watching such an item makes normal live retention apply. **Forget recent** uses when CueWoven saved/updated an item. Export before deleting if you need a copy.
 

@@ -2,8 +2,6 @@
 // and the offscreen document that holds the model and the index.
 import {captureLabel} from './lib/capture-reason.js';
 import { videoIdFromUrl } from './lib/video.js';
-import { createCaptureWindow } from './lib/capture-window.js';
-import { createTranscriptQueue } from './lib/transcript-queue.js';
 import './lib/scene-policy.js';
 import {createWebAccess} from './lib/web-access.js';
 import {policy} from './lib/web-items.js';
@@ -88,81 +86,12 @@ async function currentCaptureStatus(tabId){
 }
 async function refreshIndicator(tabId){const status=await currentCaptureStatus(tabId).catch(()=>({reason:'no-permission'}));captureIndicator(tabId,status.reason);}
 
-// ---------------------------------------------------------------------------
-// Bulk pre-loading (the demo "insurance policy")
-// ---------------------------------------------------------------------------
-const waiters = new Map(); // tabId -> resolve({ok, reason})
-
-const captureWindow = createCaptureWindow(chrome);
-const captureTabs = new Map();
-
-async function fetchVideoTranscript(id, onTab = () => {}) {
-  const existing=await engine('has',{videoId:id});
-  if (existing.has) return {videoId:id,title:existing.title,status:'skipped',reason:'Already indexed'};
-  const windowId = await captureWindow.get();
-  const tab = await chrome.tabs.create({windowId, url: `https://www.youtube.com/watch?v=${id}&recall_index=1`, active: false});
-  captureTabs.set(tab.id, windowId);
-  // Register immediately, before awaiting storage or mute operations.
-  const outcome = new Promise(resolve => {
-    const timer = setTimeout(() => { waiters.delete(tab.id); resolve({ok: false, reason: 'Timed out'}); }, 75000);
-    waiters.set(tab.id, r => { clearTimeout(timer); waiters.delete(tab.id); resolve(r); });
-  });
-  try {
-    onTab(tab.id);
-    await chrome.tabs.update(tab.id, {muted: true});
-    await captureWindow.minimize(windowId);
-    const result = await outcome;
-    return {...result,title:result.title || existing.title,videoId: id, status: result.ok ? 'done' : 'failed'};
-  } finally {
-    captureTabs.delete(tab.id);
-    settleWaiter(tab.id, {ok: false, reason: 'Transcript tab closed'});
-    await chrome.tabs.remove(tab.id).catch(() => {});
-  }
-}
-
-let jobsReady;
-let jobKeepAlive;
-function getTranscriptJobs() {
-  if (!jobsReady) jobsReady = (async () => {
-    const {transcriptJob} = await chrome.storage.session.get('transcriptJob');
-    if (transcriptJob && ['running', 'pausing'].includes(transcriptJob.status)) {
-      for (const active of transcriptJob.active || []) {
-        if (!Number.isInteger(active.tabId)) continue;
-        const tab = await chrome.tabs.get(active.tabId).catch(() => null);
-        if (tab?.url && videoIdFromUrl(tab.url) === active.videoId && new URL(tab.url).searchParams.get('recall_index') === '1') await chrome.tabs.remove(tab.id).catch(() => {});
-      }
-    }
-    await captureWindow.recover();
-    const jobs = createTranscriptQueue({
-      initial: transcriptJob,
-      processVideo: fetchVideoTranscript,
-      beforeStart: async () => {captureWindow.begin();await engine('warmup');},
-      afterFinish: () => captureWindow.close(),
-      onChange(job) {
-        if (['running', 'pausing'].includes(job.status)) {
-          if (!jobKeepAlive) jobKeepAlive = setInterval(() => chrome.runtime.getPlatformInfo().catch(() => {}), 20000);
-        } else { clearInterval(jobKeepAlive); jobKeepAlive = null; }
-        chrome.runtime.sendMessage({type: 'transcript-job', job}).catch(() => {});
-        return chrome.storage.session.set({transcriptJob: job});
-      },
-    });
-    return jobs;
-  })();
-  return jobsReady;
-}
-
 function requireLibrary(sender) {
-  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to manage transcript fetching.');
+  if (sender.url?.split('#')[0] !== chrome.runtime.getURL('options/options.html')) throw new Error('Open Library & settings to manage saved data.');
 }
 
-async function requireTranscriptJobIdle() {
+async function requireSpeechIdle() {
   if (['preparing', 'recording', 'stopping'].includes((await engine('speech-status')).status)) throw new Error('Stop speech-to-text before changing saved data.');
-  if (['running', 'pausing'].includes((await getTranscriptJobs()).get()?.status)) throw new Error('Pause transcript fetching before changing saved data.');
-}
-
-function settleWaiter(tabId, outcome) {
-  const w = tabId != null && waiters.get(tabId);
-  if (w) w(outcome);
 }
 
 // ---------------------------------------------------------------------------
@@ -178,9 +107,9 @@ async function speechContext(tabId) {
   if(!tab.url?.startsWith('https://www.youtube.com/watch?'))return webAccess.context(tabId);
   if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded in website settings. Allow youtube.com to resume.');
   const id = videoIdFromUrl(tab.url);
-  if (!id || !tab.url.startsWith('https://www.youtube.com/watch?') || new URL(tab.url).searchParams.get('recall_index') === '1') throw new Error('Open a normal YouTube video first.');
+  if (!id || !tab.url.startsWith('https://www.youtube.com/watch?')) throw new Error('Open a normal YouTube video first.');
   const clock = await chrome.tabs.sendMessage(tabId, {type: 'speech-context'});
-  if (clock?.video?.videoId !== id || clock.forced) throw new Error('Refresh the YouTube tab so CueWoven can read its playback timing.');
+  if (clock?.video?.videoId !== id) throw new Error('Refresh the YouTube tab so CueWoven can read its playback timing.');
   return {tab, clock};
 }
 
@@ -268,23 +197,6 @@ const handlers = {
     if (sender.url !== chrome.runtime.getURL(OFFSCREEN_PATH)) throw new Error('Invalid audio timing request.');
     return (await speechContext(tabId)).clock;
   },
-  async 'transcript-job-start'({urls}, sender) {
-    requireLibrary(sender);
-    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded. Allow youtube.com before fetching captions.');
-    if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
-    const ids = urls.map(videoIdFromUrl).filter(Boolean);
-    const settings = await getSettings();
-    const concurrency = [1, 3, 6, 10].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 3;
-    return {job: (await getTranscriptJobs()).start(ids, concurrency)};
-  },
-  async 'transcript-job-status'(_msg, sender) {
-    requireLibrary(sender);
-    return {job: (await getTranscriptJobs()).get()};
-  },
-  async 'transcript-job-pause'(_msg, sender) {
-    requireLibrary(sender);
-    return {job: (await getTranscriptJobs()).pause()};
-  },
   // From YouTube tabs
   async 'index-metadata'({video}, sender) {
     if (!sender.tab || sender.frameId > 0 || new URL(sender.url).origin !== 'https://www.youtube.com' || !/^[\w-]{11}$/.test(video?.videoId)) throw Error('Invalid video metadata source.');
@@ -297,7 +209,7 @@ const handlers = {
   async 'should-index'({ videoId, manual, watchedAt },sender) {
     if(sender?.tab?.incognito)return {index:false,reason:'Incognito capture is excluded.'};
     const s = await getSettings();
-    if(s.youtubeBlocked){settleWaiter(sender?.tab?.id,{ok:false,reason:'YouTube is excluded.'});return {index:false,reason:'YouTube is excluded.'};}
+    if(s.youtubeBlocked)return {index:false,reason:'YouTube is excluded.'};
     if (!manual && !s.enabled) return { index: false, reason: 'Indexing is paused' };
     if (Number.isFinite(watchedAt) && watchedAt > 0 && watchedAt <= Date.now() + 60000) {
       await engine('touch-watch', { videoId, watchedAt });
@@ -307,22 +219,15 @@ const handlers = {
     return { index: !has, reason: has ? 'Already indexed' : undefined };
   },
   async 'index-video'({ video, segments, method }, sender) {
-    try {
-      if(sender.tab?.incognito)throw Error('Incognito capture is excluded.');
-      if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded.');
-      const res = await engine('index', { video, segments, method });
-      flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
-      settleWaiter(sender.tab && sender.tab.id, { ok: true, chunkCount: res.chunkCount, title: res.video.title });
-      chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
-      return { chunkCount: res.chunkCount };
-    } catch (e) {
-      settleWaiter(sender.tab && sender.tab.id, { ok: false, title:String(video?.title||'').slice(0,300),reason: String(e.message || e) });
-      throw e;
-    }
+    if(sender.tab?.incognito)throw Error('Incognito capture is excluded.');
+    if((await getSettings()).youtubeBlocked)throw Error('YouTube is excluded.');
+    const res = await engine('index', { video, segments, method });
+    flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
+    chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
+    return { chunkCount: res.chunkCount };
   },
   async 'index-failed'({ reason,title,metadataSaved }, sender) {
     flashBadge(sender.tab && sender.tab.id, metadataSaved ? '✓' : '!', metadataSaved ? '#1f8a4c' : '#b3261e');
-    settleWaiter(sender.tab && sender.tab.id, { ok: false,title:String(title||'').slice(0,300), reason });
     return { ok: true };
   },
 
@@ -330,7 +235,7 @@ const handlers = {
   'capture-status':({tabId},sender)=>{requirePopup(sender);return currentCaptureStatus(tabId);},
   'video-status':({videoId},sender)=>{requirePopup(sender);return engine('has',{videoId});},
   'load-samples':(_data,sender)=>{requirePopup(sender);return engine('load-samples');},
-  'forget-recent':async({hours},sender)=>{requireLibrary(sender);if(![1,24,168].includes(hours))throw Error('Invalid recent range.');const jobs=await getTranscriptJobs();jobs.pause();await jobs.wait();await engine('speech-stop',{reason:'Forgetting recent items.'});const result=await engine('forget-recent',{hours});chrome.runtime.sendMessage({type:'index-changed'}).catch(()=>{});return result;},
+  'forget-recent':async({hours},sender)=>{requireLibrary(sender);if(![1,24,168].includes(hours))throw Error('Invalid recent range.');await engine('speech-stop',{reason:'Forgetting recent items.'});const result=await engine('forget-recent',{hours});chrome.runtime.sendMessage({type:'index-changed'}).catch(()=>{});return result;},
   async search({ query, sinceDays, sinceMs, untilMs, exclude, singleVideo, distinct, offset = 0,kind,videoId,inferFilters }) {
     const s = await getSettings();
     if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
@@ -346,13 +251,13 @@ const handlers = {
   warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),
   list: () => engine('list'),
   async delete({ videoId }) {
-    await requireTranscriptJobIdle();
+    await requireSpeechIdle();
     const r = await engine('delete', { videoId });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
   },
   async clear() {
-    await requireTranscriptJobIdle();
+    await requireSpeechIdle();
     const r = await engine('clear');
     await webAccess.clearLog();
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
@@ -360,7 +265,7 @@ const handlers = {
   },
   export: () => engine('export'),
   async import({ data }) {
-    await requireTranscriptJobIdle();
+    await requireSpeechIdle();
     const r = await engine('import', { data });
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return r;
@@ -374,7 +279,7 @@ const handlers = {
   },
   prune: async () => {const s=await getSettings();return engine('prune',{maxAgeDays:s.maxAgeDays,importMaxAgeDays:s.importMaxAgeDays});},
 };
-const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,requirePopup,onCapture:(tabId,reason)=>captureIndicator(tabId,reason),beforeForget:async site=>{if(policy.matches('www.youtube.com',[site])||policy.matches('youtu.be',[site]))(await getTranscriptJobs()).pause();}});
+const webAccess=createWebAccess({chrome,engine,getSettings,requireLibrary,requirePopup,onCapture:(tabId,reason)=>captureIndicator(tabId,reason)});
 Object.assign(handlers,webAccess.handlers);
 chrome.tabs?.onActivated?.addListener(({tabId})=>refreshIndicator(tabId));
 chrome.tabs?.onUpdated?.addListener((tabId,change)=>{if(change.status==='complete'||change.url)refreshIndicator(tabId);});
@@ -419,30 +324,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'recall-prune') handlers.prune().catch(() => {});
 });
 
-// Manual closure pauses the job rather than repeatedly recreating a window.
-function onCaptureWindowRemoved(windowId) {
-  if (!captureWindow.removed(windowId)) return;
-  if (jobsReady) jobsReady.then(jobs => jobs.pause()).catch(() => {});
-  for (const [tabId, owner] of captureTabs) if (owner === windowId) settleWaiter(tabId, {ok: false, reason: 'Capture window closed'});
-}
-chrome.windows?.onRemoved?.addListener(onCaptureWindowRemoved);
-chrome.tabs?.onRemoved?.addListener((tabId, info) => {
+chrome.tabs?.onRemoved?.addListener(tabId => {
   if (tabId === speechBadgeTab) engine('speech-stop', {reason: 'The video tab was closed.'}).catch(() => {});
-  if (info?.isWindowClosing && captureTabs.has(tabId)) onCaptureWindowRemoved(info.windowId);
-  settleWaiter(tabId, {ok: false, reason: 'Capture tab closed'});
 });
 
 
 chrome.storage?.onChanged?.addListener((changes, area) => {
   if(area==='local'&&changes.webCapture&&(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false))engine('vision-stop').catch(()=>{});
   if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
-  if (area === 'local' && changes.webCapture) {
-    const blocked = changes.webCapture.newValue?.blocked || [];
-    if (policy.matches('www.youtube.com', blocked) || policy.matches('youtu.be', blocked)) {
-      jobsReady?.then(jobs => jobs.pause()).catch(() => {});
-      for (const tabId of captureTabs.keys()) settleWaiter(tabId, {ok:false,reason:'YouTube is excluded.'});
-    }
-  }
   const settings = changes.settings?.newValue;
   if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.articleImagesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
