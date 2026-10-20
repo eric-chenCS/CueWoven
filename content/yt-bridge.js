@@ -9,7 +9,7 @@
 
   const FROM_MAIN = 'recall-main';
   const FROM_BRIDGE = 'recall-bridge';
-  const DEFAULTS = { enabled: true, dwellSeconds: 20, scenesEnabled: true,screenTextEnabled:true };
+  const DEFAULTS = { enabled: true, dwellSeconds: 10, scenesEnabled: true,screenTextEnabled:true };
   const MAX_SEGMENTS = 20000;
 
   let playbackRevision = 0;
@@ -20,6 +20,7 @@
   let excluded=false;
   const excludedSite=config=>(config?.blocked||[]).some(site=>['www.youtube.com','youtu.be'].some(host=>host===site||host.endsWith('.'+site)));
   let speechPending = null;
+  let textCapture = null;
   let dwellTimer = null;
   let dwellVisibility = null;
   let reqCounter = 0;
@@ -178,6 +179,7 @@
       if(!check||!check.index){logCapture(check?.reason==='Indexing is paused'?'paused':'duplicate');return {ok:true,skipped:true,reason:check&&check.reason};}
       if(captureRevision!==revision || current?.videoId!==video.videoId)return {ok:false,reason:'The capture was cancelled.'};
 
+      textCapture = {videoId:id, revision, reason:'preparing-text'};
       const metadata = send({type:'index-metadata', video});
       const t = await requestTranscript(video.videoId, manual);
       const latest = await settings();
@@ -200,7 +202,12 @@
     })();
     running.set(id, task);
     try {
-      return await task;
+      const result = await task;
+      if (textCapture?.videoId === id && textCapture.revision === revision) textCapture.reason = result.ok ? (result.titleOnly ? 'captions-unavailable' : 'saved') : 'model-error';
+      return result;
+    } catch (error) {
+      if (textCapture?.videoId === id && textCapture.revision === revision) textCapture.reason = 'model-error';
+      return {ok:false,reason:error.message};
     } finally {
       running.delete(id);
     }
@@ -236,7 +243,7 @@
       return false;
     }
     if (msg.type === 'get-video') {
-      sendResponse({ video: current });
+      sendResponse({ video: current, textCapture: textCapture?.videoId === current?.videoId && textCapture?.revision === captureRevision ? textCapture.reason : 'waiting' });
       return false;
     }
     return false;

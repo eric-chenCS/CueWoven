@@ -1,6 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createQueryCache } from "../lib/query-cache.js";
+
+test('a cold reranker may be retried on a new first-page search without changing existing pagination', async () => {
+  let calls = 0;
+  const cache = createQueryCache(async () => ({results: [{id: ++calls}, {id: 2}], rerankPending: calls === 1}));
+  assert.equal((await cache.get('q', 0, 1, {retryPending: true})).results[0].id, 1);
+  assert.equal((await cache.get('q', 0, 1)).results[0].id, 1, 'a pagination first-page probe keeps its original window');
+  await cache.get('q', 1, 1); assert.equal(calls, 1);
+  assert.equal((await cache.get('q', 0, 1, {retryPending: true})).results[0].id, 2);
+  await cache.get('q', 0, 1, {retryPending: true}); assert.equal(calls, 2);
+});
+
+test('continuations retain the original window past expiry and additions, while deletion forces fresh results', async () => {
+  let time = 0, calls = 0;
+  const cache = createQueryCache(async () => ({results: Array.from({length: 40}, (_, i) => ({id: `${calls}:${i}`})), rerankPending: ++calls === 1}), {now: () => time, ttl: 10});
+  const first = await cache.get('q', 0, 12, {retryPending: true});
+  time = 11; cache.invalidate({destructive: false});
+  assert.deepEqual((await cache.get('q', 0, 1, {continuation: true})).results, first.results.slice(0, 1));
+  assert.equal((await cache.get('q', 12, 12, {continuation: true})).results[0].id, '0:12');
+  assert.equal(calls, 1);
+  await cache.get('q', 0, 12, {retryPending: true}); assert.equal(calls, 2, 'a new submitted search may refresh');
+  cache.invalidate(); await cache.get('q', 12, 12, {continuation: true}); assert.equal(calls, 3, 'deleted content must not be served from a pinned page');
+});
 test("arrow pages share one ranked window and deep pages remain reachable", async () => {
   let calls = 0;
   const cache = createQueryCache(async (_key, page) => {

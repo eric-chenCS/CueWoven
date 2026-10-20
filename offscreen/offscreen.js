@@ -24,6 +24,8 @@ import {policy,itemIdentity as webIdentity,duplicateItems} from '../lib/web-item
 import {samples,sampleFor} from '../lib/samples.js';
 import {createTextModel} from './text-model.js';
 import {visualBudget} from '../lib/visual-budget.js';
+import {createReranker} from './rerank-model.js';
+import {rerankQuery} from '../lib/rerank.js';
 
 const MODEL_ID = 'Xenova/all-MiniLM-L6-v2';
 const DIM = 384;
@@ -33,6 +35,8 @@ let modelState = {status: 'idle', progress: 0};
 function broadcast(msg) { chrome.runtime.sendMessage(msg).catch(() => {}); }
 const textModel = createTextModel(state => {modelState = state; broadcast({type: 'model-status', state});});
 const embed = textModel.embed;
+const reranker = createReranker();
+let lastSearchKey = '', searchRevision = 0;
 // ---------------------------------------------------------------------------
 // In-memory index (rebuilt lazily from IndexedDB after any change)
 // ---------------------------------------------------------------------------
@@ -58,7 +62,7 @@ const indexCache=createRevisionCache(async()=>{
   return {videos,index,indexedIds,overflow};
 });
 const getIndex=()=>indexCache.get();
-const invalidate=(destructive=true)=>{indexCache.invalidate({destructive});queryCache.invalidate({destructive});if(destructive){metadataUpdates.clear();lexicalCache.clear();}};
+const invalidate=(destructive=true)=>{indexCache.invalidate({destructive});queryCache.invalidate({destructive});if(destructive){reranker.release();metadataUpdates.clear();lexicalCache.clear();}};
 async function refreshVideo(id) {
   if (policy.webId(id)) await web.refresh(id);
   else {
@@ -142,23 +146,26 @@ async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,e
   const custom=sinceMs||untilMs?{sinceMs,untilMs}:null;
   const intent=searchIntent(query,{sinceDays,infer:inferFilters,manualRange:!!custom});
   const q=intent.query;
-  if(!q&&!intent.source&&!intent.sinceDays&&!intent.range&&!custom)return {results:[],appliedFilters:[]};
+  if(!q&&!intent.source&&!intent.sinceDays&&!intent.range&&!custom){reranker.cancel();lastSearchKey='';searchRevision++;return {results:[],appliedFilters:[]};}
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
   // A date range chosen in the popup survives relaxing typed filters; a typed one does not.
   const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),exclude,kind,source:filters.source});
+  const searchKey=keyFor(intent);
+  if(searchKey!==lastSearchKey){reranker.cancel();lastSearchKey=searchKey;searchRevision++;}
   // Only an empty first page relaxes inferred filters; reaching the last page does not.
-  const first=offset?await queryCache.get(keyFor(intent),0,1):null;
+  const first=offset?await queryCache.get(keyFor(intent),0,1,{continuation:true}):null;
   const result=await searchWithFallback(intent,sinceDays,async filters=>{
     if(offset&&filters===intent&&first.results.length===0)return first;
-    const page=await queryCache.get(keyFor(filters),offset,limit);
+    const page=await queryCache.get(keyFor(filters),offset,limit,{retryPending:offset===0,continuation:offset>0});
     return offset&&filters===intent?{...page,hasFirst:true}:page;
   });
   const results=(await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit))).filter(hit=>!hit.scene||hit.image);
   // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
-  return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!!q&&offset===0&&nearTie(results)};
+  return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!result.reranked&&!!q&&offset===0&&nearTie(results)};
 }
 async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, untilMs=0, exclude=[], offset=0,kind='all',videoId,source='' }) {
+  const revision=searchRevision;
   const q = String(query || '').trim();
   if (!q&&!source&&!sinceDays&&!sinceMs&&!untilMs) return { results: [] };
   if(!['all','video','page','search'].includes(kind))throw Error('Invalid result filter.');
@@ -184,15 +191,22 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, u
   });
   const {hits:words,twins}=dropTwins(rankPool(pool,{perVideo}));
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
-  const finish=results=>({results});
-  if(!hasScenes||hasRelevantText(words))return finish(select(words));
+  const finishText=async()=>{
+    const busy=revision!==searchRevision||captionTasks.size||webTasks.size||screenTask||sceneTask||indexImportBusy||captureHold.held();
+    if(busy||!rerankQuery(q)||hasRelevantText(words.slice(0,1)))return {results:select(words)};
+    const evidence=perVideo===2?words:dropTwins(rankPool(pool,{perVideo:2})).hits;
+    const ranked=await reranker.rerank(q,words,evidence);
+    return {results:select(ranked.hits),...(ranked.pending?{rerankPending:true}:{}),...(ranked.applied?{reranked:true}:{})};
+  };
+  if(!hasScenes||hasRelevantText(words))return finishText();
   try {
     const visual = await visualBudget(searchScenes(q,{limit:2000,perVideo,...range},videos));
     const scenes=visual.results.filter(hit=>!twins.has(hit.videoId));
-    if (!scenes.length) return {...finish(select(words)),visualPending:!!visual.pending};
-    return finish(fuseMatches(words,scenes,{limit,perVideo,offset}));
+    if (!scenes.length) return {...await finishText(),visualPending:!!visual.pending};
+    // Preserve the established visual fallback policy; its rank fusion uses baseline text order.
+    return {results:fuseMatches(words,scenes,{limit,perVideo,offset})};
   } catch (error) {
-    return {...finish(select(words)),sceneError:'Scene search unavailable: '+error.message};
+    return {...await finishText(),sceneError:'Scene search unavailable: '+error.message};
   }
 }
 
@@ -200,7 +214,7 @@ async function status() {
   const videos = await db.listVideos();
   const chunks = videos.reduce((n, v) => n + (v.method === 'history-title' ? 0 : v.chunkCount || 0), 0);
   const screenText=videos.reduce((n,v)=>n+(v.screenCount||0),0);
-  return { total:videos.length,videos:videos.filter(v=>!v.kind||v.kind==='video').length,pages:videos.filter(v=>v.kind==='page').length,searches:videos.filter(v=>v.kind==='search').length,chunks:chunks+screenText, screenText, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,embeddingMigration:migration.status() };
+  return { total:videos.length,videos:videos.filter(v=>!v.kind||v.kind==='video').length,pages:videos.filter(v=>v.kind==='page').length,searches:videos.filter(v=>v.kind==='search').length,chunks:chunks+screenText, screenText, scenes: videos.reduce((n,v)=>n+(v.sceneCount || 0),0), model: modelState,reranker:reranker.status(),embeddingMigration:migration.status() };
 }
 
 async function exportIndex() {
@@ -453,7 +467,7 @@ const handlers = {
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
-    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),content:!!video&&(video.chunkCount>0||video.sceneCount>0||video.screenCount>0),title:video?.title,modelStatus:modelState.status };
+    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),content:!!video&&(video.chunkCount>0||video.sceneCount>0||video.screenCount>0),textContent:!!video&&((video.method!=='history-title'&&video.chunkCount>0)||video.screenCount>0),title:video?.title,modelStatus:modelState.status };
   },
   'import-history': data=>captionChange(()=>importHistory(data)),
   'touch-watch': async ({ videoId, watchedAt }) => {

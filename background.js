@@ -81,7 +81,13 @@ async function currentCaptureStatus(tabId){
   if(id){
     const settings=await getSettings();
     if(!settings.enabled||settings.youtubeBlocked)return {reason:settings.youtubeBlocked?'blocked-domain':'paused'};
-    const saved=await engine('has',{videoId:id});return {reason:saved.content?'saved':'waiting'};
+    const context=await chrome.tabs.sendMessage(tabId,{type:'get-video'}).catch(()=>null);
+    if(context?.video?.videoId===id && context.textCapture==='preparing-text')return {reason:'preparing-text'};
+    const saved=await engine('has',{videoId:id});
+    if(saved.textContent)return {reason:'saved'};
+    const speech=await engine('speech-status');
+    if(speech.video?.videoId===id && ['preparing','recording','stopping'].includes(speech.status))return {reason:'preparing-text'};
+    return {reason:context?.video?.videoId===id && ['captions-unavailable','model-error'].includes(context.textCapture)?context.textCapture:'waiting'};
   }
   return webAccess.pageStatus(tabId);
 }

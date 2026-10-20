@@ -436,9 +436,21 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------------------------------------------------------------------------
 // Current-tab context and automatic capture status
 // ---------------------------------------------------------------------------
+let captureStatusPending = false;
+async function refreshCaptureIndicator() {
+  if(captureStatusPending || !/^https?:/.test(currentTab?.url||''))return;
+  captureStatusPending=true;
+  try {
+    const state=await send({type:'capture-status',tabId:currentTab.id});
+    $('capture-indicator').textContent=captureLabel(state.reason);
+    $('capture-indicator').hidden=!$('page-capture').hidden;
+  } catch (_) {}
+  finally {captureStatusPending=false;}
+}
 async function setupCaptureContext() {
   [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if(currentTab&&/^https?:/.test(currentTab.url||''))send({type:'capture-status',tabId:currentTab.id}).then(state=>{$('capture-indicator').textContent=captureLabel(state.reason);$('capture-indicator').hidden=!$('page-capture').hidden;}).catch(()=>{});
+  await refreshCaptureIndicator();
+  if(videoIdFromUrl(currentTab?.url))setInterval(refreshCaptureIndicator,1500);
   if(currentTab&&/^https?:/.test(currentTab.url||'')&&!(currentTab.url||'').startsWith('https://www.youtube.com/')){$('page-capture').hidden=false;await refreshPageCapture();}
   if (!currentTab || !currentTab.url || !/^https:\/\/www\.youtube\.com\/watch\?/.test(currentTab.url)&&!policy.safeUrl(currentTab.url)) return;
   try {

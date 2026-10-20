@@ -32,7 +32,7 @@ Watch YouTube videos as usual. YouTube is the only default capture site. After t
 
 To save pages from other websites, choose sites during first-run setup or add them under **Library & settings → Websites**, grant browser access, and refresh already-open tabs. Website audio transcription and saving Google searches are off by default. Only compatible browser video players are supported; protected players may prevent capture.
 
-Videos are saved as you watch them. CueWoven does not scan previous browser visits, import Google Takeout files, or accept pasted video links for background transcript fetching. You can restore a library previously exported from CueWoven.
+Videos are saved as you watch them. The default watch delay is 10 seconds for longer videos and up to 5 seconds for short videos. The popup shows **Preparing searchable text…** while captions or initial player speech are processing. CueWoven does not scan previous browser visits, import Google Takeout files, or accept pasted video links for background transcript fetching. You can restore a library previously exported from CueWoven.
 
 ## Search what you remember
 
@@ -43,6 +43,8 @@ Videos are saved as you watch them. CueWoven does not scan previous browser visi
 - **Refine a result:** add another detail when the first match is not the one you meant.
 
 Press **Enter** to search after editing your query. Semantic search combines local embeddings with words, titles and context. Relevant text and speech matches take priority; scenes and saved images are searched as a fallback when no strong text match is found. Results are estimates, and a matching detail may be absent from the saved evidence. [How indexing and ranking work →](docs/ARCHITECTURE.md)
+
+For weak, closely competing text results, CueWoven can ask a second local model, Ettin 32M q8, to check the order. Strong text matches and quoted searches keep the normal fast path. The extra model downloads about 37 MB once; downloads and loading run in the background, and a slow or unavailable reranker leaves the original results available. Saved text, embeddings and timestamps are preserved. [Selective reranking](docs/SELECTIVE-RERANKING.md)
 
 ## Privacy and controls
 

@@ -115,3 +115,16 @@ test('one date check keeps items watched inside the window from every source',()
   assert.equal(watchedWithin(at(4),{sinceMs:5}),false);assert.equal(watchedWithin(at(1),{untilMs:2}),true);
   assert.equal(watchedWithin({indexedAt:7},{sinceMs:5,untilMs:10}),true);assert.equal(watchedWithin(at(99)),true);
 });
+
+
+test('bounded comparative forms share lexical clues without changing literal quotes',()=>{
+ for(const root of ['old','young','fast','slow','small','long','short','high','low','new','tall']){
+  assert.equal(stem(root+'er'),stem(root));assert.equal(stem(root+'est'),stem(root));
+ }
+ assert.equal(wordText('lower lowered lowering lowers'),'low low low low');
+ assert.equal(lexical('old back pain','getting older with a bad back').match,'close');
+ assert.ok(lexical('"getting old"','getting old').score>lexical('"getting old"','getting older').score+.5);
+ for(const word of ['flower','power','speaker','other','water','forest','border','fewer','news'])assert.equal(stem(word),word);
+ assert.notEqual(stem('high'),stem('low'));
+ assert.deepEqual(prepareQuery('not faster than 20').terms,['not','fast','than','20']);
+});

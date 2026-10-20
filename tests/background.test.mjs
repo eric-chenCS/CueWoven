@@ -29,7 +29,7 @@ test('removed history import and scan messages have no public handler',()=>{
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 20, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 10, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {
@@ -183,4 +183,29 @@ test('automatic speech accepts undetermined language while retaining the English
  const calls=[];chrome.runtime.getContexts=async()=>[{}];chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);return msg.type==='speech-status'?{status:'idle'}:{...msg,id:'automatic-unknown'};};
  const result=await request({type:'speech-auto-start'},{id:'x',tab:{id:1},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});
  assert.equal(result.type,'speech-start');assert.ok(calls.includes('speech-prepare'));
+});
+
+
+test('popup capture status distinguishes text preparation, saved scenes, speech and terminal failures',async()=>{
+ const id='aaaaaaaaaaa',url='https://www.youtube.com/watch?v='+id;
+ const sender={id:'x',url:'popup/popup.html'};
+ for(const item of [
+  {textCapture:'preparing-text',reason:'preparing-text'},
+  {textContent:true,reason:'saved'},
+  {sceneOnly:true,reason:'waiting'},
+  {speech:'preparing',reason:'preparing-text'},
+  {speech:'recording',reason:'preparing-text'},
+  {speech:'stopping',reason:'preparing-text'},
+  {speech:'recording',otherVideo:true,reason:'waiting'},
+  {textCapture:'captions-unavailable',reason:'captions-unavailable'},
+  {textCapture:'model-error',reason:'model-error'},
+  {paused:true,textCapture:'preparing-text',reason:'paused'},
+  {blocked:true,textCapture:'preparing-text',reason:'blocked-domain'},
+ ]){
+  chrome.storage.local.get=async()=>({settings:{enabled:!item.paused},webCapture:{blocked:item.blocked?['youtube.com']:[]}});
+  chrome.tabs={get:async()=>({url}),sendMessage:async()=>({video:{videoId:id},textCapture:item.textCapture||'waiting'})};
+  chrome.runtime.getContexts=async()=>[{}];
+  chrome.runtime.sendMessage=async msg=>msg.type==='has'?{content:!!(item.textContent||item.sceneOnly),textContent:!!item.textContent}:{status:item.speech||'idle',video:{videoId:item.otherVideo?'bbbbbbbbbbb':id}};
+  assert.equal((await request({type:'capture-status',tabId:1},sender)).reason,item.reason,JSON.stringify(item));
+ }
 });
