@@ -4,7 +4,7 @@
 
 Describe a quote, idea, scene or passage. CueWoven searches a library saved in your browser and links back to a matching video moment or page.
 
-CueWoven is a local-first extension for desktop Chrome and Microsoft Edge, built for SwampHacks XII. No account or personal YouTube API key is required.
+CueWoven is a local-first extension for desktop Chrome and Microsoft Edge. No account or personal YouTube API key is required.
 
 [Download](https://github.com/eric-chenCS/CueWoven/releases/latest) · [Installation guide](INSTALL.md) · [User guide](docs/USAGE.md) · [Privacy policy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md)
 
