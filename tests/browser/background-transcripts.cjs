@@ -31,7 +31,8 @@ const limit=Number(process.env.RECALL_TEST_CONCURRENCY || 6), total=limit+2;
   const worker=context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
   const base=`chrome-extension://${new URL(worker.url()).hostname}`;
   let page=await context.newPage();await page.goto(`${base}/options/options.html`);
-  assert.equal(await page.locator('#transcriptConcurrency').inputValue(),'6');
+  // Settings fill in after the page loads; wait for the saved default instead of reading the first option.
+  await page.waitForFunction(()=>document.querySelector('#transcriptConcurrency').value==='3');
   await page.locator('details.fold').filter({has:page.locator('#transcriptConcurrency')}).locator('summary').first().click();
   await page.locator('#transcriptConcurrency').selectOption(String(limit));
   await page.waitForFunction(async limit=> (await chrome.storage.local.get('settings')).settings?.transcriptConcurrency===limit,limit);

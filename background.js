@@ -274,7 +274,7 @@ const handlers = {
     if (!Array.isArray(urls)) throw new Error('Provide video links to fetch.');
     const ids = urls.map(videoIdFromUrl).filter(Boolean);
     const settings = await getSettings();
-    const concurrency = [1, 3, 6, 10].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 6;
+    const concurrency = [1, 3, 6, 10].includes(settings.transcriptConcurrency) ? settings.transcriptConcurrency : 3;
     return {job: (await getTranscriptJobs()).start(ids, concurrency)};
   },
   async 'transcript-job-status'(_msg, sender) {

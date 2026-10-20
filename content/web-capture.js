@@ -79,18 +79,21 @@
     const direct = links.map((a) => P.safeUrl(a.href)).find((url2) => url2?.hostname === location.hostname && /\/(?:reels?|p|video|videos|status)\/[\w-]+/.test(url2.pathname));
     const url = direct || P.safeUrl(location.href);
     const stable = /\/(?:reels?|p|video|videos|status)\/[\w-]+/.test(url.pathname);
+    const caption = post?.querySelector(captionSelector)?.textContent || (stable && url.pathname===location.pathname ? document.querySelector('meta[property="og:description"]')?.content : '') || '';
+    const text = P.redactText(caption).trim().slice(0, 4000);
+    const title = (video.getAttribute("aria-label") || text || document.querySelector('meta[property="og:title"]')?.content || document.title || location.hostname).trim().slice(0, 300);
     let sourceHint = "";
     if (!stable) {
       try {
         const src = new URL(video.currentSrc, location.href);
-        sourceHint = src.origin + src.pathname;
+        // A blob: address is new on every page load, so it would save the same feed video again; use stable clues.
+        const poster = video.poster && !video.poster.startsWith("blob:") ? video.poster : "";
+        sourceHint = src.protocol === "blob:" ? ["clues", poster, text, title, Math.round(video.duration || 0)].join("|").slice(0, 4096) : src.origin + src.pathname;
       } catch {
         sourceHint = video.currentSrc.slice(0, 4096);
       }
     }
-    const caption = post?.querySelector(captionSelector)?.textContent || (stable && url.pathname===location.pathname ? document.querySelector('meta[property="og:description"]')?.content : '') || '';
-    const text = P.redactText(caption).trim().slice(0, 4000);
-    return { url: url.href, sourceHint, text, title: (video.getAttribute("aria-label") || text || document.querySelector('meta[property="og:title"]')?.content || document.title || location.hostname).trim().slice(0, 300) };
+    return { url: url.href, sourceHint, text, title };
   }
   function pageText() {
     const candidates = [...document.querySelectorAll('article,main,[role="main"]')].slice(0, 16).filter(rendered);

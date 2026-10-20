@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {rank, prepareQuery, termWeights, termMask, passageEvidence, matchStrength} from '../lib/search.js';
+import {rank, prepareQuery, termWeights, termMask, passageEvidence, matchStrength, dropTwins, nearTie} from '../lib/search.js';
 import {webHit} from '../lib/web-items.js';
 
 const vector = score => new Float32Array([score, Math.sqrt(1 - score * score)]);
@@ -178,4 +178,21 @@ test('"Not this one" hides an item from website ranking while others still rank'
   await engine.collect(pool,vector(1),{kind:'video',hidden:new Set([bread])});
   const ranked=searchModule.rankPool(pool,{perVideo:1,limit:20});
   assert.ok(ranked.length>0);assert.ok(ranked.every(hit=>hit.videoId!==bread));
+});
+
+test('a second saved copy of the same page or video is shown once, keeping the better-scoring one', () => {
+  const hit = (videoId, title, channel, text, score) => ({videoId, title, channel, text, score});
+  const ranked = [
+    hit('web_new', 'Why coral bleaches', 'www.reefnews.com', 'Warm water drives away the algae.', 0.81),
+    hit('web_old', 'Why coral bleaches', 'reefnews.com', 'Warm water drives away the algae!', 0.8),
+    hit('web_old', 'Why coral bleaches', 'reefnews.com', 'Another passage from the old copy.', 0.5),
+    hit('web_other', 'Why coral bleaches', 'otherblog.org', 'Warm water drives away the algae.', 0.79),
+    hit('web_new', 'Why coral bleaches', 'www.reefnews.com', 'A second moment in the kept copy.', 0.4),
+    hit('yt_lesson', 'Lecture 1', 'Physics Channel', 'Newton’s first law.', 0.7),
+    hit('yt_other', 'Lecture 1', 'Physics Channel', 'Thermodynamics basics.', 0.69),
+  ];
+  const {hits, twins} = dropTwins(ranked);
+  assert.deepEqual(hits.map(h => h.videoId), ['web_new', 'web_other', 'web_new', 'yt_lesson', 'yt_other']);
+  assert.deepEqual([...twins], ['web_old']);
+  assert.equal(nearTie(hits.slice(0, 2)), nearTie([ranked[0], ranked[3]]), 'the near-tie check sees the real alternative, not the copy');
 });

@@ -28,9 +28,9 @@ Visual capture samples frames; it does not continuously archive a video. Short e
 
 ## Add specific videos
 
-Paste YouTube links under **Add videos** to fetch available captions for videos you choose. There is no Takeout importer or browser-history scan. Background fetching uses a separate minimized window with muted player tabs; it is visible in the taskbar and must remain open. Choose 1, 3, 6 or 10 parallel videos; fewer use less CPU/memory. Settings can close after fetching starts, but the browser must stay open. Closing the capture window pauses new work. Retry unavailable captions later; this does not recover unwatched audio or scenes. Live capture can continue alongside the caption queue.
+Paste YouTube links under **Add videos** to fetch available captions for videos you choose. There is no Takeout importer or browser-history scan. Background fetching uses a separate minimized window with muted player tabs; it is visible in the taskbar and must remain open. Choose 1, 3 (default), 6 or 10 parallel videos; fewer use less CPU and memory and keep the computer quieter. Settings can close after fetching starts, but the browser must stay open. Closing the capture window pauses new work. Retry unavailable captions later; this does not recover unwatched audio or scenes. Live capture can continue alongside the caption queue.
 
-Older saved title-only entries remain available and can use Add transcript or Fetch missing transcripts. Removing history import does not delete an existing library or reject an old CueWoven/Recall/Momento backup.
+Older saved title-only entries remain available and can use Add transcript. **Fetch missing transcripts (N)** under Add videos appears only when some saved videos are title-only or have AI speech for just the parts you played; it fetches full captions for them, newest first. Removing history import does not delete an existing library or reject an old CueWoven/Recall/Momento backup.
 
 ## Privacy and data
 

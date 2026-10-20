@@ -24,9 +24,11 @@ function scheduleLibraryRefresh(){
 }
 
 function updateTranscriptButton() {
+  // Only offered when some saved videos are title-only or have AI speech for the played parts only.
   const count = videos.filter(needsTranscript).length;
-  $('missing-transcripts').disabled = bulkBusy || restoreBusy || libraryBusy() || !count;
-  $('missing-transcripts').textContent = count ? `Fetch missing transcripts (${count})` : 'Fetch missing transcripts';
+  $('missing-transcripts').hidden = !count;
+  $('missing-transcripts').disabled = bulkBusy || restoreBusy || libraryBusy();
+  $('missing-transcripts').textContent = `Fetch missing transcripts (${count})`;
 }
 
 $('welcome-restore').addEventListener('click', () => { $('backup-controls').scrollIntoView({block:'center'}); $('import').click(); });
@@ -304,7 +306,7 @@ async function loadSettings() {
   selectRetention('maxAgeDays', s.maxAgeDays);
   $('sceneStorageMB').value = String(s.sceneStorageMB);
   for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
-  $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 6);
+  $('transcriptConcurrency').value = String([1, 3, 6, 10].includes(s.transcriptConcurrency) ? s.transcriptConcurrency : 3);
 }
 
 let savedTimer;

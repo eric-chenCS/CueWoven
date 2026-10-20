@@ -10,7 +10,7 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes,sceneCaps, fuseMatches} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
-import { prepareQuery, createPool, addIndex, rankPool, nearTie, watchedWithin } from '../lib/search.js';
+import { prepareQuery, createPool, addIndex, rankPool, nearTie, watchedWithin, dropTwins } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateVideoMetadataBatch } from '../lib/video-metadata.js';
 import { shouldForgetVideo } from '../lib/retention.js';
@@ -19,7 +19,7 @@ import {loadVideoChunks,packIndex} from '../lib/video-index.js';
 import {createRevisionCache} from '../lib/revision-cache.js';
 import {createQueryCache} from '../lib/query-cache.js';
 import {createWebEngine} from './web-engine.js';
-import {policy,itemIdentity as webIdentity} from '../lib/web-items.js';
+import {policy,itemIdentity as webIdentity,duplicateItems} from '../lib/web-items.js';
 import {samples,sampleFor} from '../lib/samples.js';
 import {createTextModel} from './text-model.js';
 import {visualBudget} from '../lib/visual-budget.js';
@@ -174,14 +174,15 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, u
     const batch=rows.filter(row=>!indexedIds.has(row.id)&&videos.has(row.videoId)&&row.vec?.length===DIM);
     addIndex(pool,qv,packIndex(batch),videos,range);
   });
-  const words=rankPool(pool,{perVideo});
+  const {hits:words,twins}=dropTwins(rankPool(pool,{perVideo}));
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   const finish=results=>({results});
   if(!hasScenes)return finish(select(words));
   try {
     const visual = await visualBudget(searchScenes(q,{limit:2000,perVideo,...range},videos));
-    if (!visual.results.length) return {...finish(select(words)),visualPending:!!visual.pending};
-    return finish(fuseMatches(words,visual.results,{limit,perVideo,offset}));
+    const scenes=visual.results.filter(hit=>!twins.has(hit.videoId));
+    if (!scenes.length) return {...finish(select(words)),visualPending:!!visual.pending};
+    return finish(fuseMatches(words,scenes,{limit,perVideo,offset}));
   } catch (error) {
     return {...finish(select(words)),sceneError:'Scene search unavailable: '+error.message};
   }
@@ -252,7 +253,10 @@ async function restoreIndex(data,sceneStorageMB) {
 async function prune({ maxAgeDays,importMaxAgeDays=0,sceneStorageMB }) {
   const scenesTrimmed = sceneStorageMB===undefined ? 0 : await db.scenes.trim(sceneCaps(sceneStorageMB));
   if (scenesTrimmed) invalidate();
-  if (!maxAgeDays&&!importMaxAgeDays) return { removed: 0,scenesTrimmed };
+  const duplicates = duplicateItems((await db.listVideos()).filter(v => policy.webId(v.videoId) && v.url));
+  for (const id of duplicates) await db.deleteVideo(id);
+  if (duplicates.length) {invalidate();web.reset();}
+  if (!maxAgeDays&&!importMaxAgeDays) return { removed: 0,scenesTrimmed,duplicatesRemoved:duplicates.length };
   const old = (await db.listVideos()).filter(v => shouldForgetVideo(v,maxAgeDays,Date.now(),importMaxAgeDays));
   for (const v of old) await db.deleteVideo(v.videoId);
   if (old.length) {invalidate();web.reset();}
@@ -260,7 +264,7 @@ async function prune({ maxAgeDays,importMaxAgeDays=0,sceneStorageMB }) {
   if (scenesRemoved) invalidate();
   const screenRemoved=maxAgeDays?await db.screenText.prune(Date.now()-maxAgeDays*864e5):0;
   if(screenRemoved)invalidate();
-  return { removed: old.length, scenesRemoved,screenRemoved,scenesTrimmed };
+  return { removed: old.length, scenesRemoved,screenRemoved,scenesTrimmed,duplicatesRemoved:duplicates.length };
 }
 
 let screenTask=null,screenEpoch=0,sceneEpoch=0;
