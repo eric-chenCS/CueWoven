@@ -10,7 +10,9 @@ export { videoIdFromUrl } from './lib/video.js';
 
 const OFFSCREEN_PATH = 'offscreen/offscreen.html';
 import {DEFAULT_SETTINGS} from './lib/settings.js';
+import {createDeviceSettings} from './lib/device-settings.js';
 export {DEFAULT_SETTINGS};
+const deviceSettings = createDeviceSettings({storage: {get: keys => chrome.storage.local.get(keys), set: value => chrome.storage.local.set(value)}, memory: chrome.system?.memory});
 
 // ---------------------------------------------------------------------------
 // Offscreen document
@@ -58,6 +60,7 @@ async function engine(type, payload = {}) {
 }
 
 async function getSettings() {
+  await deviceSettings();
   const { settings,webCapture } = await chrome.storage.local.get(['settings','webCapture']);
   return Object.assign({}, DEFAULT_SETTINGS, settings,settings?.lightMode?{speechEnabled:false,scenesEnabled:false,articleImagesEnabled:false,screenTextEnabled:false}:{},{youtubeBlocked:policy.matches('www.youtube.com',webCapture?.blocked||[])||policy.matches('youtu.be',webCapture?.blocked||[])});
 }
@@ -148,6 +151,10 @@ async function startSpeech(tabId, manual=false) {
 }
 
 const handlers = {
+  async 'settings-defaults'(_input, sender) {
+    requireLibrary(sender);
+    return deviceSettings();
+  },
   async 'youtube-saving-status'(_input,sender) {
     if(sender.url!==chrome.runtime.getURL(OFFSCREEN_PATH))throw Error('Invalid capture status request.');
     const settings=await getSettings();
@@ -338,9 +345,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // Housekeeping: daily auto-delete of old entries
 // ---------------------------------------------------------------------------
 chrome.runtime.onInstalled.addListener(async ({ reason }) => {
+  await deviceSettings();
   await webAccess.sync().catch(()=>{});
-  const { settings } = await chrome.storage.local.get('settings');
-  await chrome.storage.local.set({ settings: Object.assign({}, DEFAULT_SETTINGS, settings) });
   chrome.alarms.create('recall-prune', { periodInMinutes: 24 * 60, delayInMinutes: 1 });
   if (reason === 'install') chrome.tabs.create({ url: chrome.runtime.getURL('options/options.html#welcome') });
 });

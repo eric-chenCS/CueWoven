@@ -467,7 +467,8 @@ const handlers = {
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);
-    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),content:!!video&&(video.chunkCount>0||video.sceneCount>0||video.screenCount>0),textContent:!!video&&((video.method!=='history-title'&&video.chunkCount>0)||video.screenCount>0),title:video?.title,modelStatus:modelState.status };
+    const textContent=!!video&&((video.method!=='history-title'&&video.chunkCount>0)||video.screenCount>0);
+    return { has: !!video && !['history-title', 'speech-local'].includes(video.method),content:textContent||!!video?.sceneCount,textContent,title:video?.title,modelStatus:modelState.status };
   },
   'import-history': data=>captionChange(()=>importHistory(data)),
   'touch-watch': async ({ videoId, watchedAt }) => {

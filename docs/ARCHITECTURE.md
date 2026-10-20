@@ -44,6 +44,6 @@ Resident video vectors use 8-bit storage, with recent full-transcript content bo
 
 ## Validation
 
-The current working-source suite has 289 Node tests; released test counts are recorded separately in the [test report](TEST-REPORT.md). Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
+The current working-source suite has 319 Node tests; released test counts are recorded separately in the [test report](TEST-REPORT.md). Browser checks exercise actual extension messages, model inference, controlled capture outcomes, search, backups, permissions and responsive UI in temporary profiles. The branding compatibility check preserves the original database, settings and saved titles while round-tripping a backup.
 
 Historical measurements and evaluations live in [the documentation index](README.md). Read their named versions and fixture limits: synthetic tests and controlled player responses do not prove live transcript availability, universal site support or a general accuracy percentage. No test evidence should be read as a claim that the extension continuously records every page or frame.

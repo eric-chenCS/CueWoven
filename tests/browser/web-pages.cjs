@@ -46,7 +46,8 @@ const fixture = require("./web-fixture.cjs"), assert = require("assert/strict"),
     await wait(async () => await popup.locator(".result").count());
     const href = await popup.locator(".result").first().getAttribute("href");
     assert.equal(new URL(href).origin + new URL(href).pathname, "https://articles.example.com/reef");
-    assert.match(new URL(href).hash, /^#recall-text=.+:~:text=.+/);
+    assert.match(new URL(href).hash, /^#recall-text=.+&recall-suggest=1/);
+    assert.ok(!new URL(href).hash.includes(':~:text='));
     assert.match(await popup.locator(".match-sources").first().textContent(), /Page text/);
     assert.match(await popup.locator(".result img").first().getAttribute("src"), /_favicon\//);
     if (process.env.RECALL_SCREENSHOT_DIR) {

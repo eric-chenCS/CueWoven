@@ -54,6 +54,8 @@ Use settings to pause saving, exclude sites, choose retention and image-storage 
 
 Available captions can cover more of a video than you have played. Speech, scene and on-screen-text capture depend on playback and cannot recover earlier audio or guarantee every brief scene. **Lite mode** keeps text capture while pausing new speech, scene, image and OCR capture. Local models use CPU, memory and disk space.
 
+On first setup of the automatic Lite feature, devices reporting 8 GB of physical RAM or less start in Lite mode. You can turn it off in Settings; your choice survives restarts and updates. Resetting settings restores the device default. A local memory check uses the `system.memory` permission; it sends no hardware information to the developer. Lite mode reduces new media processing, but is not a fixed memory limit or a guarantee of smooth performance on every 8 GB laptop.
+
 Backups contain saved evidence, not original video files or complete websites. Export a backup before uninstalling, clearing a browser profile or switching installation folders. Unpacked installations need manual updates; keep the same folder, reload the extension, and refresh open tabs. [Privacy policy](docs/PRIVACY.md) · [Data controls and backup limits](docs/USAGE.md#privacy-and-data)
 
 ## Build from source

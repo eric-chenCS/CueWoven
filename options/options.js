@@ -152,8 +152,9 @@ $('reset-settings').addEventListener('click', async () => {
   const button = $('reset-settings');
   button.disabled = true;
   try {
+    const defaults = await deviceDefaults();
     const { settings } = await chrome.storage.local.get('settings');
-    await chrome.storage.local.set(resetPreferences(settings));
+    await chrome.storage.local.set({...resetPreferences(settings, defaults), liteModeInitialized: true});
     await loadSettings();
     $('reset-msg').textContent = 'Settings reset to default. Your library, retention choices and website access are unchanged.';
   } catch (error) {
@@ -167,8 +168,13 @@ function selectRetention(id, days) {
   select.value = value;
 }
 async function loadSettings() {
+  let defaults;
+  try { defaults = await deviceDefaults(); }
+  catch (error) { $('reset-msg').textContent = error.message; return; }
   const { settings } = await chrome.storage.local.get('settings');
-  const s = Object.assign({}, DEFAULTS, settings);
+  const s = Object.assign({}, defaults, settings);
+  $('lightMode').closest('label').querySelector('.default-note').textContent = defaults.lightMode
+    ? 'Default: On for devices with 8 GB RAM or less. You can turn it off.' : 'Default: Off';
   $('enabled').checked = !!s.enabled;
   $('lightMode').checked=!!s.lightMode;
   $('speechEnabled').checked = s.speechEnabled !== false;
@@ -182,30 +188,39 @@ async function loadSettings() {
 }
 
 let savedTimer;
+async function deviceDefaults() {
+  const defaults = await send({type: 'settings-defaults'});
+  if (!defaults || defaults.error) throw Error(defaults?.error || 'Could not load device defaults.');
+  return defaults;
+}
 async function saveSettings(event) {
-  const {settings:stored={}}=await chrome.storage.local.get('settings');
-  const storedMB=stored.sceneStorageMB??DEFAULTS.sceneStorageMB,sceneStorageMB=Number($('sceneStorageMB').value);
-  if(sceneStorageMB<storedMB&&!confirm(`Lower image storage to ${sceneStorageMB>=1024?'1 GB':sceneStorageMB+' MB'}? If your saved images don't fit, the oldest scenes and article images are deleted now. This can't be undone.`)){$('sceneStorageMB').value=String(storedMB);return;}
-  const settings = {
-    ...stored,
-    enabled: $('enabled').checked,
-    lightMode:$('lightMode').checked,
-    speechEnabled: $('speechEnabled').checked,
-    scenesEnabled: $('scenesEnabled').checked,
-    articleImagesEnabled: $('articleImagesEnabled').checked,
-    screenTextEnabled:$('screenTextEnabled').checked,
-    dwellSeconds: Number($('dwellSeconds').value),
-    maxAgeDays: Number($('maxAgeDays').value),
-    sceneStorageMB,
-  };
-  for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
-  await chrome.storage.local.set({ settings });
-  const status = $(event?.target?.closest('#sec-data') ? 'data-saved' : 'saved');
-  $('saved').textContent = $('data-saved').textContent = '';
-  status.textContent = 'Saved';
-  clearTimeout(savedTimer);
-  savedTimer = setTimeout(() => (status.textContent = ''), 1500);
-  if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
+  try {
+    // Finish first-time device setup before a user's save can replace its settings.
+    await deviceDefaults();
+    const {settings:stored={}}=await chrome.storage.local.get('settings');
+    const storedMB=stored.sceneStorageMB??DEFAULTS.sceneStorageMB,sceneStorageMB=Number($('sceneStorageMB').value);
+    if(sceneStorageMB<storedMB&&!confirm(`Lower image storage to ${sceneStorageMB>=1024?'1 GB':sceneStorageMB+' MB'}? If your saved images don't fit, the oldest scenes and article images are deleted now. This can't be undone.`)){$('sceneStorageMB').value=String(storedMB);return;}
+    const settings = {
+      ...stored,
+      enabled: $('enabled').checked,
+      lightMode:$('lightMode').checked,
+      speechEnabled: $('speechEnabled').checked,
+      scenesEnabled: $('scenesEnabled').checked,
+      articleImagesEnabled: $('articleImagesEnabled').checked,
+      screenTextEnabled:$('screenTextEnabled').checked,
+      dwellSeconds: Number($('dwellSeconds').value),
+      maxAgeDays: Number($('maxAgeDays').value),
+      sceneStorageMB,
+    };
+    for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
+    await chrome.storage.local.set({ settings, ...(event?.target?.id === 'lightMode' ? {liteModeInitialized: true} : {}) });
+    const status = $(event?.target?.closest('#sec-data') ? 'data-saved' : 'saved');
+    $('saved').textContent = $('data-saved').textContent = '';
+    status.textContent = 'Saved';
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => (status.textContent = ''), 1500);
+    if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
+  } catch (error) { $('saved').textContent = `Could not save settings: ${error.message}`; }
 }
 for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 

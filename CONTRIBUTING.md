@@ -18,6 +18,10 @@ For the optional browser regression, install Playwright separately from the proj
 node tests/browser/backup-simplification.cjs
 node tests/browser/refine-search.cjs
 node tests/browser/single-video.cjs
+node tests/browser/video-scope.cjs
+node tests/browser/article-jump.cjs
+node tests/browser/article-suggestion.cjs
+node tests/browser/device-lite.cjs
 node tests/browser/enter-search.cjs
 node tests/browser/adaptive-scenes.cjs
 node tests/browser/security-hardening.cjs
@@ -25,6 +29,14 @@ node tests/browser/visual-fallback.cjs
 ```
 
 These use controlled YouTube/transcript outcomes with the real local embedding/search engine. They can download model weights, create isolated temporary browser profiles, and do not use your normal browser history or cookies. The background test uses the real service worker and temporary tabs to verify processing continues after settings closes.
+
+`video-scope.cjs` checks **Search this video** with saved captions, local speech, real OCR and CLIP scenes, including preserved timestamps, paused capture, switching back to library search, initial caption capture and unavailable captions. Saved moment evidence must remain searchable without another caption request; a saved title alone still triggers initial capture.
+
+`article-jump.cjs` reproduces exact-phrase searches through the popup and real model, then verifies on-page highlight ranges for repeated phrases, paragraph and inline boundaries, long phrases, punctuation, late rendering and removed text. Pages are controlled fixtures; the script does not browse personal articles.
+
+`article-suggestion.cjs` verifies that semantic article results scroll without native or extension text highlights, display a suggested-section label, dismiss it on website interaction and cancel pending late-render jumps. It uses real Edge input events, including emulated touch, and checks that exact phrase highlighting remains available.
+
+`device-lite.cjs` checks automatic Lite defaults with controlled physical-memory responses in isolated extension copies. It covers fresh setup, first upgrade, manual overrides, reset, unavailable hardware detection, media capture gates, responsive Settings and real-model text search. These are browser integration checks, not measurements on a physical 8 GB laptop.
 
 After pulling merged changes, run `pnpm run setup` if dependencies or the runtime build changed. Reload the extension, reopen its settings page, and refresh YouTube tabs. Keeping the checkout folder path stable preserves its extension identity. Export your index before switching to another folder or removing an installation.
 

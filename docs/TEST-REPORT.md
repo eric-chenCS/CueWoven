@@ -1,6 +1,10 @@
 # CueWoven test report
 
-## Current baseline — v3.3.35
+## Current baseline — v3.3.37
+
+All 319 Node tests pass. Isolated Edge validation covers scoped-video search with saved speech/OCR/scenes, precise literal article jumps, semantic suggested-section display and dismissal, automatic Lite defaults, preserved user overrides, device-aware reset and settings initialization/save ordering. The physical-memory API is checked on the test laptop; 8 GB behavior uses controlled RAM responses, not a physical 8 GB performance benchmark. Models and ranking remain unchanged from 3.3.36. See [v3.3.37 validation](UPDATE-3.3.37.md).
+
+## v3.3.35 baseline
 
 All 289 Node tests pass. Edge checks cover real Whisper speech saved automatically after playback (including undetermined language), settings-only speech stop/resume, the cleaner popup, text-first selection with real CLIP fallback, unchanged 121/121 text retrieval, diagnostics and themes. See [v3.3.35 validation](UPDATE-3.3.35.md) for scope and limitations.
 

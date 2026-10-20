@@ -1,6 +1,6 @@
 # CueWoven privacy policy
 
-*Last updated: October 19, 2026*
+*Last updated: October 20, 2026*
 
 CueWoven is a browser extension that lets you search videos and pages you have watched or read. It processes and stores the library on your computer. There is no CueWoven account, developer-operated server, analytics or advertising. The extension does not send your library or search queries to the developer.
 
@@ -32,6 +32,7 @@ The library is stored in your browser profile on your computer, using the extens
 - **YouTube access** lets CueWoven read the video you are watching and its captions.
 - **Access to other websites** is optional. Chrome or Edge asks you before granting it, and only for the sites you choose.
 - **Storage and unlimited storage** keep your library on your computer.
+- **System memory** checks physical RAM locally to choose the initial Lite mode default for devices with 8 GB or less. The capacity value is not saved or sent to the developer; your Lite mode preference and a setup-complete flag are saved locally.
 - **Offscreen document, alarms and favicon** run the local search models in the background, remove old items on schedule, and show site icons in results.
 
 ## Your control

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { policy, cleanItem, itemIdentity, canonicalKey, duplicateItems, pagePassages, quantize, packedDot, itemLink, webHit } from "../lib/web-items.js";
+import { policy, cleanItem, itemIdentity, canonicalKey, duplicateItems, pagePassages, quantize, packedDot, itemLink, webHit, pageAnchor } from "../lib/web-items.js";
+import {resultLink} from '../lib/result-link.js';
 import { restoreBackup } from "../lib/backup.js";
 import { fuseMatches } from "../lib/scenes.js";
 test("private addresses, credentials, local networks and sensitive paths are excluded", () => {
@@ -41,9 +42,9 @@ test("page passages and packed vectors stay bounded without losing a precise sem
 });
 test("page links highlight saved words and media links preserve site and playback lead-in", () => {
   const videoId = "web_" + "a".repeat(64), url = "https://example.com/article";
-  const page = itemLink({ videoId, url, kind: "page", pageText: true, text: "Coral bleaching is caused by warm-water stress." });
+  const page = itemLink({ videoId, url, kind: "page", pageText: true, text: "Coral bleaching is caused by warm-water stress." }, 'Coral bleaching is caused by warm-water stress.');
   assert.match(page, /#recall-text=Coral%20bleaching.*:~:text=Coral%20bleaching/);
-  const long = new URL(itemLink({ videoId, url, kind: "page", pageText: true, text: "one two three four five six seven eight nine ten" }));
+  const long = new URL(itemLink({ videoId, url, kind: "page", pageText: true, text: "one two three four five six seven eight nine ten" }, 'one two three four five six seven eight nine ten'));
   assert.ok(long.hash.endsWith(":~:text=one%20two%20three%20four,seven%20eight%20nine%20ten"));
   assert.equal(new URLSearchParams(long.hash.slice(1).split(":~:")[0]).get("recall-text"), "one two three four five six seven eight nine ten");
   assert.ok(page.includes("warm%2Dwater"));
@@ -53,10 +54,36 @@ test("page links highlight saved words and media links preserve site and playbac
   assert.ok(itemLink({ videoId, url, kind: "page", pageText: true, text: "Snippet words shown here", anchor: "Other paragraph words" }).includes("recall-text=Snippet"));
   assert.equal(itemLink({ videoId, url, kind: "page", pageText: true, text: "A red fish", matchSources: ["Image caption"] }), url);
 });
+
+test('semantic article links request a suggestion without browser text highlighting', () => {
+  const hit = {videoId: 'web_' + 'a'.repeat(64), url: 'https://example.com/article', kind: 'page', pageText: true, text: 'Coral bleaching occurs when warm ocean water drives away algae.'};
+  const url = new URL(resultLink(hit, 'why reefs lose their colour during heat waves'));
+  const params = new URLSearchParams(url.hash.slice(1));
+  assert.equal(params.get('recall-suggest'), '1');
+  assert.equal(params.get('recall-exact'), null);
+  assert.equal(params.get('recall-text'), hit.text);
+  assert.ok(!url.hash.includes(':~:text='), 'native text fragments must not highlight a semantic suggestion');
+});
 test("text fragment anchors stay within one captured text block rather than crossing a heading", () => {
   const rows = pagePassages("Coral reefs\nCoral bleaching occurs when warm ocean water drives away the algae that feed the reef.");
   assert.match(rows[0].anchor, /^Coral bleaching/);
   assert.equal(rows[0].anchor.includes("Coral reefs"), false);
+});
+
+test('article links target the literal search deep in a passage and carry disambiguating context', () => {
+  const phrase = 'Warm ocean water drives away symbiotic algae', prefix = 'An introduction to marine observations. '.repeat(20);
+  const hit = {videoId: 'web_' + 'a'.repeat(64), url: 'https://example.com/article', kind: 'page', pageText: true, text: prefix + phrase + ' from coral reefs during prolonged heat stress.'};
+  for (const query of [phrase, '"' + phrase + '"', 'the article saying "' + phrase + '"']) {
+    const url = new URL(resultLink(hit, query)), params = new URLSearchParams(url.hash.slice(1).split(':~:')[0]);
+    assert.equal(params.get('recall-text'), phrase);
+    assert.equal(params.get('recall-exact'), '1');
+    assert.match(params.get('recall-prefix'), /marine observations\.$/);
+    assert.equal(params.get('recall-suffix'), 'from coral reefs during prolonged heat stress.');
+  }
+  assert.equal(pageAnchor({text: 'The reef’s warm‑water stress spreads fast.'}, "reef's warm-water stress").text, 'reef’s warm‑water stress');
+  assert.equal(pageAnchor({text: 'first paragraph has unrelated words and heart conditions'}, 'art').exact, undefined, 'query words do not match inside longer words');
+  assert.equal(pageAnchor({text: 'first paragraph has unrelated words'}, 'missing phrase').exact, undefined);
+  assert.equal(itemLink({...hit, matchSources: ['Image caption']}, phrase), hit.url, 'generated image captions are not on-page anchors');
 });
 test("page word offsets are never treated as video times during scene fusion", () => {
   const words = [{ videoId: "aaaaaaaaaaa", start: 0, score: 0.8, pageText: true, matchSources: ["Page text"] }], scenes = [{ videoId: "aaaaaaaaaaa", start: 3, score: 0.4, key: "a", scene: true }];

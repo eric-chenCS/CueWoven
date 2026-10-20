@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 const listener = () => ({ addListener() {} });
 let onMessage;
 globalThis.chrome = {
+  storage: {local: {get: async () => ({liteModeInitialized: true})}},
   runtime: { onMessage: { addListener(fn) { onMessage = fn; } }, onInstalled: listener(), id: 'x', getURL: (p) => p },
   alarms: { onAlarm: listener() },
 };
@@ -22,6 +23,14 @@ test('videoIdFromUrl understands common YouTube link shapes', () => {
 
 const request = (msg, sender = { id: 'x', tab: { id: 1 }, url: 'options/options.html' }) =>
   new Promise(resolve => assert.equal(onMessage(msg, sender, resolve), true));
+// Initialize the device policy before individual routing tests replace storage.
+assert.equal((await request({type:'settings-defaults'})).lightMode, false);
+
+test('device defaults are available only to the settings page', async () => {
+  for (const url of ['popup/popup.html', 'https://www.youtube.com/watch?v=aaaaaaaaaaa']) {
+    assert.match((await request({type:'settings-defaults'}, {id:'x', url})).error, /Library & settings/);
+  }
+});
 test('incognito YouTube requests stop before any indexing or model access',async()=>{const result=await request({type:'should-index',videoId:'aaaaaaaaaaa'},{id:'x',tab:{id:7,incognito:true},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.equal(result.index,false);assert.match(result.reason,/Incognito/);});
 
 test('removed history import and scan messages have no public handler',()=>{

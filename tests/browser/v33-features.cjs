@@ -23,8 +23,12 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   // Use a controlled active-video context, while the real engine indexes and filters.
   await f.send({type:'clear'});
   await f.options.evaluate(async()=>{
+   await chrome.storage.local.set({settings:{enabled:true,maxAgeDays:0}});
+   for(const videoId of ['aaaaaaaaaaa','bbbbbbbbbbb']){
+    const saved=await chrome.runtime.sendMessage({target:'offscreen',type:'index',video:{videoId,title:videoId==='aaaaaaaaaaa'?'Current video':'Another video',watchedAt:Date.now()},segments:[{start:42,text:'Coral bleaching happens when warm ocean water drives away algae.'}],method:'controlled-test'});
+    if(saved.error)throw Error(saved.error);
+   }
    await chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0}});
-   for(const videoId of ['aaaaaaaaaaa','bbbbbbbbbbb'])await chrome.runtime.sendMessage({target:'offscreen',type:'index',video:{videoId,title:videoId==='aaaaaaaaaaa'?'Current video':'Another video',watchedAt:Date.now()},segments:[{start:42,text:'Coral bleaching happens when warm ocean water drives away algae.'}],method:'controlled-test'});
   });
   await f.context.addInitScript(()=>{
    if(!location.pathname.endsWith('/popup/popup.html'))return;
@@ -36,6 +40,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   await popup.waitForFunction(()=>document.querySelectorAll('.result').length===1,'searching one video shows only that video');
   assert.ok((await popup.locator('.result').getAttribute('href')).includes('&t=42s'));
   // Fresh current videos are indexed automatically before their first scoped search.
+  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,maxAgeDays:0}}));
   await f.send({type:'delete',videoId:'aaaaaaaaaaa'});
   await popup.evaluate(()=>{
    const original=chrome.runtime.sendMessage.bind(chrome.runtime);

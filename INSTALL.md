@@ -5,7 +5,7 @@ CueWoven runs in desktop Chrome and Microsoft Edge. The manifest requires Chromi
 ## Download and load
 
 1. Open [Releases](https://github.com/eric-chenCS/CueWoven/releases/latest) and expand **Assets** if needed.
-2. Download the named installation asset, currently **cuewoven-v3.3.35.zip**. Do not choose **Source code (zip)**, **Source code (tar.gz)** or **Code → Download ZIP** for a ready-to-use installation.
+2. Download the named installation asset, currently **cuewoven-v3.3.37.zip**. Do not choose **Source code (zip)**, **Source code (tar.gz)** or **Code → Download ZIP** for a ready-to-use installation.
 3. Extract the **entire ZIP** into a permanent folder. On Windows, right-click the ZIP and choose **Extract All**. Do not load from the ZIP preview or copy only `manifest.json`.
 4. In Chrome, open `chrome://extensions`; in Edge, open `edge://extensions`.
 5. Enable **Developer mode**, click **Load unpacked**, and select the folder that directly contains `manifest.json`. If extraction created an outer folder, open it and select the inner extension folder.
@@ -32,6 +32,8 @@ Videos are saved as you watch them. Past browser visits and Google Takeout impor
 ## Update without losing your library
 
 Keep using the same installed folder. Export a backup under **Your data**, replace that folder's files with the new release's contents, click **Reload** in the browser's extension manager, and refresh open video/website tabs.
+
+Version 3.3.37 adds the `system.memory` permission to select a local Lite mode default. On first setup of this feature, devices reporting 8 GB RAM or less switch to Lite mode; captions and article text keep saving, while new speech, scene, image and OCR capture pause. You can turn Lite mode off in Settings, and that choice survives later updates. No hardware information is uploaded.
 
 The library, model cache, settings and site permissions belong to the current browser profile and do not automatically transfer to another computer. Export a backup on the old computer, install the complete release on the new one, allow its models to download, and restore the backup. Configure site access again; backups do not contain settings or browser permissions.
 

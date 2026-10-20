@@ -12,7 +12,11 @@ Describe an idea, phrase, image or scene, then press **Enter**. Typing alone doe
 
 A moment is a saved passage or observation at a video time. Indicators identify the evidence: Transcript, Audio, Scene, On-screen text, Article image, Image caption or Title. Title-only results open a source without claiming a matching spoken timestamp. Relevant text and speech matches take priority over image similarity. Scenes and saved screenshots are used as a fallback when no strong text match is found; weak incidental text does not prevent visual searches. Scores express ranking, not probability.
 
-Press Enter once to search; press Enter again to open the shown result, or use **Copy link**. **Search this video** restricts search to the current YouTube video and tries indexing if needed.
+On a supported video page, **Search this video** limits results to the current video. Saved speech, on-screen text and scenes can be searched even when captions are unavailable or new capture is paused. If no moment evidence has been saved yet, CueWoven first attempts to capture the current video; it cannot retrieve speech or scenes that were never saved. Uncheck the option to search the rest of your library again.
+
+Press Enter once to search; press Enter again to open the shown result, or use **Copy link**.
+
+For article results, a literal phrase found in the saved passage becomes the highlighted jump target, even when it occurs later in that passage. Surrounding saved words help distinguish repeated phrases. Similar-meaning results scroll near the saved passage without highlighting its words and show **Suggested section · Similar in meaning**. The label disappears on click, typing, keyboard navigation, touch or scrolling; interacting before a late-rendered passage appears also cancels the pending jump. If an exact target has disappeared or cannot be distinguished on the current page, CueWoven reports that it could not find the saved passage. Generated image captions open the page without claiming an on-page text location.
 
 ## Choose what gets saved
 
@@ -25,6 +29,8 @@ Allowed pages contribute up to 2,000 visible words and up to three accessible ar
 Speech fallback is local and English-only. It starts automatically when captions are unavailable; no Save now or speech-start button is needed. Missing/undetermined language metadata permits an English attempt, which can be inaccurate if the actual audio is not English. Known non-English audio is skipped. Pause saving or use **Settings → Transcribe when there are no captions** to control it; Lite mode also pauses speech. It processes only audio played after starting, one player at a time. Audio is not saved as a recording.
 
 Visual capture samples frames; it does not continuously archive a video. Short events and small or stylized text may be missed. **Lite mode** pauses new article images, scenes, OCR and speech while keeping captions and article text. Settings also provide individual controls, light/dark/system appearance and **Reset settings to default**. Reset preserves the library, site choices and retention preferences.
+
+The first time automatic Lite setup runs (including an update from a version without it), devices reporting 8 GB of physical RAM or less switch to Lite mode. Larger devices keep full capture by default. This uses the browser's `system.memory` permission locally, without uploading memory information or polling free RAM. Settings explains the device default; turn Lite mode off to resume media capture. Your choice is preserved across restarts and updates. **Reset settings to default** restores the device-based default. If memory detection is unavailable, the current Lite choice is kept, or the normal Off default is used for a fresh install; detection is retried on a later service-worker start. Previously saved media stays searchable, so Lite mode does not impose a fixed browser-memory limit.
 
 ## Videos saved without a transcript
 

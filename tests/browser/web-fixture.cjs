@@ -1,5 +1,5 @@
 const { chromium } = require(process.env.RECALL_PLAYWRIGHT || "playwright"), fs = require("fs"), path = require("path"), os = require("os");
-module.exports = async function fixture({ sites = ["example.com", "instagram.com", "tiktok.com"] } = {}) {
+module.exports = async function fixture({ sites = ["example.com", "instagram.com", "tiktok.com"], prepareExtension } = {}) {
   const root = process.env.RECALL_EXTENSION || path.resolve(__dirname, "../.."), directory = fs.mkdtempSync(path.join(process.env.RECALL_TEST_ROOT||os.tmpdir(), "recall-web-")), extension = path.join(directory, "extension");
   fs.cpSync(root, extension, { recursive: true, filter: (source) => {
     const rel = path.relative(root, source);
@@ -17,6 +17,7 @@ module.exports = async function fixture({ sites = ["example.com", "instagram.com
   manifest.optional_permissions = manifest.optional_permissions.filter((name) => !["scripting"].includes(name));
   manifest.host_permissions.push(...sites.flatMap((site) => [`https://*.${site}/*`, `http://*.${site}/*`]));
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  if (prepareExtension) await prepareExtension(extension);
   const context = await chromium.launchPersistentContext(path.join(directory, "profile"), { headless: true, executablePath: process.env.RECALL_BROWSER, viewport: { width: 1e3, height: 800 }, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`] });
   const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker"), base = `chrome-extension://${new URL(worker.url()).hostname}`, options = await context.newPage();
   await options.goto(`${base}/options/options.html`);

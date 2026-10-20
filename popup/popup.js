@@ -172,7 +172,7 @@ async function showMore() {
 function resultCard(r, terms, variant) {
     const wrap = $('result-tpl').content.firstElementChild.cloneNode(true),node=wrap.querySelector('.result');
     wrap.classList.add(variant);
-    const url = resultLink(r);
+    const url = resultLink(r, submittedQuery || '');
     node.href = url;
     setItemImage(node.querySelector('img'), r);
     if (r.image) node.querySelector('img').alt = r.articleImage?(r.caption||'Saved article image'):'Saved scene at ' + formatTime(r.sceneStart ?? r.start);
@@ -241,7 +241,8 @@ async function runSearch() {
     if(videoId){
       const state=await send({type:'video-status',videoId});
       if(state.error)throw Error(state.error);
-      if(!state.has){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
+      // Saved speech, OCR and scenes are searchable even when captions are unavailable.
+      if(!state.has&&!state.content){const indexed=await send({type:'index-tab',tabId:currentTab.id});if(!indexed?.ok)throw Error(indexed?.reason||indexed?.error||'Captions are not ready. Play the video and retry.');}
     }
     if(videoId)request.videoId=videoId;
     return send(request);
