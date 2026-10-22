@@ -8,8 +8,8 @@ const hits = () => Array.from({length: 45}, (_, i) => ({videoId: `owner${i}`, ti
 const query = 'a speaker getting older with an aching back';
 function fixture(options = {}) {
   const workers = [];
-  class Worker {
-    constructor() {workers.push(this);}
+  class Worker extends EventTarget {
+    constructor() {super();workers.push(this);}
     messages = [];
     postMessage(data) {this.messages.push(data);}
     terminate() {this.terminated = true;}
@@ -105,6 +105,18 @@ test('worker construction and message failures cannot turn optional reranking in
   try {assert.equal((await broken.rerank(query, rows)).hits, rows);} finally {broken.release();}
   const {model, workers, load} = fixture();
   try {await load(); workers[0].postMessage = () => {throw Error('closed');}; assert.equal((await model.rerank(query, rows)).hits, rows);} finally {model.release();}
+});
+
+test('unreadable reranker messages preserve ordinary results and settle loading promptly',async()=>{
+  const {model,workers,load}=fixture({cooldownMs:0});
+  try{
+    const warming=model.warmup();workers[0].dispatchEvent(new Event('messageerror'));assert.equal(workers[0].terminated,true);
+    assert.equal(await warming,false);await load();
+    const rows=hits(),pending=model.rerank(query,rows);workers[1].dispatchEvent(new Event('messageerror'));
+    assert.equal((await pending).hits,rows);assert.equal(workers[1].terminated,true);
+    const retry=model.warmup();workers[1].dispatchEvent(new Event('messageerror'));assert.equal(model.status().status,'loading');
+    workers[2].send({id:0,ready:true});assert.equal(await retry,true);
+  }finally{model.release();}
 });
 
 test('scoring head parses only expected finite F32 tensors and reads CLS rather than mean pooling', () => {

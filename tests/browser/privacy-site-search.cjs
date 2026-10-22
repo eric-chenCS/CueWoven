@@ -16,8 +16,10 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
   const specific=await checked({type:'search',query:'a YouTube video about coral bleaching'});
   assert.ok(specific.results.length);assert.ok(specific.results.every(row=>row.videoId==='site0000001'));assert.equal(specific.appliedSource,'youtube.com');
   report.checks.push('real MiniLM search returns only the requested website');
-  const website=await checked({type:'search',query:'an article from example.com about coral bleaching'});
-  assert.ok(website.results.length);assert.ok(website.results.every(row=>row.url?.startsWith('https://example.com/')));
+  for(const query of ['an article from example.com about coral bleaching','coral bleaching from example.com.','coral bleaching from https://www.example.com/research']){
+   const website=await checked({type:'search',query});assert.equal(website.appliedSource,'example.com');
+   assert.ok(website.results.length);assert.ok(website.results.every(row=>row.url?.startsWith('https://example.com/')));
+  }
   const absent=await checked({type:'search',query:'an article from absent.example.org about coral bleaching'});
   assert.equal(absent.results.length,0);assert.equal(absent.appliedSource,'absent.example.org');assert.equal(absent.filtersRelaxed,false);
   const broad=await checked({type:'search',query:'an article from absent.example.org about coral bleaching',inferFilters:false});

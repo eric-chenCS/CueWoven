@@ -38,9 +38,9 @@ test('metadata changes update a loaded snapshot without rebuilding vectors',asyn
   const before=await cache.get();cache.update(snapshot=>snapshot.videos.set('a',{watchedAt:2,sceneCount:1}));
   assert.equal(await cache.get(),before);assert.equal(calls,1);assert.equal(before.videos.get('a').watchedAt,2);
 });
-class FakeWorker{
+class FakeWorker extends EventTarget{
   static instances=[];
-  constructor(){this.sent=[];FakeWorker.instances.push(this);}
+  constructor(){super();this.sent=[];FakeWorker.instances.push(this);}
   postMessage(data){this.sent.push(data);}
   answer(){const {id,texts}=this.sent.at(-1);this.onmessage({data:{id,vectors:texts.map(text=>Float32Array.of(Number(text)||0))}});}
   terminate(){this.terminated=true;}

@@ -15,12 +15,15 @@ export function createVisionModel(onState = () => {}) {
       onState({status: 'working', operation: type});
       if (!worker) {
         worker = new Worker(new URL('vision-worker.js', import.meta.url), {type: 'module'});
+        const current=worker;
         worker.onmessage = ({data}) => {
+          if(worker!==current)return;
           const request = pending.get(data.id);if (!request) return;
           if ('progress' in data) {request.progress(data.progress);return;}
           pending.delete(data.id);data.error ? request.reject(new Error(data.error)) : request.resolve(data.result);
         };
-        worker.onerror = () => release();
+        worker.onerror = () => {if(worker===current)release();};
+        worker.addEventListener('messageerror',worker.onerror);
       }
       const result = await new Promise((resolve, reject) => {
         const id = ++nextId;

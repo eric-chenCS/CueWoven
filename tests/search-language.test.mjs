@@ -101,6 +101,19 @@ test('website-only empty searches never query another website',async()=>{
   assert.equal(matchesSource({url:'https://youtube.com.evil.org/watch'},'youtube.com'),false);
 });
 
+test('website filters survive sentence punctuation and explicit HTTP URLs without aliasing lookalikes',()=>{
+  for(const [query,host] of [
+    ['an article from nature.com.','nature.com'],['an article from nature.com, about coral','nature.com'],
+    ['I read it on nature.com!','nature.com'],['an article from https://www.nature.com/articles/coral','nature.com'],
+    ['an article from http://nature.com/research','nature.com'],
+    ['a video from YouTube.','youtube.com'],['I watched it on YouTube!','youtube.com'],['I read it on GitHub.','github.com'],
+    ['a video on https://youtube.com.evil.test/watch','youtube.com.evil.test'],
+    ['a video I watched on youtube.com.evil.test.','youtube.com.evil.test'],
+    ['a page from https://Example.ORG/path?q=coral','example.org'],
+  ])assert.equal(searchIntent(query).source,host,query);
+  for(const query of ['a video I watched on youtube.com@evil.test','from youtube-notes','from https://youtube.com@evil.test/watch','a video I watched on youtube.com..evil.test','a video I watched on youtube.com.@evil.test'])assert.equal(searchIntent(query).source,'',query);
+});
+
 test('article visual evidence never produces a text-score near-tie hint',()=>{
  assert.equal(nearTie([{videoId:'a',score:.5,articleImage:true,matchSources:['Article image']},{videoId:'b',score:.49}]),false);
 });

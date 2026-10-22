@@ -18,8 +18,9 @@ export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,id
       if(!worker){
         onState({status:'loading',progress:0});
         worker=new WorkerClass(new URL('text-worker.js',import.meta.url),{type:'module'});
+        const current=worker;
         worker.onmessage=({data})=>{
-          if(!running||data.id!==running.id)return;
+          if(worker!==current||!running||data.id!==running.id)return;
           if('progress'in data){onState({status:'loading',progress:data.progress});return;}
           clearTimeout(deadline);
           const {job,count}=running;running=null;
@@ -30,7 +31,8 @@ export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,id
           else job.resolve(job.vectors);
           schedule();
         };
-        worker.onerror=()=>release(new Error('The search model worker failed. Retry to reload it.'));
+        worker.onerror=()=>{if(worker===current)release(new Error('The search model worker failed. Retry to reload it.'));};
+        worker.addEventListener('messageerror',()=>{if(worker===current)release(new Error('The search engine response could not be read. Retry to reload it.'));});
       }
       const texts=job.texts.slice(job.offset,job.offset+4),id=++nextId;
       running={job,id,count:texts.length};

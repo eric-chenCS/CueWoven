@@ -32,6 +32,7 @@ export function createReranker({WorkerClass = globalThis.Worker, timeoutMs = 180
         request.resolve(data.scores);
       };
       created.onerror = () => {if (worker === created) release({failed: true});};
+      created.addEventListener('messageerror',created.onerror);
       deadline = setTimeout(() => release({failed: true}), loadTimeoutMs);
       created.postMessage({id: 0, type: 'init'});
     } catch {release({failed: true});}
