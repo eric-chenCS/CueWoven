@@ -170,6 +170,18 @@ test('caption saves require the current top-level YouTube video',async()=>{
   assert.equal(calls.filter(msg=>msg.type==='index').length,1);
 });
 
+test('saving captions stops local speech only for the same tab and video',async()=>{
+  chrome.storage.local.get=async()=>({settings:{enabled:true}});
+  const url='https://www.youtube.com/watch?v=aaaaaaaaaaa',sender={id:'x',tab:{id:1},frameId:0,url};
+  chrome.tabs.get=async()=>({id:1,url});
+  chrome.action={setBadgeText:async()=>{},setBadgeBackgroundColor:async()=>{},setTitle:async()=>{}};
+  for(const [state,stops] of [[{status:'recording',tabId:1,video:{videoId:'aaaaaaaaaaa'}},true],[{status:'recording',tabId:1,video:{videoId:'bbbbbbbbbbb'}},false],[{status:'recording',tabId:2,video:{videoId:'aaaaaaaaaaa'}},false],[{status:'idle'},false]]){
+    const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return msg.type==='speech-status'?state:{chunkCount:1};};
+    assert.equal((await request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).chunkCount,1);
+    assert.equal(calls.some(msg=>msg.type==='speech-stop'),stops,JSON.stringify(state));
+  }
+});
+
 test('website scripts cannot read or mutate the library or start UI work',async()=>{
   const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return {status:'idle'};};
   const commands=['list','delete','clear','export','import','prune','search','status','warmup','index-tab','vision-status','speech-status'];

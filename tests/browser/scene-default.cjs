@@ -25,7 +25,8 @@ const report={checks:[],errors:[]};
   await f.options.locator('#scenesEnabled').uncheck();
   await f.wait(()=>f.options.evaluate(()=>chrome.storage.local.get('settings').then(({settings})=>settings.scenesEnabled===false&&settings.articleImagesEnabled===false)));
   assert.equal((await f.send({type:'export'})).scenes.length,1);
-  const found=await f.send({type:'search',query:'a red square on a white background',videoId:'sceneOff001',distinct:true,inferFilters:false});
+  // The first image search loads CLIP's text half and answers with text only until it is ready, as the popup tells users.
+  let found;await f.wait(async()=>!(found=await f.send({type:'search',query:'a red square on a white background',videoId:'sceneOff001',distinct:true,inferFilters:false})).visualPending);
   assert.equal(found.results[0].videoId,'sceneOff001');assert.equal(found.results[0].start,42);
   report.checks.push('explicit opt-in survives reload; turning it off preserves searchable saved scenes');
   await f.options.locator('#scenesEnabled').check();
@@ -48,7 +49,7 @@ const report={checks:[],errors:[]};
   }
   await f.options.locator('#reset-settings').click();await f.options.waitForFunction(()=>document.querySelector('#reset-msg').textContent.startsWith('Settings reset'));
   report.checks.push('combined toggle controls both features and preserves legacy mixed choices on unrelated saves');
-  if(process.env.RECALL_SCREENSHOT_DIR)await f.options.locator('#sec-capture').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'scene-default-warning.png')});
+  if(process.env.RECALL_SCREENSHOT_DIR){await f.options.bringToFront();await f.options.locator('#sec-capture').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR,'scene-default-warning.png')});}
   report.checks.push('reset restores off without deleting saved scenes');
   assert.deepEqual(report.errors,[]);report.pass=true;console.log('SCENE_DEFAULT_PASS',JSON.stringify(report));
  }finally{if(process.env.RECALL_REPORT_DIR)fs.writeFileSync(path.join(process.env.RECALL_REPORT_DIR,'scene-default.json'),JSON.stringify(report,null,2));await f.close();}

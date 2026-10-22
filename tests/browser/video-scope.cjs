@@ -141,6 +141,8 @@ const report = {checks: [], errors: []};
   assert.equal(scene.error, undefined); assert.equal(scene.busy, undefined);
   const sceneStatus = await f.send({target: 'offscreen', type: 'has', videoId: 'scope000006'});
   assert.equal(sceneStatus.has, false); assert.equal(sceneStatus.textContent, false); assert.equal(sceneStatus.content, true);
+  // Let image search finish loading first, as a user would after "search again shortly".
+  await f.wait(async () => !(await f.send({type: 'search', query: 'a red square on a white background', videoId: 'scope000006', distinct: true, inferFilters: false})).visualPending);
   const visualPage = await popup('scope000006');
   await search(visualPage, 'a red square on a white background');
   assert.equal(await visualPage.locator('.result').getAttribute('href'), 'https://www.youtube.com/watch?v=scope000006&t=156s');

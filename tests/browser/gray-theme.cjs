@@ -8,7 +8,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  for(const [theme,paper,surface,focus,border,danger] of [['dark','3d3d3d','333333','ffffff','a0a0a0','ff8a80'],['light','ededed','ffffff','000000','848484','b42318']]){
   await f.options.locator('#theme').selectOption(theme);
   await popup.waitForFunction(t=>document.documentElement.dataset.theme===t,theme);
-  await popup.locator('#q').focus();
+  await popup.bringToFront();await popup.locator('#q').focus();
   const colors=await popup.evaluate(()=>{const q=getComputedStyle(document.querySelector('#q')),button=getComputedStyle(document.querySelector('#page-forget'));return{paper:getComputedStyle(document.body).backgroundColor,surface:q.backgroundColor,focus:q.borderTopColor,ring:q.boxShadow,border:button.borderTopColor}});
   assert.equal(colors.paper,rgb(paper));assert.equal(colors.surface,rgb(surface));assert.equal(colors.focus,rgb(focus));assert.ok(colors.ring.includes(rgb(focus)));assert.equal(colors.border,rgb(border));
   assert.equal(await f.options.locator('.sheet').first().evaluate(el=>getComputedStyle(el).backgroundColor),rgb(surface));
