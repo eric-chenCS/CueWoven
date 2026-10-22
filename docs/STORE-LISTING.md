@@ -28,7 +28,9 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 > • Something you saw: "a red car on a mountain road"
 > • Text that was on screen, a channel or site name, or when you saw it: "3 days ago", "last week", "in September"
 >
-> Results open at the matching moment in the video or the matching passage on the page.
+> When saved evidence supports a location, results open at a matching video moment or article passage. Otherwise, they open the video or page. Related passages are identified as suggestions.
+>
+> Video snapshots and article images require opt-in and can use substantial memory. Lite mode starts enabled on devices reporting 8 GB of RAM or less and pauses new speech, image and on-screen-text capture. Captions and page text remain available.
 >
 > Private by design
 > • Everything is saved and searched on your computer with local AI models. There is no account, no server and no tracking.
@@ -49,6 +51,7 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 | Permission | Justification |
 |---|---|
 | storage | Saves the user's settings and site choices. |
+| system.memory | Reads physical RAM locally once during initial Lite mode setup so devices with 8 GB or less start with lighter capture settings. The capacity is not retained or transmitted. |
 | unlimitedStorage | The searchable library (transcripts, page text, image embeddings) is kept locally and can exceed the default quota; the user sets the image storage size and retention. |
 | offscreen | Runs the local AI search models (text, speech and image) in an offscreen document so search works without sending data anywhere. |
 | alarms | Removes items older than the user's chosen retention period on a schedule. |
@@ -78,7 +81,7 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 
 ## Microsoft Edge Add-ons (Partner Center)
 
-- Use the same ZIP, description, privacy policy URL, category and images.
+- Use the same ZIP, category and images. Use Edge-specific wording in the description and privacy policy; Microsoft requires the policy to primarily refer to Microsoft Edge. Do not copy Chrome dashboard labels into the Edge listing.
 - **Search terms** (up to 7): video search, history search, transcript search, YouTube history, local AI, memory, find video
 - **Notes for certification:** paste the reviewer notes above.
 - Edge requires the description to be at least 250 characters; the detailed description above qualifies.
@@ -95,3 +98,12 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 | icons/icon128.png | 128×128 | Store icon (both stores; Edge accepts 128 or larger) |
 
 Before submitting, recapture the screenshots if the UI has changed since the version they show.
+
+## Submission gates
+
+The ZIP passing local tests does not certify store approval. Review the current store policies and finish the actual dashboard disclosures before submitting. Keep this list separate from runtime test results:
+
+- Check the live privacy-policy URL and ensure the dashboard disclosures agree with it, including local browsing-content handling and ordinary requests to model/content hosts.
+- Review the current screenshots and use only the refreshed images for this version. Demo records are bundled sample content, not a real user's history.
+- Explain that JavaScript, WebAssembly and OCR resources are bundled; first-use downloads supply model assets. Reviewers decide whether the submitted implementation satisfies remote-code policy.
+- Complete a second-device check and investigate the previously observed intermittent Edge native crashes before a broad public launch. Passing regression tests do not resolve those failures.

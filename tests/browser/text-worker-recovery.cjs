@@ -14,7 +14,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
      if(unreadable){unreadable=false;queueMicrotask(()=>this.dispatchEvent(new MessageEvent('messageerror')));}
     }
    }
-   const model=createTextModel(()=>{},{WorkerClass:RecordingWorker});
+   const model=createTextModel(()=>{},{WorkerClass:RecordingWorker,restartWindowMs:3000});
    const texts=['The speaker admits that aging is not fun and his back hurts.','Coral loses its algae when warm ocean water causes heat stress.'];
    const equal=(before,after)=>before.length===after.length&&before.every((vec,i)=>vec.length===384&&vec.every((n,j)=>n===after[i][j]));
    try{
@@ -25,8 +25,11 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
     const first=model.embed(texts),queued=model.embed(texts,{priority:'query'}),results=Promise.allSettled([first,queued]);
     const stopped=await results,errorMs=performance.now()-start;
     if(!stopped.every(row=>row.status==='rejected'))throw Error('Unreadable response left inference active: '+JSON.stringify({statuses:stopped.map(row=>row.status),handler:typeof workers.at(-1).onmessageerror,nativeSetter:!!Object.getOwnPropertyDescriptor(Worker.prototype,'onmessageerror')?.set,workers:workers.length}));
+    const blocked=await Promise.allSettled(Array.from({length:12},()=>model.embed(texts)));
+    if(workers.length!==2||!blocked.every(row=>row.status==='rejected'&&/restarted repeatedly/.test(row.reason.message)))throw Error('Rapid retries bypassed restart protection');
+    await new Promise(resolve=>setTimeout(resolve,3000));
     const retried=await model.embed(texts);if(!equal(before,retried))throw Error('Reload changed inference vectors');
-    return {workers:workers.length,vectors:before.length,dimensions:before[0].length,bitIdenticalAfterReload:true,allPendingRejected:true,errorMs,controlledEvents:true};
+    return {workers:workers.length,vectors:before.length,dimensions:before[0].length,bitIdenticalAfterReload:true,allPendingRejected:true,errorMs,controlledEvents:true,blockedRetries:blocked.length,acceleratedRestartWindowMs:3000};
    }finally{model.release();}
   });
   assert.equal(report.result.workers,3);assert.deepEqual(report.errors,[]);report.pass=true;

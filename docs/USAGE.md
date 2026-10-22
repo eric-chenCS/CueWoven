@@ -24,6 +24,8 @@ Queries containing only punctuation or common English filler words (such as `...
 
 Opening the popup prepares text search without preloading visual search. Visual models load when capture or an actual visual search needs them. The text worker unloads after a minute without work; downloaded model files stay cached on disk. This reduces idle memory at the cost of a short reload after a break. Initial downloads and slower devices can take longer. [Resource behavior and measured limits](PERF.md#current-model-residency).
 
+If the text engine repeatedly stops, CueWoven allows one immediate replacement, then limits new workers to two starts per minute to prevent rapid restarts from accumulating memory. Further attempts show a retry countdown; try again after that interval. Healthy searches keep reusing their worker without this wait. This safeguard does not guarantee recovery from a native browser-process crash.
+
 For article results, a literal phrase found in the saved passage becomes the highlighted jump target, even when it occurs later in that passage. Surrounding saved words help distinguish repeated phrases. Similar-meaning results scroll near the saved passage without highlighting its words and show **Suggested section · Similar in meaning**. The label disappears on click, typing, keyboard navigation, touch or scrolling; interacting before a late-rendered passage appears also cancels the pending jump. If an exact target has disappeared or cannot be distinguished on the current page, CueWoven reports that it could not find the saved passage. Generated image captions open the page without claiming an on-page text location.
 
 ## Choose what gets saved

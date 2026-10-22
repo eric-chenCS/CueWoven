@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createTextModel} from '../offscreen/text-model.js';
 
 function fixture(t){
-  t.mock.timers.enable({apis:['setTimeout']});
+  t.mock.timers.enable({apis:['setTimeout','Date']});
   const workers=[];
   class Worker extends EventTarget {
     constructor(){super();this.sent=[];workers.push(this);}
@@ -26,6 +26,25 @@ for(const reason of ['release','idle','timeout'])test(`late errors from a worker
     const replacement=workers[1];lateError();
     assert.ok(!replacement.terminated,'a retired worker must not terminate the current worker');
     replacement.answer();assert.equal((await outcome)[0][0],2);
+  }finally{model.release();}
+});
+
+test('rapid retirement allows one replacement, then blocks restarts until the minute expires',async t=>{
+  const {workers,model}=fixture(t);
+  try{
+    for(let i=0;i<2;i++){
+      const pending=model.embed([String(i)]);t.mock.timers.tick(0);workers[i].answer();await pending;
+      // Even after the restart budget is used, a healthy worker keeps serving queries.
+      const reused=model.embed(['8']);t.mock.timers.tick(0);workers[i].answer();assert.equal((await reused)[0][0],8);
+      model.release();
+    }
+    const blocked=Promise.allSettled([model.warmup(),model.embed(['3'],{priority:'query'})]);t.mock.timers.tick(0);
+    assert.equal(workers.length,2,'blocked requests must not allocate another model worker');
+    assert.ok((await blocked).every(row=>row.status==='rejected'&&/restarted repeatedly.*60 seconds/i.test(row.reason.message)));
+    t.mock.timers.tick(59999);model.release();
+    const early=model.embed(['4']).catch(error=>error);t.mock.timers.tick(0);assert.match((await early).message,/1 seconds/);assert.equal(workers.length,2);
+    t.mock.timers.tick(1);
+    const retry=model.embed(['5']);t.mock.timers.tick(0);workers[2].answer();assert.equal((await retry)[0][0],5);
   }finally{model.release();}
 });
 
