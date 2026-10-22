@@ -254,9 +254,8 @@ const handlers = {
   async 'index-video'({ video, segments, method }, sender) {
     await requireYouTubeCapture(sender, video?.videoId);
     const res = await engine('index', { video, segments, method });
-    // Captions replace local speech for this video, so stop transcribing audio that would be discarded.
-    const speech = await engine('speech-status').catch(() => null);
-    if (speech && speech.status !== 'idle' && speech.tabId === sender.tab?.id && speech.video?.videoId === video.videoId) await engine('speech-stop', {reason: 'Captions were saved for this video.'}).catch(() => {});
+    // Caption acknowledgement must not wait for redundant speech inference or cleanup.
+    engine('speech-cancel-captions', {tabId: sender.tab.id, videoId: video.videoId}).catch(() => {});
     flashBadge(sender.tab && sender.tab.id, '✓', '#1f8a4c');
     chrome.runtime.sendMessage({ type: 'index-changed' }).catch(() => {});
     return { chunkCount: res.chunkCount };

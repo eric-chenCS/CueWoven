@@ -170,16 +170,24 @@ test('caption saves require the current top-level YouTube video',async()=>{
   assert.equal(calls.filter(msg=>msg.type==='index').length,1);
 });
 
-test('saving captions stops local speech only for the same tab and video',async()=>{
+test('saved captions request scoped cancellation without waiting for speech cleanup',async()=>{
   chrome.storage.local.get=async()=>({settings:{enabled:true}});
   const url='https://www.youtube.com/watch?v=aaaaaaaaaaa',sender={id:'x',tab:{id:1},frameId:0,url};
   chrome.tabs.get=async()=>({id:1,url});
   chrome.action={setBadgeText:async()=>{},setBadgeBackgroundColor:async()=>{},setTitle:async()=>{}};
-  for(const [state,stops] of [[{status:'recording',tabId:1,video:{videoId:'aaaaaaaaaaa'}},true],[{status:'recording',tabId:1,video:{videoId:'bbbbbbbbbbb'}},false],[{status:'recording',tabId:2,video:{videoId:'aaaaaaaaaaa'}},false],[{status:'idle'},false]]){
-    const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return msg.type==='speech-status'?state:{chunkCount:1};};
-    assert.equal((await request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).chunkCount,1);
-    assert.equal(calls.some(msg=>msg.type==='speech-stop'),stops,JSON.stringify(state));
+  for(const outcome of ['pending','rejected']){
+    const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg);if(msg.type==='speech-cancel-captions'){if(outcome==='rejected')throw Error('cleanup unavailable');return new Promise(()=>{});}return {chunkCount:1};};
+    let timer;
+    try{
+      const result=await Promise.race([request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Caption reply waited for cleanup')),1000)})]);
+      assert.equal(result.chunkCount,1);
+      assert.deepEqual(calls.filter(msg=>msg.type==='speech-cancel-captions').map(({tabId,videoId})=>({tabId,videoId})),[{tabId:1,videoId:'aaaaaaaaaaa'}]);
+      assert.ok(!calls.some(msg=>['speech-status','speech-stop'].includes(msg.type)));
+    }finally{clearTimeout(timer);}
   }
+  const calls=[];chrome.runtime.sendMessage=async msg=>{calls.push(msg.type);if(msg.type==='index')throw Error('save failed');return {};};
+  assert.match((await request({type:'index-video',video:{videoId:'aaaaaaaaaaa'},segments:[]},sender)).error,/save failed/);
+  assert.ok(!calls.includes('speech-cancel-captions'),'failed caption save must preserve speech');
 });
 
 test('website scripts cannot read or mutate the library or start UI work',async()=>{

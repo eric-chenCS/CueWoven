@@ -12,7 +12,7 @@ Keep video metadata, transcript validation, original watch dates, optional site 
 
 ## Browser checks
 
-Run the maintained regression set with `pnpm run test:browser`, or select checks such as `node scripts/browser-tests.mjs transcript-dom release-ui late-captions`. This covers thirteen regression programs; it does not run every historical benchmark in `tests/browser`. Programs run sequentially to limit competing model loads.
+Run the maintained regression set with `pnpm run test:browser`, or select checks such as `node scripts/browser-tests.mjs transcript-dom release-ui late-captions`. This covers fourteen regression programs; it does not run every historical benchmark in `tests/browser`. Programs run sequentially to limit competing model loads. The speech cancellation check uses controlled pending inference in a real browser Worker, without downloading Whisper or recording microphone audio.
 
 Set `RECALL_PLAYWRIGHT` to an installed Playwright module path and `RECALL_BROWSER` to a compatible Edge/Chromium executable. With `RECALL_MODEL_DIR` set, the runner checks required MiniLM/CLIP files before starting each applicable program. A text-only fixture blocks visual checks rather than reporting them as product failures. Without that override, programs can download their models. Missing setup is **BLOCKED**, assertion/runtime errors after launch are **FAILED**, and successful checks are **PASSED**. Exit codes are 0 for all passed, 1 for any failure, and 2 for blocked/incomplete setup. A failed check takes precedence over blocked ones; never report a blocked run as clean.
 

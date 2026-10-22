@@ -456,6 +456,7 @@ const handlers = {
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),
   'speech-stop': ({reason}) => speech.stop(reason),
+  'speech-cancel-captions': async data => speech.cancelForCaptions(data),
   'speech-status': async () => speech.status(),
   'speech-pcm': async ({id, tabId, pcm, clock}) => {
     const state = speech.status();

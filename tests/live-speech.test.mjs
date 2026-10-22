@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createLiveSpeech, downsample, speechSegments} from '../lib/live-speech.js';
 const tick=()=>new Promise(r=>setImmediate(r));
 const id='aaaaaaaaaaa', samples=()=>new Float32Array(16000).fill(0.1);
+const deferred=()=>{let resolve,reject;const promise=new Promise((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject};};
 function fixture(overrides={}) {
  let clock={video:{videoId:id,title:'Battery science'},time:100,rate:1,paused:false,seeking:false,ad:false,revision:0};
  const saved=[],states=[];let closes=0,released=0,calls=0;
@@ -76,4 +77,72 @@ test('common Whisper music, blank and language tags never create searchable segm
  for(const text of ['♪ ♪','[BLANK_AUDIO]','( Music )','*music*','(speaking in foreign language)','[ applause ]','12345 !!!','Thank you. Thank you.'])assert.deepEqual(speechSegments({text},0,1,10),[],text);
  assert.equal(speechSegments({text:'♪ [BLANK_AUDIO] *music* A battery loses capacity.'},0,1,10)[0].text,'A battery loses capacity.');
  assert.equal(speechSegments({text:'The lesson is (music theory) and [a minor scale].'},0,1,10)[0].text,'The lesson is (music theory) and [a minor scale].');
+});
+
+test('caption cancellation atomically matches both tab and video and discards buffered audio',async()=>{
+ const f=fixture();await f.start();await f.feed(4);
+ for(const target of [{tabId:2,videoId:id},{tabId:1,videoId:'bbbbbbbbbbb'},{}]){
+  f.controller.cancelForCaptions(target);assert.equal(f.controller.status().status,'recording');
+ }
+ f.controller.cancelForCaptions({tabId:1,videoId:id});
+ assert.equal(f.controller.status().status,'idle');assert.match(f.controller.status().reason,/Captions were saved/);
+ assert.deepEqual(f.counts(),{closes:1,released:1,calls:0});assert.deepEqual(f.saved,[]);
+ f.controller.cancelForCaptions({tabId:1,videoId:id});assert.equal(f.counts().released,1);
+ f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();
+ f.controller.cancelForCaptions({tabId:1,videoId:id});assert.equal(f.controller.status().status,'recording');
+ await f.feed(3);await f.controller.stop();assert.equal(f.saved.length,1,'normal stop still saves buffered speech');
+});
+
+for(const outcome of ['resolve','reject'])test('cancelled inference cannot save, stop or release the next session: '+outcome,async()=>{
+ const first=deferred(),second=deferred();let calls=0;
+ const f=fixture({transcribe:()=>++calls===1?first.promise:second.promise});
+ await f.start();await f.feed(30);const oldStop=f.controller.stop();
+ f.controller.cancelForCaptions({tabId:1,videoId:id});assert.equal(f.controller.status().status,'idle');
+ f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();await f.feed(15);
+ assert.equal(calls,2,'new session can infer while the old promise unwinds');
+ outcome==='resolve'?first.resolve({text:'obsolete speech'}):first.reject(Error('old worker terminated'));
+ await oldStop;await tick();assert.equal(f.controller.status().status,'recording');assert.equal(f.counts().released,1);assert.deepEqual(f.saved,[]);
+ const stopping=f.controller.stop();second.resolve({text:'current speech'});await stopping;
+ assert.equal(calls,2,'cancelled queued audio was discarded');assert.equal(f.saved.length,1);assert.equal(f.saved[0].video.videoId,'bbbbbbbbbbb');
+ assert.equal(f.counts().released,2);
+});
+
+for(const outcome of ['resolve','reject'])test('cancelled inference stays retired even before another session starts: '+outcome,async()=>{
+ const pending=deferred(),f=fixture({transcribe:()=>pending.promise});await f.start();await f.feed(15);
+ const oldStop=f.controller.stop();f.controller.cancelForCaptions({tabId:1,videoId:id});const stopped=f.controller.status(),events=f.states.length;
+ outcome==='resolve'?pending.resolve({text:'obsolete speech'}):pending.reject(Error('worker terminated'));
+ await oldStop;await tick();assert.deepEqual(f.controller.status(),stopped);assert.equal(f.states.length,events);
+ assert.equal(f.counts().released,1);assert.deepEqual(f.saved,[]);
+});
+
+test('a late save completion cannot change the next session',async()=>{
+ const pending=deferred();const f=fixture({save:()=>pending.promise});await f.start();await f.feed(15);
+ f.controller.cancelForCaptions({tabId:1,videoId:id});f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();
+ pending.resolve({skipped:true});await tick();assert.equal(f.controller.status().status,'recording');assert.equal(f.controller.status().saved,0);
+ await f.controller.stop();
+});
+
+for(const outcome of ['resolve','reject'])test('a cancelled clock callback cannot stop or unlock a new packet: '+outcome,async()=>{
+ const old=deferred(),current=deferred();let calls=0;
+ const f=fixture({readClock:()=>++calls===1?old.promise:current.promise});await f.start();
+ const packet=f.controller.packet(samples(),16000);f.controller.cancelForCaptions({tabId:1,videoId:id});
+ f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();const next=f.controller.packet(samples(),16000);
+ outcome==='resolve'?old.resolve(f.clock):old.reject(Error('old tab closed'));await packet;
+ assert.equal(f.controller.status().status,'recording');
+ await f.controller.packet(samples(),16000,f.clock);assert.match(f.controller.status().reason,/timing is unavailable/,'new clock must remain locked');
+ current.resolve(f.clock);await next;await f.controller.stop();
+});
+
+test('caption cancellation during preparation leaves a subsequent session intact',async()=>{
+ const pending=deferred();let calls=0;const f=fixture({prepareModel:()=>++calls===1?pending.promise:Promise.resolve()});
+ const old=f.controller.prepare({tabId:1,video:{videoId:id}}),rejected=assert.rejects(old,/cancelled/);
+ f.controller.cancelForCaptions({tabId:1,videoId:id});f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();
+ pending.resolve();await rejected;assert.equal(f.controller.status().status,'recording');assert.equal(f.counts().released,1);await f.controller.stop();
+});
+
+test('late audio opening closes only its own stream after caption cancellation',async()=>{
+ const pending=deferred();let calls=0,closed=0;const f=fixture({openAudio:()=>++calls===1?pending.promise:Promise.resolve({close:async()=>{}})});
+ const prepared=await f.controller.prepare({tabId:1,video:{videoId:id}}),old=f.controller.start({id:prepared.id}),rejected=assert.rejects(old,/cancelled/);
+ f.controller.cancelForCaptions({tabId:1,videoId:id});f.clock.video={videoId:'bbbbbbbbbbb'};await f.start();
+ pending.resolve({close:async()=>{closed++}});await rejected;assert.equal(closed,1);assert.equal(f.controller.status().status,'recording');await f.controller.stop();
 });
