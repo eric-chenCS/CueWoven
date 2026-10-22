@@ -9,6 +9,13 @@ import {openShortcut,isPinned} from '../lib/shortcut.js';
 const $ = (id) => document.getElementById(id);
 $('version').textContent = 'v' + (chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version);
 const send = (msg) => chrome.runtime.sendMessage(msg);
+// Native confirm() can only say OK; name the action on the button and focus Cancel first.
+function confirmAction(message, action, {danger = true} = {}) {
+  const dialog = $('confirm-dialog');
+  $('confirm-text').textContent = message;$('confirm-ok').textContent = action;$('confirm-ok').className = danger ? 'btn danger' : 'btn';dialog.returnValue = '';
+  dialog.showModal();
+  return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), {once: true}));
+}
 let restoreBusy = false;
 let libraryRefresh;
 let libraryDirty=false;
@@ -65,7 +72,7 @@ function renderLibrary() {
   if (matches.length > 200) {
     const note = document.createElement('p');
     note.className = 'note';
-    note.textContent = `Showing 200 of ${matches.length} items. Filter titles, channels or sites to find more.`;
+    note.textContent = `Showing 200 of ${matches.length} items. Search titles, channels or sites to find more.`;
     lib.append(note);
   }
   if (!list.length) {
@@ -157,8 +164,10 @@ $('reset-settings').addEventListener('click', async () => {
     const { settings } = await chrome.storage.local.get('settings');
     await chrome.storage.local.set({...resetPreferences(settings, defaults), liteModeInitialized: true});
     await loadSettings();
-    $('reset-msg').textContent = 'Settings reset to default. Your library, retention choices and website access are unchanged.';
+    $('reset-msg').textContent = 'Settings reset to default.';
+    clearTimeout(resetTimer);resetTimer = setTimeout(() => ($('reset-msg').textContent = ''), 6000);
   } catch (error) {
+    clearTimeout(resetTimer);
     $('reset-msg').textContent = `Could not reset settings: ${error.message}`;
   } finally { button.disabled = false; }
 });
@@ -190,7 +199,7 @@ async function loadSettings() {
   for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
 }
 
-let savedTimer;
+let savedTimer, resetTimer;
 async function deviceDefaults() {
   const defaults = await send({type: 'settings-defaults'});
   if (!defaults || defaults.error) throw Error(defaults?.error || 'Could not load device defaults.');
@@ -202,7 +211,9 @@ async function saveSettings(event) {
     await deviceDefaults();
     const {settings:stored={}}=await chrome.storage.local.get('settings');
     const storedMB=stored.sceneStorageMB??DEFAULTS.sceneStorageMB,sceneStorageMB=Number($('sceneStorageMB').value);
-    if(sceneStorageMB<storedMB&&!confirm(`Lower image storage to ${sceneStorageMB>=1024?'1 GB':sceneStorageMB+' MB'}? If your saved images don't fit, the oldest scenes and article images are deleted now. This can't be undone.`)){$('sceneStorageMB').value=String(storedMB);return;}
+    if(sceneStorageMB<storedMB&&!await confirmAction(`Lower image storage to ${sceneStorageMB>=1024?'1 GB':sceneStorageMB+' MB'}? If your saved images don't fit, the oldest scenes and article images are deleted now. This can't be undone.`,'Lower storage')){$('sceneStorageMB').value=String(storedMB);return;}
+    const storedDays=stored.maxAgeDays??DEFAULTS.maxAgeDays;
+    if(Number($('maxAgeDays').value)===0&&storedDays!==0&&!await confirmAction('Keep everything forever? Your library will keep growing, so searches can get slower and use more memory over time. Images still stay within your image storage limit.','Keep forever',{danger:false})){$('maxAgeDays').value=String(storedDays);return;}
     const settings = {
       ...stored,
       enabled: $('enabled').checked,
@@ -261,7 +272,7 @@ $('import').addEventListener('change', async (e) => {
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!confirm('Delete every saved video, page, search query and transcript from this browser? This cannot be undone.')) return;
+  if (!await confirmAction('Delete every saved video, page, search query and transcript from this browser? This cannot be undone.', 'Delete everything')) return;
   const response = await send({ type: 'clear' });
   if (response?.error) { $('data-msg').textContent = response.error; return; }
   $('data-msg').textContent = 'Everything was deleted.';
@@ -287,7 +298,7 @@ $('shortcut-change').addEventListener('click', () => chrome.tabs.create({ url: '
 $('forget-recent').addEventListener('click',async()=>{
   if(libraryBusy()||restoreBusy)return;
   const hours=Number($('forget-hours').value);
-  if(!confirm('Forget items CueWoven saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.'))return;
+  if(!await confirmAction('Forget items CueWoven saved or updated in the last '+(hours===1?'hour':hours===24?'day':'week')+'? This removes all their saved evidence.','Forget items'))return;
   const release=beginLibraryTask();
   try{const result=await send({type:'forget-recent',hours});if(result.error)throw Error(result.error);$('data-msg').textContent='Forgot '+result.removed+' recently saved items.';await loadLibrary();}
   catch(error){$('data-msg').textContent=error.message;}

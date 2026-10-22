@@ -22,6 +22,14 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.locator('#theme').selectOption('system');await f.options.waitForFunction(()=>!document.documentElement.dataset.theme);
  for(const value of ['1','7','28','365','0']){
   await f.options.locator('#maxAgeDays').selectOption(value);
+  if(value==='0'){
+   // Forever asks first; Cancel restores the previous choice without saving.
+   await f.options.locator('#confirm-dialog button[value=cancel]').click();
+   await f.options.waitForFunction(()=>document.querySelector('#maxAgeDays').value==='365');
+   assert.equal(await f.options.evaluate(()=>chrome.storage.local.get('settings').then(s=>s.settings.maxAgeDays)),365);
+   await f.options.locator('#maxAgeDays').selectOption(value);
+   assert.equal(await f.options.locator('#confirm-ok').innerText(),'Keep forever');await f.options.locator('#confirm-ok').click();
+  }
   await f.options.waitForFunction(value=>chrome.storage.local.get('settings').then(s=>s.settings.maxAgeDays===Number(value)),value);
  }
  // Old ranges remain intact until explicitly changed, including when another setting is saved.
@@ -35,7 +43,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,lightMode:true,speechEnabled:false,scenesEnabled:false,screenTextEnabled:false,dwellSeconds:60,perVideo:5,maxAgeDays:0,importMaxAgeDays:90},theme:'dark',singleVideoView:false,webCapture:{enabled:false,paused:true,domains:['example.com'],blocked:['excluded.test'],audio:true,searches:true},otherData:'keep'}));
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#theme').value==='dark');
  const sitesBefore=await f.options.evaluate(()=>chrome.storage.local.get('webCapture')),permissionsBefore=await f.options.evaluate(()=>chrome.permissions.getAll());
- assert.equal(await f.options.locator('#reset-settings').innerText(),'Reset settings to default');
+ assert.equal(await f.options.locator('#reset-settings').innerText(),'Reset to default');
  await f.options.locator('#reset-settings').click();await f.options.waitForFunction(()=>document.querySelector('#reset-msg').textContent.startsWith('Settings reset'));
  const reset=await f.options.evaluate(()=>chrome.storage.local.get(['settings','theme','singleVideoView','otherData']));
  for(const [key,value] of Object.entries({enabled:true,lightMode:false,speechEnabled:true,scenesEnabled:false,screenTextEnabled:true,dwellSeconds:10,perVideo:2,maxAgeDays:0,importMaxAgeDays:90}))assert.equal(reset.settings[key],value,key);

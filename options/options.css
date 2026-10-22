@@ -296,3 +296,9 @@ input.switch:disabled { opacity: .45; cursor: not-allowed; }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 26%, transparent);
 }
 .site-groups:not(.blocked) .site-remove:hover { background: color-mix(in srgb, var(--tint) 22%, var(--surface)); }
+
+/* Confirmations name their action instead of a generic OK. */
+.confirm-dialog { max-width: 420px; padding: 20px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); color: var(--ink); box-shadow: var(--raise); }
+.confirm-dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+.confirm-dialog p { margin: 0 0 16px; line-height: 1.45; }
+.confirm-dialog .row { justify-content: flex-end; }

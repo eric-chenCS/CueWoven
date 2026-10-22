@@ -8,7 +8,7 @@ const report={checks:[],errors:[]};
   assert.equal(await f.options.locator('#scenesEnabled').isChecked(),false);
   assert.equal(await f.options.locator('#articleImagesEnabled').count(),0);
   const label=f.options.locator('label').filter({has:f.options.locator('#scenesEnabled')});
-  assert.match(await label.innerText(),/substantial RAM and CPU/);assert.match(await label.innerText(),/Default: Off/);assert.equal((await label.innerText()).match(/Default:/g).length,1);
+  assert.match(await label.innerText(),/more memory and CPU/);assert.match(await label.innerText(),/Default: Off/);assert.equal((await label.innerText()).match(/Default:/g).length,1);
   assert.match(await label.innerText(),/Previously saved visuals stay searchable/);
   report.checks.push('fresh scene capture defaults off with visible resource warning');
   // This test laptop is not in automatic Lite mode, so opt-in remains available.
@@ -20,7 +20,7 @@ const report={checks:[],errors:[]};
    return chrome.runtime.sendMessage({target:'offscreen',type:'scene-index',video:{videoId:'sceneOff001',title:'Saved visual example',watchedAt:Date.now()},start:42,image:canvas.toDataURL('image/jpeg',.8)});
   });assert.equal(scene.error,undefined);assert.equal(scene.ok,true,JSON.stringify(scene));
   await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#scenesEnabled').checked);
-  assert.match(await label.innerText(),/substantial RAM and CPU/);
+  assert.match(await label.innerText(),/more memory and CPU/);
   const before=await f.send({type:'export'});assert.equal(before.scenes.length,1);
   await f.options.locator('#scenesEnabled').uncheck();
   await f.wait(()=>f.options.evaluate(()=>chrome.storage.local.get('settings').then(({settings})=>settings.scenesEnabled===false&&settings.articleImagesEnabled===false)));

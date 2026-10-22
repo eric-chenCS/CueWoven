@@ -275,7 +275,7 @@ async function runSearch() {
   $('ignore-inferred').textContent=res.appliedSource?'Search without suggested filters':'Ignore suggested filters';
   showChips(res.appliedSinceDays ?? sinceDays);
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
-  else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
+  else if(res.visualPending){$('scene-status').textContent='Image search is still loading. Search again in a moment to include images.';$('scene-status').hidden=false;}
   if (res.empty && !videoId && !res.appliedSource) {$('refine').hidden = true;showIdle();return;}
   if (!res.results.length) {
     empty(res.appliedSource?'No matches on '+res.appliedSource:'Add one more detail', [], res.appliedSource?'Add another detail or search without suggested filters.':(res.appliedSinceDays||sinceDays||customRange) ? 'You can also try “Any time” to widen your search.' : 'Use a detail you remember to narrow your search.');
@@ -499,7 +499,7 @@ $('start-restore').addEventListener('click', () => chrome.tabs.create({url:chrom
 $('start-samples').addEventListener('click',async()=>{
   const button=$('start-samples');button.disabled=true;button.textContent='Adding samples…';
   const result=await send({type:'load-samples'}).catch(error=>({error:error.message}));
-  button.disabled=false;button.textContent='Try sample videos';
+  button.disabled=false;button.textContent='Try samples';
   if(result.error){empty('Could not load samples',[result.error]);return;}
   await refreshStatus();q.value='why do batteries wear out';prepareSearch();q.focus();
 });

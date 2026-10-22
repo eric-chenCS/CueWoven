@@ -41,7 +41,7 @@
           </fieldset>
           <div class="row">
             <button id="welcome-empty" class="btn">Start saving</button>
-            <button id="welcome-restore" class="btn ghost">Restore backup</button>
+            <button id="welcome-restore" class="btn ghost">Restore backup…</button>
           </div>
           <p id="welcome-msg" class="msg" role="status" aria-live="polite"></p>
         </section>
@@ -51,7 +51,7 @@
         <section id="sec-library" class="sec" aria-labelledby="library-heading">
           <div class="sec-head">
             <h2 id="library-heading">Library</h2>
-            <input id="filter" type="search" placeholder="Filter" aria-label="Filter saved items" />
+            <input id="filter" type="search" placeholder="Search" aria-label="Search saved items" />
           </div>
           <div class="stats" id="stats"></div>
           <p id="scene-storage" class="msg" role="status" aria-live="polite"></p>
@@ -80,7 +80,7 @@
               </form>
               <div id="web-access-row" class="access-warning" hidden>
                 <p id="web-access" role="status"></p>
-                <button id="web-fix" class="btn small" type="button">Give access</button>
+                <button id="web-fix" class="btn small" type="button">Allow access</button>
               </div>
               <p id="web-msg" class="msg" role="status" aria-live="polite"></p>
               <div id="web-exclusions" class="site-groups blocked"></div><p id="web-exclusions-help" class="hint" hidden>Excluded sites are not captured or imported. Use Allow again to restore a site to your list; deleted items are not restored.</p>
@@ -93,11 +93,11 @@
                   <input id="web-all" type="checkbox" role="switch" class="switch" />
                 </label>
                 <label class="setting">
-                  <span class="setting-text"><strong>Save my Google searches</strong><span class="hint">Off by default; saves searches on allowed Google pages you visit. Obvious medical queries stay excluded.</span></span>
+                  <span class="setting-text"><strong>Save my Google searches</strong><span class="hint">Saves searches on allowed Google pages you visit. Obvious medical queries stay excluded.</span></span>
                   <input id="web-searches" type="checkbox" role="switch" class="switch" />
                 </label>
                 <label class="setting">
-                  <span class="setting-text"><strong>Transcribe videos on these sites</strong><span class="hint">Local English speech recognition for played portions without captions. First use downloads the model.</span></span>
+                  <span class="setting-text"><strong>Transcribe videos on other sites</strong><span class="hint">Extends “Transcribe when there are no captions” beyond YouTube to the sites above.</span></span>
                   <input id="web-audio" type="checkbox" role="switch" class="switch" />
                 </label>
                 <div class="block"><details class="more"><summary>What gets saved?</summary><p>Public page text, up to three visible article images and compatible video evidence on allowed sites. Incognito, known private services, private routes, visible sign-out controls and password/editor pages are excluded. These checks cannot recognize every private page. New text redacts recognizable personal identifiers; images are not redacted. Past page bodies are not fetched.</p></details>
@@ -115,8 +115,8 @@
           </div>
           <div class="sheet">
             <label class="setting"><span class="setting-text">Appearance<span class="hint">Choose the theme for CueWoven.</span></span><select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-            <div class="setting"><span class="setting-text">Keyboard shortcut<span class="hint">Opens CueWoven on any page. You can also click its toolbar icon.</span></span><span class="shortcut-control"><kbd id="shortcut-key">Not set</kbd><button id="shortcut-change" class="btn ghost small" type="button">Change</button></span></div>
-            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause visual and speech capture. Skip advanced ranking to save memory; difficult searches may be less accurate.</span></span><input type="checkbox" role="switch" class="switch" id="lightMode" /></label>
+            <div class="setting"><span class="setting-text">Keyboard shortcut<span class="hint">Opens CueWoven on any page. You can also click its toolbar icon.</span></span><span class="shortcut-control"><kbd id="shortcut-key">Not set</kbd><button id="shortcut-change" class="btn ghost small" type="button" aria-label="Change keyboard shortcut">Change</button></span></div>
+            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Uses less memory and CPU by pausing audio and image capture. Hard searches may be less accurate.</span></span><input type="checkbox" role="switch" class="switch" id="lightMode" /></label>
             <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" role="switch" class="switch" id="enabled" /></label>
             <label class="setting">
               <span class="setting-text">Watch time before saving</span>
@@ -128,12 +128,12 @@
                 <option value="60">1 min</option>
               </select>
             </label>
-            <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" role="switch" class="switch" id="speechEnabled" /></label>
-            <label class="setting"><span class="setting-text">Save visual details<span class="hint">Saves video scenes and article images. Uses substantial RAM and CPU. Previously saved visuals stay searchable.</span><span id="visual-mixed" class="hint" hidden></span></span><input type="checkbox" class="switch" id="scenesEnabled" aria-describedby="visual-mixed" /></label>
+            <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Recognizes English speech on this computer, only for the parts you play.</span></span><input type="checkbox" role="switch" class="switch" id="speechEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save visual details<span class="hint">Saves video scenes and article images. Uses more memory and CPU. Previously saved visuals stay searchable.</span><span id="visual-mixed" class="hint" hidden></span></span><input type="checkbox" class="switch" id="scenesEnabled" aria-describedby="visual-mixed" /></label>
             <label class="setting"><span class="setting-text">Read on-screen text<span class="hint">Reads text shown in videos, like slides and code, so you can search it.</span></span><input type="checkbox" role="switch" class="switch" id="screenTextEnabled" /></label>
             <div class="block">
-              <button id="reset-settings" type="button" class="btn ghost">Reset settings to default</button>
-              <p class="hint">Restore capture, search and appearance defaults. Your library, retention choices, allowed sites and exclusions stay unchanged.</p>
+              <button id="reset-settings" type="button" class="btn ghost">Reset to default</button>
+              <p class="hint">Your library, websites and retention stay as they are.</p>
               <p id="reset-msg" class="msg" role="status" aria-live="polite"></p>
             </div>
           </div>
@@ -149,18 +149,18 @@
                   <select id="maxAgeDays"><option value="1">24 hours</option><option value="7">7 days</option><option value="28">4 weeks</option><option value="365">12 months</option><option value="0">Forever</option></select>
                 </label>
                 <label class="setting">
-                  <span class="setting-text">Image storage<span class="hint">For scenes and article images. Larger keeps more images but uses more memory when searching them.</span></span>
+                  <span class="setting-text">Image storage<span class="hint">For scenes and article images. More storage keeps more images but uses more memory when searching them.</span></span>
                   <select id="sceneStorageMB"><option value="120">120 MB</option><option value="240">240 MB</option><option value="500">500 MB</option><option value="1024">1 GB</option></select>
                 </label>
 
 
             <div class="block">
-              <div class="row"><label for="forget-hours">Forget recent</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger">Forget recent</button></div>
-              <p class="hint">Remove whole items saved or updated during this period, including recently restored items. Uses CueWoven's save date, not the original visit date.</p>
+              <div class="row"><label for="forget-hours">Forget recent</label><select id="forget-hours"><option value="1">Last hour</option><option value="24">Last day</option><option value="168">Last week</option></select><button id="forget-recent" class="btn danger" title="Uses the date CueWoven saved each item, not when you first visited it. Restored items count as newly saved.">Forget</button></div>
+              <p class="hint">Deletes whole items saved or updated in that time.</p>
             </div>
             <div class="block" id="backup-controls">
               <h3>Keep your saved moments safe</h3>
-              <p class="hint">Your library lives only in this browser, with no account or cloud sync. Export a backup before uninstalling, clearing this browser profile or moving to another computer, then restore it there to search everything again.</p>
+              <p class="hint">There's no account or cloud sync, so a backup file is your only copy.</p>
               <details class="more" id="backup-help"><summary>What's in a backup?</summary>
                 <p><strong>Included:</strong> everything that makes your saved moments searchable. That's each video's title, channel, link, watch date and full transcript with timestamps; each page's title, link and saved text; scene snapshots and article images; and on-screen text read from videos.</p>
                 <p><strong>Not included:</strong> original video files, audio recordings or complete websites, only what CueWoven saved from them. Settings, site permissions and AI models aren't included either; set them again after restoring, and the models download again. If a video or page is later removed online, your saved moments from it stay searchable, but the backup can't bring the original back.</p>
@@ -169,7 +169,7 @@
               </details>
               <div class="row">
                 <button id="export" class="btn ghost">Export backup</button>
-                <label class="btn ghost file">Restore backup<input id="import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
+                <label class="btn ghost file">Restore backup…<input id="import" type="file" accept="application/json,.json" class="visually-hidden" /></label>
                 <span class="spacer"></span>
                 <button id="clear" class="btn danger">Delete everything</button>
               </div>
@@ -181,7 +181,7 @@
                 <p id="storage-usage" class="hint" role="status"></p>
                 <div class="row">
                   <button id="diagnostics-refresh" class="btn ghost small">Refresh</button>
-                  <button id="diagnostics-clear" class="btn ghost small">Clear</button>
+                  <button id="diagnostics-clear" class="btn ghost small">Clear log</button>
                 </div>
                 <p id="capture-empty" class="hint">No events yet.</p>
                 <div class="diagnostic-table"><table><thead><tr><th>Time</th><th>Site</th><th>Kind</th><th>Status</th></tr></thead><tbody id="capture-events"></tbody></table></div>
@@ -191,6 +191,12 @@
         </section>
       </main>
     </div>
+    <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-text">
+      <form method="dialog">
+        <p id="confirm-text"></p>
+        <div class="row"><button value="cancel" class="btn ghost" autofocus>Cancel</button><button id="confirm-ok" value="ok" class="btn danger"></button></div>
+      </form>
+    </dialog>
     <script type="module" src="diagnostics.js"></script>
     <script type="module" src="options.js"></script>
     <script type="module" src="web-options.js"></script>

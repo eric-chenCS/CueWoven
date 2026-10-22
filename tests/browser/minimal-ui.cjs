@@ -70,7 +70,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   await f.options.locator('#filter').fill('Extra library item');assert.equal(await f.options.locator('#library .vid').count(),1);
   assert.equal(await f.options.locator('#library').evaluate(node=>node.style.maxHeight),'');
   await f.options.locator('#filter').fill('');assert.equal(await f.options.locator('#library .vid').count(),6);
-  await f.options.locator('#maxAgeDays').selectOption('0');await f.options.waitForFunction(()=>document.querySelector('#data-saved').textContent==='Saved');
+  await f.options.locator('#maxAgeDays').selectOption('0');await f.options.locator('#confirm-ok').click();await f.options.waitForFunction(()=>document.querySelector('#data-saved').textContent==='Saved');
   // Website controls are covered by websites.cjs.
   assert.deepEqual(errors,[]);
   console.log('MINIMAL_UI_PASS',JSON.stringify({sidebar:true,folds:true,progressReveal:true,nativeFileKeyboardFocus:true,samples:true,copy:true,themes:['light','dark'],sourceIndicators:true,newControlsPreserved:true,momentsHelp:true,fiveRowLibrary:true,websiteIndicators:true,retentionInYourData:true,layouts}));
