@@ -27,7 +27,7 @@ test('canceling visual inference rejects active and waiting work and permits ret
   }finally{model.release();globalThis.Worker=previous}
 });
 
-test('popup prewarming loads the text model once and a real query reuses its worker',async()=>{
+test('explicit visual prewarming loads the text model once and a real query reuses its worker',async()=>{
  const previous=globalThis.Worker,workers=[];globalThis.Worker=class {constructor(){workers.push(this)}requests=[];postMessage(message){this.requests.push(message)}terminate(){}};
  const model=createVisionModel();try{
   const warm=model.warmup();assert.equal(model.warmup(),warm);const worker=workers[0];assert.equal(worker.requests[0].type,'text');

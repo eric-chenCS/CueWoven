@@ -23,9 +23,31 @@ test('shared redaction catches credentials in prose, headers, JSON and PEM block
   for(const label of ['email','phone','SSN','card'])assert.ok(pii.includes('['+label+' redacted]'));
 });
 test('credential URLs are excluded centrally and ordinary state/key parameters keep their identity',()=>{
-  for(const name of ['refresh_token','api_key','apikey','client_secret','sig','signature'])assert.equal(policy.safeUrl('https://example.com/article?'+name+'=opaque'),null);
+  for(const name of ['refresh_token','api_key','apikey','client_secret','sig','signature','SAMLRequest','SAMLResponse','ticket','wresult'])assert.equal(policy.safeUrl('https://example.com/article?'+name+'=opaque'),null);
   assert.equal(policy.safeUrl('https://example.com/article?key=sk-'+ 'a'.repeat(30)),null);
   const url='https://example.com/article?state=CA&key=chapter1';assert.equal(policy.safeUrl(url).href,url);
+});
+
+test('authentication providers, MFA and private university routes are excluded before capture',()=>{
+  for(const url of [
+    'https://api-123.duosecurity.com/frame/prompt','https://duo.com/','https://school.okta.com/app/example',
+    'https://tenant.auth0.com/u/login','https://school.onelogin.com/','https://login.microsoftonline.com/common/',
+    'https://sso.school.edu/','https://idp.school.edu/idp/profile','https://school.edu/cas/service',
+    'https://school.edu/%73so/start','https://school.edu/auth/continue','https://school.edu/mfa/challenge',
+    'https://school.edu/#/oauth2/authorize','https://school.edu/grades','https://school.edu/student/gradebook',
+    'https://school.edu/shibboleth.sso/Login','https://example.com/security-challenge','https://school.blackboard.com/',
+  ]){
+    assert.equal(policy.safeUrl(url),null,url);
+    assert.equal(policy.allowed(url,{enabled:true,allSites:true}),false,url);
+  }
+});
+
+test('public educational and security material stays available without keyword-wide blocking',()=>{
+  for(const url of [
+    'https://www.school.edu/research/coral','https://ocw.mit.edu/courses/','https://cs.stanford.edu/security',
+    'https://example.com/blog/security','https://example.com/docs/oauth2','https://en.wikipedia.org/wiki/Authentication',
+    'https://security.example.com/articles/cybersecurity','https://duosecurity.com.example.org/blog/overview',
+  ])assert.ok(policy.safeUrl(url),url);
 });
 test('sender checks accept real extension tabs but reject websites, lookalikes and subframes',()=>{
   const runtime={id:'abc',getURL:path=>'chrome-extension://abc/'+path},paths=['options/options.html'];

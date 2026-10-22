@@ -3,12 +3,9 @@
 // --store packs only the runtime files for Chrome Web Store / Edge Add-ons upload.
 import { execFileSync } from 'node:child_process';
 import { existsSync, unlinkSync, readFileSync } from 'node:fs';
+import {checkRuntime} from './check-runtime.mjs';
 
-const runtime=['transformers.bundle.js','ocr/ocr.bundle.js','ocr/worker.min.js','ocr/eng.traineddata.gz',...['','simd-','relaxedsimd-'].map(kind=>'ocr/tesseract-core-'+kind+'lstm.wasm.js')];
-if (!runtime.every(file=>existsSync('vendor/'+file))) {
-  console.error('Run "pnpm run setup" first so vendor/ exists.');
-  process.exit(1);
-}
+checkRuntime(process.cwd());
 const store = process.argv.includes('--store');
 const extension = ['samples', 'manifest.json', 'background.js', 'content', 'capture', 'lib', 'offscreen', 'options', 'popup', 'styles', 'icons', 'vendor', 'licenses'];
 const items = store ? extension : [...extension, 'README.md', 'INSTALL.md', 'docs', 'package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'CONTRIBUTING.md', 'scripts', 'tests'];

@@ -36,7 +36,7 @@ async function run({name, capacity, stored, failed = false, real = false, verify
   assert.equal(defaults.lightMode, true); assert.equal(state.settings.lightMode, true); assert.equal(state.liteModeInitialized, true);
   assert.equal(await f.options.locator('#lightMode').isChecked(), true);
   assert.match(await f.options.locator('label').filter({has:f.options.locator('#lightMode')}).innerText(), /8 GB RAM or less/);
-  for (const id of ['speechEnabled','scenesEnabled','screenTextEnabled','articleImagesEnabled']) assert.equal(await f.options.locator('#'+id).isDisabled(), true);
+  for (const id of ['speechEnabled','scenesEnabled','screenTextEnabled']) assert.equal(await f.options.locator('#'+id).isDisabled(), true);
   // These real service-worker gates must stop before player or model access.
   for (const type of ['speech-auto-start','scene-frame','screen-frame']) assert.deepEqual(await f.send({type}), {disabled:true});
   assert.equal((await f.send({type:'youtube-saving-status'})).error !== undefined, true, 'offscreen-only status remains private');
@@ -58,7 +58,7 @@ async function run({name, capacity, stored, failed = false, real = false, verify
   await f.wait(() => f.options.evaluate(() => chrome.storage.local.get('settings').then(({settings}) => settings.lightMode === false)));
   await f.options.reload(); await f.options.waitForFunction(() => document.querySelector('#speechEnabled').disabled === false);
   assert.equal(await f.options.locator('#lightMode').isChecked(), false);
-  for (const id of ['speechEnabled','scenesEnabled','screenTextEnabled','articleImagesEnabled']) assert.equal(await f.options.locator('#'+id).isChecked(), true);
+  for (const id of ['speechEnabled','scenesEnabled','screenTextEnabled']) assert.equal(await f.options.locator('#'+id).isChecked(), id !== 'scenesEnabled');
   // Hold device setup pending: a manual switch must wait before reading/writing settings.
   await f.options.evaluate(() => {
    const original = chrome.runtime.sendMessage.bind(chrome.runtime);

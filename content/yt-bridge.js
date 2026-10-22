@@ -9,7 +9,7 @@
 
   const FROM_MAIN = 'recall-main';
   const FROM_BRIDGE = 'recall-bridge';
-  const DEFAULTS = { enabled: true, dwellSeconds: 10, scenesEnabled: true,screenTextEnabled:true };
+  const DEFAULTS = { enabled: true, dwellSeconds: 10, scenesEnabled: false,screenTextEnabled:true };
   const MAX_SEGMENTS = 20000;
 
   let playbackRevision = 0;

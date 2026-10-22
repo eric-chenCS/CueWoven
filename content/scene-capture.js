@@ -5,7 +5,7 @@
   let lastBaseline=null,baselineProbe=null,nextBaselineCheck=0,lastAttempt=-Infinity,extraBlockedUntil=0,retryAt=0,seen=new Set(),budget=P.createBudget();
   let probeCanvas,frameCanvas;
   const send=async msg=>{try{return await chrome.runtime.sendMessage(msg);}catch(error){return {error:error.message};}};
-  function schedule(delay=P.PROBE_MS){clearTimeout(timer);if(clock&&!options.lightMode&&options.enabled!==false&&options.scenesEnabled!==false)timer=setTimeout(tick,delay);}
+  function schedule(delay=P.PROBE_MS){clearTimeout(timer);if(clock&&!options.lightMode&&options.enabled!==false&&options.scenesEnabled===true)timer=setTimeout(tick,delay);}
   function pixels(video){
     if(!probeCanvas){probeCanvas=document.createElement('canvas');probeCanvas.width=P.WIDTH;probeCanvas.height=P.HEIGHT;}
     const ctx=probeCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(video,0,0,P.WIDTH,P.HEIGHT);
@@ -56,7 +56,7 @@
   function reset(){generation++;clearTimeout(timer);pending=null;previous=null;baselineProbe=null;revision=null;probeCanvas=null;frameCanvas=null;}
   function start(readClock,settings){reset();clock=readClock;options=settings;seen=new Set();budget=P.createBudget();lastBaseline=null;baselineProbe=null;nextBaselineCheck=0;lastAttempt=-Infinity;extraBlockedUntil=0;retryAt=0;schedule(Math.max(3,Number(settings.dwellSeconds)||0)*1000);}
   function stop(){reset();clock=null;}
-  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local'||!changes.settings)return;options={...options,...changes.settings.newValue};if(options.lightMode||options.enabled===false||options.scenesEnabled===false)reset();else schedule();});
+  chrome.storage.onChanged.addListener((changes,area)=>{if(area!=='local'||!changes.settings)return;options={...options,...changes.settings.newValue,scenesEnabled:changes.settings.newValue?.scenesEnabled===true};if(options.lightMode||options.enabled===false||options.scenesEnabled!==true)reset();else schedule();});
   window.addEventListener('pagehide',stop);document.addEventListener('yt-navigate-start',stop);
   globalThis.__recallScenes={start,stop};
 })();

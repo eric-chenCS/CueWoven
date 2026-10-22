@@ -38,7 +38,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  assert.equal(await f.options.locator('#reset-settings').innerText(),'Reset settings to default');
  await f.options.locator('#reset-settings').click();await f.options.waitForFunction(()=>document.querySelector('#reset-msg').textContent.startsWith('Settings reset'));
  const reset=await f.options.evaluate(()=>chrome.storage.local.get(['settings','theme','singleVideoView','otherData']));
- for(const [key,value] of Object.entries({enabled:true,lightMode:false,speechEnabled:true,scenesEnabled:true,screenTextEnabled:true,dwellSeconds:10,perVideo:2,maxAgeDays:0,importMaxAgeDays:90}))assert.equal(reset.settings[key],value,key);
+ for(const [key,value] of Object.entries({enabled:true,lightMode:false,speechEnabled:true,scenesEnabled:false,screenTextEnabled:true,dwellSeconds:10,perVideo:2,maxAgeDays:0,importMaxAgeDays:90}))assert.equal(reset.settings[key],value,key);
  assert.equal(reset.theme,'system');assert.equal(reset.otherData,'keep');
  assert.deepEqual(await f.send({type:'list'}),libraryBefore);
  assert.deepEqual(await f.options.evaluate(()=>chrome.storage.local.get('webCapture')),sitesBefore);

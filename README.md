@@ -44,7 +44,7 @@ Videos are saved as you watch them. The default watch delay is 10 seconds for lo
 
 Press **Enter** to search after editing your query. Semantic search combines local embeddings with words, titles and context. Relevant text and speech matches take priority; scenes and saved images are searched as a fallback when no strong text match is found. Results are estimates, and a matching detail may be absent from the saved evidence. [How indexing and ranking work →](docs/ARCHITECTURE.md)
 
-For weak, closely competing text results, CueWoven can ask a second local model, Ettin 32M q8, to check the order. Strong text matches and quoted searches keep the normal fast path. The extra model downloads about 37 MB once; downloads and loading run in the background, and a slow or unavailable reranker leaves the original results available. Saved text, embeddings and timestamps are preserved. [Selective reranking](docs/SELECTIVE-RERANKING.md)
+For weak, closely competing text results, CueWoven can ask a second local model, Ettin 32M q8, to check the order. Lite mode skips this extra model to save memory; difficult searches may be less accurate. Strong text matches and quoted searches keep the normal fast path. The extra model downloads about 37 MB once; downloads and loading run in the background, and a slow or unavailable reranker leaves the original results available. Saved text, embeddings and timestamps are preserved. [Selective reranking](docs/SELECTIVE-RERANKING.md)
 
 ## Privacy and controls
 
@@ -52,7 +52,9 @@ Your library and search index stay in the current browser profile. CueWoven does
 
 Use settings to pause saving, exclude sites, choose retention and image-storage limits, delete items, or export and restore a backup. Incognito capture is excluded. Sensitive-page filters and shared text redaction (including recognizable API keys, tokens and private-key blocks) reduce unwanted capture but cannot detect every private page, and captured images are not redacted.
 
-Available captions can cover more of a video than you have played. Speech, scene and on-screen-text capture depend on playback and cannot recover earlier audio or guarantee every brief scene. **Lite mode** keeps text capture while pausing new speech, scene, image and OCR capture. Local models use CPU, memory and disk space.
+Available captions can cover more of a video than you have played. Speech, scene and on-screen-text capture depend on playback and cannot recover earlier audio or guarantee every brief scene. **Lite mode** keeps text capture while pausing new speech, scene, image and OCR capture and skipping the optional reranker. Local models use CPU, memory and disk space.
+
+**Save visual details is off by default.** This single Settings switch controls video scene snapshots and article-image capture, which share the visual model and can use substantial RAM and CPU. Previously saved visuals remain searchable when it is off. Captions, text search, OCR and speech fallback are unchanged. Existing separate choices are preserved until you toggle the combined control; a mixed state is explained beside it. Resetting Settings turns both off.
 
 On first setup of the automatic Lite feature, devices reporting 8 GB of physical RAM or less start in Lite mode. You can turn it off in Settings; your choice survives restarts and updates. Resetting settings restores the device default. A local memory check uses the `system.memory` permission; it sends no hardware information to the developer. Lite mode reduces new media processing, but is not a fixed memory limit or a guarantee of smooth performance on every 8 GB laptop.
 

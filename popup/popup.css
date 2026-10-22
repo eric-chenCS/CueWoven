@@ -30,6 +30,7 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 .refine { margin: 2px 16px 12px; }
 .refine #refine-toggle { font-weight: 600; color: var(--action); }
 .refine-panel { margin-top: 8px; }
+.refine-question { margin: 0 0 8px; color: var(--ink-2); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 .refine-hints { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
 .hint-chip { appearance: none; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2); border-radius: 999px; padding: 4px 9px; font: 500 11.5px/1 var(--font); cursor: pointer; }
 .hint-chip:hover { color: var(--ink); }

@@ -31,6 +31,13 @@ test('device defaults are available only to the settings page', async () => {
     assert.match((await request({type:'settings-defaults'}, {id:'x', url})).error, /Library & settings/);
   }
 });
+test('only the offscreen engine can read the current search mode',async()=>{
+ chrome.storage.local.get=async()=>({settings:{lightMode:true}});
+ assert.deepEqual(await request({type:'search-mode'},{id:'x',url:'offscreen/offscreen.html'}),{lightMode:true});
+ chrome.storage.local.get=async()=>({settings:{lightMode:false}});
+ assert.deepEqual(await request({type:'search-mode'},{id:'x',url:'offscreen/offscreen.html'}),{lightMode:false});
+ for(const url of ['options/options.html','popup/popup.html','https://example.com'])assert.match((await request({type:'search-mode'},{id:'x',url})).error,/Invalid search settings/);
+});
 test('incognito YouTube requests stop before any indexing or model access',async()=>{const result=await request({type:'should-index',videoId:'aaaaaaaaaaa'},{id:'x',tab:{id:7,incognito:true},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'});assert.equal(result.index,false);assert.match(result.reason,/Incognito/);});
 
 test('removed history import and scan messages have no public handler',()=>{
@@ -38,7 +45,7 @@ test('removed history import and scan messages have no public handler',()=>{
 });
 
 test('default settings match the spec', () => {
-  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 10, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, speechEnabled: true, scenesEnabled: true,articleImagesEnabled:true,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
+  assert.deepEqual(DEFAULT_SETTINGS, { enabled: true, dwellSeconds: 10, maxAgeDays: 28, importMaxAgeDays:0, perVideo: 2, speechEnabled: true, scenesEnabled: false,articleImagesEnabled:false,screenTextEnabled:true,lightMode:false,sceneStorageMB:240 });
 });
 
 test('automatic speech respects the off switches before touching playback', async () => {

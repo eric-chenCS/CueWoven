@@ -2,6 +2,8 @@
 
 CueWoven 3.3.36 uses `cross-encoder/ettin-reranker-32m-v1`, revision `b33e5ceb5110773ea9cf5e00c9bedc83a8c2afdd`, as a second opinion for weak text searches. The existing MiniLM embedder, stored evidence, embedding version and baseline scores remain unchanged. Reload the same unpacked installation to load code changes; published release ZIPs are separate snapshots.
 
+Lite mode skips reranking and releases a loaded reranker when enabled. Captions, article text, existing embeddings and timestamps remain available; difficult searches may rank less accurately.
+
 ## Ranking contract
 
 1. Apply the existing date/source/kind/video/exclusion filters and text ranking.

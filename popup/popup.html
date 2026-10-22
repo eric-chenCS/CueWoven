@@ -69,7 +69,7 @@
       <p id="ocr-status" class="notice" role="status" aria-live="polite" hidden></p>
       <p id="embedding-status" class="notice" role="status" aria-live="polite" hidden></p>
       <div id="model" class="notice model" hidden>
-        <div class="model-text" id="model-text">Loading the search model…</div>
+        <div class="model-text" id="model-text">Loading search engine…</div>
         <div class="bar"><div id="model-bar"></div></div>
       </div>
     </div>
@@ -78,14 +78,15 @@
     <section id="refine" class="refine" aria-label="Add a detail to this search" hidden>
       <button id="refine-toggle" class="link-btn" type="button" aria-expanded="false" aria-controls="refine-panel">Not it? Add a detail</button>
       <div id="refine-panel" class="refine-panel" hidden>
+        <p id="refine-question" class="refine-question"></p>
         <div class="refine-hints" role="group" aria-label="What do you remember?">
-          <button type="button" class="hint-chip" aria-pressed="false" data-hint="What did they say? e.g. lithium gets trapped">Something said</button>
-          <button type="button" class="hint-chip" aria-pressed="false" data-hint="What was on screen? e.g. a red car, a whiteboard">On screen</button>
-          <button type="button" class="hint-chip" aria-pressed="false" data-hint="Which channel or site? e.g. Veritasium, from TikTok">Channel or site</button>
-          <button type="button" class="hint-chip" aria-pressed="false" data-hint="When? e.g. 3 days ago, between 1 and 2 months ago">When</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-question="said">Something said</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-question="screen">On screen</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-question="source">Channel or site</button>
+          <button type="button" class="hint-chip" aria-pressed="false" data-question="when">When</button>
         </div>
         <label for="details" class="visually-hidden">A detail you remember</label>
-        <input id="details" type="text" maxlength="300" autocomplete="off" spellcheck="false" placeholder="Add a detail you remember, then press Enter" />
+        <input id="details" type="text" maxlength="300" autocomplete="off" spellcheck="false" aria-describedby="refine-question" placeholder="Add a detail you remember, then press Enter" />
       </div>
     </section>
 

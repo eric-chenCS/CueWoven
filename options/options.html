@@ -116,7 +116,7 @@
           <div class="sheet">
             <label class="setting"><span class="setting-text">Appearance<span class="hint">Choose the theme for CueWoven.</span></span><select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
             <div class="setting"><span class="setting-text">Keyboard shortcut<span class="hint">Opens CueWoven on any page. You can also click its toolbar icon.</span></span><span class="shortcut-control"><kbd id="shortcut-key">Not set</kbd><button id="shortcut-change" class="btn ghost small" type="button">Change</button></span></div>
-            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause images, scenes, on-screen text and speech.</span></span><input type="checkbox" role="switch" class="switch" id="lightMode" /></label>
+            <label class="setting"><span class="setting-text">Lite mode<span class="hint">Keep captions and articles; pause visual and speech capture. Skip advanced ranking to save memory; difficult searches may be less accurate.</span></span><input type="checkbox" role="switch" class="switch" id="lightMode" /></label>
             <label class="setting"><span class="setting-text">Save automatically</span><input type="checkbox" role="switch" class="switch" id="enabled" /></label>
             <label class="setting">
               <span class="setting-text">Watch time before saving</span>
@@ -129,8 +129,7 @@
               </select>
             </label>
             <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" role="switch" class="switch" id="speechEnabled" /></label>
-            <label class="setting"><span class="setting-text">Save article images<span class="hint">Up to 3 visible images per page. Counts toward Image storage under Your data.</span></span><input type="checkbox" role="switch" class="switch" id="articleImagesEnabled" /></label>
-            <label class="setting"><span class="setting-text">Save scene snapshots</span><input type="checkbox" role="switch" class="switch" id="scenesEnabled" /></label>
+            <label class="setting"><span class="setting-text">Save visual details<span class="hint">Saves video scenes and article images. Uses substantial RAM and CPU. Previously saved visuals stay searchable.</span><span id="visual-mixed" class="hint" hidden></span></span><input type="checkbox" class="switch" id="scenesEnabled" aria-describedby="visual-mixed" /></label>
             <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" role="switch" class="switch" id="screenTextEnabled" /></label>
             <div class="block">
               <button id="reset-settings" type="button" class="btn ghost">Reset settings to default</button>

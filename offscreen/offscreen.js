@@ -11,6 +11,7 @@ import {createCaptureHold} from '../lib/capture-hold.js';
 import {validateScreenFrame,screenRecord,SCREEN_TOTAL,novelScreenLines,cleanScreenText} from '../lib/screen-text.js';
 import {validateScene, rankScenes,sceneCaps, fuseMatches,hasRelevantText} from '../lib/scenes.js';
 import { chunkTranscript } from '../lib/chunk.js';
+import {embedTranscript,TRANSCRIPT_BATCH} from '../lib/transcript-embeddings.js';
 import { prepareQuery, createPool, addIndex, rankPool, nearTie, watchedWithin, dropTwins } from '../lib/search.js';
 import * as db from '../lib/db.js';
 import { validateVideoMetadataBatch } from '../lib/video-metadata.js';
@@ -95,16 +96,16 @@ async function requireYouTubeSaving() {
 
 async function storeChunks(video, chunks, method, indexedAt) {
   chunks = chunks.map(row=>({...row,text:policy.redactText(row.text)}));
-  const vecs = await embed(chunks.map(c=>embeddingText({...video,method},c.text)));
-  const existing = await db.getVideo(video.videoId);
-  const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), savedAt:indexedAt===undefined?Date.now():video.savedAt||indexedAt, chunkCount: chunks.length, method: method || null });
+  const {video:existing,chunks:previous} = await db.videoWithChunks(video.videoId);
+  const packed = await embedTranscript({...video,method},chunks,existing,previous,embed);
+  const record = Object.assign(cleanVideo(video), { indexedAt: indexedAt || Date.now(), savedAt:indexedAt===undefined?Date.now():video.savedAt||indexedAt, chunkCount: chunks.length, transcriptBatch:TRANSCRIPT_BATCH, method: method || null });
   if (method === 'speech-local') record.partial = true;
   record.watchedAt = Math.max(record.watchedAt || 0, existing?.watchedAt || 0) || undefined;
   if(indexedAt===undefined && video.watchedAt>0)record.historyImported=false;
   if(indexedAt===undefined)await requireYouTubeSaving();
   const saved=await db.replaceVideo(
     record,
-    chunks.map((c, i) => ({ ...c, videoId: record.videoId, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION })),
+    packed.map(c => ({ ...c, videoId: record.videoId })),
     {backgroundCapture:indexedAt===undefined && !(video.watchedAt>0)}
   );
   invalidate(false);
@@ -139,6 +140,7 @@ async function indexVideo({ video, segments, method }) {
 }
 
 const queryCache=createQueryCache(async(key,page)=>rankSearch({...JSON.parse(key),...page}));
+async function liteMode(){const state=await chrome.runtime.sendMessage({type:'search-mode'});if(typeof state?.lightMode!=='boolean')throw Error('Search settings unavailable.');return state.lightMode;}
 async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,exclude=[],offset=0,kind='all',videoId,inferFilters=true}){
   if(![sinceMs,untilMs].every(ms=>Number.isSafeInteger(ms)&&ms>=0))throw Error('Invalid date range.');
   if(!Array.isArray(exclude)||exclude.length>100||!exclude.every(id=>policy.ownerId(id)))throw Error('Invalid hidden results.');
@@ -150,7 +152,8 @@ async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,e
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1||limit>512||![1,2,3,4,5].includes(perVideo))throw Error('Invalid search page.');
   if(videoId!==undefined&&!policy.ownerId(videoId))throw Error('Invalid video filter.');
   // A date range chosen in the popup survives relaxing typed filters; a typed one does not.
-  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),exclude,kind,source:filters.source});
+  const lightMode=await liteMode();
+  const keyFor=filters=>JSON.stringify({query:q,videoId,perVideo,sinceDays:filters.sinceDays||0,...(filters.range||custom||{}),exclude,kind,source:filters.source,lightMode});
   const searchKey=keyFor(intent);
   if(searchKey!==lastSearchKey){reranker.cancel();lastSearchKey=searchKey;searchRevision++;}
   // Only an empty first page relaxes inferred filters; reaching the last page does not.
@@ -162,7 +165,7 @@ async function search({query,limit=12,perVideo=2,sinceDays,sinceMs=0,untilMs=0,e
   });
   const results=(await Promise.all(result.results.map(async hit=>hit.key?{...hit,image:(await db.scenes.get(hit.key))?.image}:hit))).filter(hit=>!hit.scene||hit.image);
   // Decided here, on the exact page being returned, from comparable scores only (see nearTie).
-  return {...result,results,appliedFilters:result.intent.labels,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!result.reranked&&!!q&&offset===0&&nearTie(results)};
+  return {...result,results,appliedFilters:result.intent.labels,appliedSource:result.intent.source,appliedSinceDays:result.intent.sinceDays,filtersRelaxed:result.relaxed,nearTie:!result.reranked&&!!q&&offset===0&&nearTie(results)};
 }
 async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, untilMs=0, exclude=[], offset=0,kind='all',videoId,source='' }) {
   const revision=searchRevision;
@@ -192,8 +195,9 @@ async function rankSearch({ query, limit=12, perVideo=2, sinceDays, sinceMs=0, u
   const {hits:words,twins}=dropTwins(rankPool(pool,{perVideo}));
   const select=hits=>{const count=new Map();return hits.filter(hit=>{const n=count.get(hit.videoId)||0;count.set(hit.videoId,n+1);return n<perVideo;}).slice(offset,offset+limit);};
   const finishText=async()=>{
+    const lightMode=await liteMode();
     const busy=revision!==searchRevision||captionTasks.size||webTasks.size||screenTask||sceneTask||indexImportBusy||captureHold.held();
-    if(busy||!rerankQuery(q)||hasRelevantText(words.slice(0,1)))return {results:select(words)};
+    if(lightMode||busy||!rerankQuery(q)||hasRelevantText(words.slice(0,1)))return {results:select(words)};
     const evidence=perVideo===2?words:dropTwins(rankPool(pool,{perVideo:2})).hits;
     const ranked=await reranker.rerank(q,words,evidence);
     return {results:select(ranked.hits),...(ranked.pending?{rerankPending:true}:{}),...(ranked.applied?{reranked:true}:{})};
@@ -428,6 +432,7 @@ async function loadSamples(){
   invalidate(false);broadcast({type:'index-changed'});return {imported};
 }
 const handlers = {
+  'rerank-stop':async()=>{searchRevision++;queryCache.invalidate();reranker.release();return {ok:true};},
   'load-samples':()=>captionChange(loadSamples),
   'forget-recent':({hours})=>libraryChange(async()=>{
     if(![1,24,168].includes(hours))throw Error('Choose the last hour, day or week.');
@@ -461,9 +466,8 @@ const handlers = {
     await speech.packet(audio, 16000, clock);return {ok: true};
   },
   ping: async () => ({ ok: true }),
-  warmup: async ({scenes=false}) => {
-    const visual=scenes?visualQuery(async()=>{const videos=await db.listVideos();return videos.some(video=>video.sceneCount>0)?visionModel.warmup():null;}).catch(()=>null):null;
-    await Promise.all([textModel.warmup(),getIndex(),visual]);return {ok:true};
+  warmup: async () => {
+    await Promise.all([textModel.warmup(),getIndex()]);return {ok:true};
   },
   has: async ({ videoId }) => {
     const video = await db.getVideo(videoId);

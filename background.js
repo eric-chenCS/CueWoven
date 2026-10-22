@@ -40,21 +40,27 @@ async function ensureOffscreen() {
 
 // Requests that save, trim or report images carry the chosen image storage size.
 const SCENE_STORAGE_REQUESTS = new Set(['scene-index', 'article-image', 'import', 'prune', 'list']);
+const ENGINE_READ_REQUESTS = new Set(['ping','warmup','has','search','status','list','export','vision-status','speech-status']);
 async function engine(type, payload = {}) {
   if (SCENE_STORAGE_REQUESTS.has(type)) payload = { ...payload, sceneStorageMB: (await getSettings()).sceneStorageMB };
-  await ensureOffscreen();
   let lastErr;
   for (let attempt = 0; attempt < 6; attempt++) {
+    await ensureOffscreen();
+    let res;
     try {
-      const res = await chrome.runtime.sendMessage(Object.assign({}, payload, { type, target: 'offscreen' }));
-      if (res === undefined) throw new Error('Receiving end does not exist');
-      if (res && res.error) throw new Error(res.error);
-      return res;
+      res = await chrome.runtime.sendMessage(Object.assign({}, payload, { type, target: 'offscreen' }));
+      if (res === undefined) throw new Error('The message channel closed without a response.');
     } catch (e) {
       lastErr = e;
-      if (!/Receiving end does not exist|message port closed/i.test(String(e && e.message))) throw e;
+      const message=String(e && e.message),missing=/Receiving end does not exist/i.test(message);
+      if (!missing && !/message (?:port|channel) closed/i.test(message)) throw e;
+      // A lost reply can follow a committed write; never replay ambiguous mutations.
+      if(!missing&&!ENGINE_READ_REQUESTS.has(type))throw Error('Processing was interrupted. Check your library before retrying.');
       await new Promise((r) => setTimeout(r, 250 * (attempt + 1))); // document still loading
+      continue;
     }
+    if (res && res.error) throw new Error(res.error);
+    return res;
   }
   throw lastErr;
 }
@@ -274,7 +280,11 @@ const handlers = {
     return engine('search', { query, sinceDays,...range,videoId,inferFilters, perVideo: s.perVideo, limit: 12,...(kind?{kind}:{}) });
   },
   status: () => engine('status'),
-  warmup: ({scenes}) => engine('warmup',{scenes:scenes===true}),
+  'search-mode':async(_input,sender)=>{
+    if(sender.url!==chrome.runtime.getURL(OFFSCREEN_PATH))throw Error('Invalid search settings request.');
+    return {lightMode:(await getSettings()).lightMode===true};
+  },
+  warmup: () => engine('warmup'),
   list: () => engine('list'),
   async delete({ videoId }) {
     await requireSpeechIdle();
@@ -364,6 +374,7 @@ chrome.storage?.onChanged?.addListener((changes, area) => {
   if(area==='local'&&changes.webCapture&&(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false))engine('vision-stop').catch(()=>{});
   if(area==='local'&&changes.webCapture){webAccess.sync().catch(()=>{});if(changes.webCapture.newValue?.paused||changes.webCapture.newValue?.enabled===false)engine('speech-status').then(state=>{if(policy.webId(state.video?.videoId))return engine('speech-stop',{reason:'Website capture paused.'});}).catch(()=>{});}
   const settings = changes.settings?.newValue;
+  if(area==='local'&&changes.settings&&!!changes.settings.oldValue?.lightMode!==!!settings?.lightMode)engine('rerank-stop').catch(()=>{});
   if (area === 'local' && settings && (settings.lightMode || settings.speechEnabled === false || settings.enabled === false)) engine('speech-stop', {reason: 'Automatic speech-to-text is switched off.'}).catch(() => {});
   if (area === 'local' && settings && (settings.lightMode || settings.scenesEnabled === false || settings.articleImagesEnabled === false || settings.enabled === false)) engine('vision-stop').catch(()=>{});
   if (area === 'local' && settings && (settings.lightMode || settings.screenTextEnabled === false || settings.enabled === false)) engine('ocr-stop').catch(()=>{});

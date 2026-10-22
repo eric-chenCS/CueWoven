@@ -1,5 +1,5 @@
 // Queries pass background work at each four-text inference boundary.
-export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,idleMs=300000,timeoutMs=180000}={}){
+export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,idleMs=60000,timeoutMs=180000}={}){
   let worker=null,running=null,nextId=0,idle,deadline,scheduled=false;
   const queries=[],background=[];
   function release(error=new Error('Text processing stopped.')){

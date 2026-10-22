@@ -64,15 +64,41 @@ test('clear viewing phrases infer dates while inference-off preserves every word
   assert.equal(searchIntent('how to grow on youtube').source,'');
   assert.equal(searchIntent('the TikTok about cooking',{infer:false}).query,'the TikTok about cooking');
 });
-test('empty inferred filters relax once while manual restrictions remain',async()=>{
+test('empty date filters relax once while website and manual restrictions remain',async()=>{
   const calls=[],intent=searchIntent('a TikTok from last week',{sinceDays:30});
-  const result=await searchWithFallback(intent,30,async filters=>{calls.push(filters);return {results:filters.source?[]:[{videoId:'found'}]};});
-  assert.equal(result.relaxed,true);assert.equal(calls.length,2);
-  assert.equal(calls[1].sinceDays,30);assert.equal(calls[1].source,'');
+  const result=await searchWithFallback(intent,30,async filters=>{calls.push(filters);return {results:[]};});
+  assert.equal(result.relaxed,false);assert.equal(calls.length,1);
+  const datedCalls=[],dated=searchIntent('a TikTok from last week');
+  const retried=await searchWithFallback(dated,0,async filters=>{datedCalls.push(filters);return {results:filters.sinceDays?[]:[{videoId:'found'}]};});
+  assert.equal(retried.relaxed,true);assert.equal(datedCalls.length,2);
+  assert.equal(datedCalls[1].sinceDays,0);assert.equal(datedCalls[1].source,'tiktok.com');
+  assert.deepEqual(retried.intent.labels,['tiktok.com']);
   const unchanged=await searchWithFallback({...intent,labels:[]},30,async()=>({results:[]}));
   assert.equal(unchanged.relaxed,false);
   const lastPage=await searchWithFallback(intent,30,async()=>({results:[],hasFirst:true}));
   assert.equal(lastPage.relaxed,false);
+});
+
+test('explicit website memories select a host without interpreting topic mentions as filters',()=>{
+  for(const [query,host] of [
+    ['a YouTube video about back pain','youtube.com'],['YouTube videos about aging','youtube.com'],
+    ['that YouTube video about getting older','youtube.com'],['a Reddit thread about keyboards','reddit.com'],
+    ['the Wikipedia article about coral','wikipedia.org'],['a GitHub page about compilers','github.com'],
+    ['a Vimeo clip about art','vimeo.com'],['I read about coral on Wikipedia','wikipedia.org'],
+    ['an article from www.nature.com about coral','nature.com'],['coral from science.example.edu','science.example.edu'],
+    ['I watched a video on youtube.com.evil.org about aging','youtube.com.evil.org'],
+  ])assert.equal(searchIntent(query).source,host,query);
+  for(const query of ['an article about YouTube','an article about YouTube videos','how YouTube videos are recommended','YouTube marketing','how to grow on youtube','a guide to posting on GitHub','"a YouTube video about aging"','“from nature.com”','nature.com security research'])assert.equal(searchIntent(query).source,'',query);
+  assert.equal(searchIntent('a YouTube video about aging',{infer:false}).source,'');
+});
+
+test('website-only empty searches never query another website',async()=>{
+  for(const query of ['a YouTube video about back pain','an article from nature.com about coral']){
+    const intent=searchIntent(query),calls=[];
+    const result=await searchWithFallback(intent,0,async filters=>{calls.push(filters);return {results:[]};});
+    assert.equal(calls.length,1);assert.equal(result.relaxed,false);assert.equal(result.intent.source,intent.source);
+  }
+  assert.equal(matchesSource({url:'https://youtube.com.evil.org/watch'},'youtube.com'),false);
 });
 
 test('article visual evidence never produces a text-score near-tie hint',()=>{

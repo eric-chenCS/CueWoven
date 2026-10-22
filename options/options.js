@@ -178,13 +178,15 @@ async function loadSettings() {
   $('enabled').checked = !!s.enabled;
   $('lightMode').checked=!!s.lightMode;
   $('speechEnabled').checked = s.speechEnabled !== false;
-  $('articleImagesEnabled').checked = s.articleImagesEnabled !== false;
-  $('scenesEnabled').checked = s.scenesEnabled !== false;
+  $('scenesEnabled').checked = s.scenesEnabled === true;
+  $('scenesEnabled').indeterminate = !!s.scenesEnabled !== !!s.articleImagesEnabled;
+  $('visual-mixed').hidden = !$('scenesEnabled').indeterminate;
+  $('visual-mixed').textContent = $('scenesEnabled').indeterminate ? `Currently enabled for ${s.scenesEnabled ? 'video scenes' : 'article images'} only. Toggle to apply to both.` : '';
   $('screenTextEnabled').checked=s.screenTextEnabled!==false;
   $('dwellSeconds').value = String(s.dwellSeconds);
   selectRetention('maxAgeDays', s.maxAgeDays);
   $('sceneStorageMB').value = String(s.sceneStorageMB);
-  for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
+  for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=!!s.lightMode;
 }
 
 let savedTimer;
@@ -205,14 +207,15 @@ async function saveSettings(event) {
       enabled: $('enabled').checked,
       lightMode:$('lightMode').checked,
       speechEnabled: $('speechEnabled').checked,
-      scenesEnabled: $('scenesEnabled').checked,
-      articleImagesEnabled: $('articleImagesEnabled').checked,
+      scenesEnabled: $('scenesEnabled').indeterminate ? stored.scenesEnabled === true : $('scenesEnabled').checked,
+      articleImagesEnabled: $('scenesEnabled').indeterminate ? stored.articleImagesEnabled === true : $('scenesEnabled').checked,
       screenTextEnabled:$('screenTextEnabled').checked,
       dwellSeconds: Number($('dwellSeconds').value),
       maxAgeDays: Number($('maxAgeDays').value),
       sceneStorageMB,
     };
-    for(const id of ['articleImagesEnabled','scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
+    for(const id of ['scenesEnabled','screenTextEnabled','speechEnabled'])$(id).disabled=settings.lightMode;
+    if (!$('scenesEnabled').indeterminate) { $('visual-mixed').hidden = true; $('visual-mixed').textContent = ''; }
     await chrome.storage.local.set({ settings, ...(event?.target?.id === 'lightMode' ? {liteModeInitialized: true} : {}) });
     const status = $(event?.target?.closest('#sec-data') ? 'data-saved' : 'saved');
     $('saved').textContent = $('data-saved').textContent = '';
@@ -222,7 +225,7 @@ async function saveSettings(event) {
     if (settings.maxAgeDays||settings.importMaxAgeDays||sceneStorageMB!==storedMB) send({ type: 'prune' }).then(loadLibrary);
   } catch (error) { $('saved').textContent = `Could not save settings: ${error.message}`; }
 }
-for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'speechEnabled', 'scenesEnabled','articleImagesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
+for (const id of ['lightMode','enabled', 'dwellSeconds', 'maxAgeDays', 'sceneStorageMB', 'speechEnabled', 'scenesEnabled','screenTextEnabled']) $(id).addEventListener('change', saveSettings);
 
 // ---------------------------------------------------------------------------
 // Export / import / wipe

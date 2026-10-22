@@ -5,7 +5,7 @@ CueWoven runs in desktop Chrome and Microsoft Edge. The manifest requires Chromi
 ## Download and load
 
 1. Open [Releases](https://github.com/eric-chenCS/CueWoven/releases/latest) and expand **Assets** if needed.
-2. Download the named installation asset, currently **cuewoven-v3.3.37.zip**. Do not choose **Source code (zip)**, **Source code (tar.gz)** or **Code → Download ZIP** for a ready-to-use installation.
+2. Download the named installation asset, **cuewoven-v<version>.zip**, from the release you selected. Do not choose **Source code (zip)**, **Source code (tar.gz)** or **Code → Download ZIP** for a ready-to-use installation. Beta packages may be shared separately before they appear on Releases.
 3. Extract the **entire ZIP** into a permanent folder. On Windows, right-click the ZIP and choose **Extract All**. Do not load from the ZIP preview or copy only `manifest.json`.
 4. In Chrome, open `chrome://extensions`; in Edge, open `edge://extensions`.
 5. Enable **Developer mode**, click **Load unpacked**, and select the folder that directly contains `manifest.json`. If extraction created an outer folder, open it and select the inner extension folder.

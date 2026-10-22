@@ -22,6 +22,10 @@ node tests/browser/video-scope.cjs
 node tests/browser/article-jump.cjs
 node tests/browser/article-suggestion.cjs
 node tests/browser/device-lite.cjs
+node tests/browser/detail-guidance.cjs
+node tests/browser/resource-lifecycle.cjs
+node tests/browser/scene-default.cjs
+node tests/browser/visual-setting.cjs
 node tests/browser/enter-search.cjs
 node tests/browser/adaptive-scenes.cjs
 node tests/browser/security-hardening.cjs
@@ -37,6 +41,12 @@ These use controlled YouTube/transcript outcomes with the real local embedding/s
 `article-suggestion.cjs` verifies that semantic article results scroll without native or extension text highlights, display a suggested-section label, dismiss it on website interaction and cancel pending late-render jumps. It uses real Edge input events, including emulated touch, and checks that exact phrase highlighting remains available.
 
 `device-lite.cjs` checks automatic Lite defaults with controlled physical-memory responses in isolated extension copies. It covers fresh setup, first upgrade, manual overrides, reset, unavailable hardware detection, media capture gates, responsive Settings and real-model text search. These are browser integration checks, not measurements on a physical 8 GB laptop.
+
+`detail-guidance.cjs` uses controlled search outcomes in the real popup to verify constructive no-match wording, optional refinement for related/near-tied results, short strong queries, keyboard focus, user-written clues, error handling and the existing 440 px popup layout. Scoped-video and Enter-search suites cover real inference and submission regressions separately.
+
+`resource-lifecycle.cjs` verifies that text warmup and strong text searches keep CLIP unloaded despite saved scenes, then checks actual visual fallback, preserved timestamps and cached text-worker reload. With `RECALL_MODEL_DIR` set, its performance acceptance requires a completed first visual response within two seconds on the test setup; first-download or slower-hardware behavior is not certified by that check. The text reload subtest uses an accelerated idle timeout; default 60-second retention is covered separately by the Node timer test and measured idle trial.
+
+`scene-default.cjs` checks the combined visual control, fresh Off defaults, the visible RAM/CPU warning, legacy mixed preferences, opt-in persistence, reset and preservation of real-model saved-scene search. `visual-setting.cjs` checks actual article-image capture with the shared switch Off, On and Off again, while retaining page text and previously saved images. The Node scene-default tests also verify that classic capture schedules no frame probes without explicit opt-in.
 
 After pulling merged changes, run `pnpm run setup` if dependencies or the runtime build changed. Reload the extension, reopen its settings page, and refresh YouTube tabs. Keeping the checkout folder path stable preserves its extension identity. Export your index before switching to another folder or removing an installation.
 

@@ -231,6 +231,8 @@ input.switch::after {
 }
 input.switch:checked { background: var(--action); }
 input.switch:checked::after { transform: translateX(16px); }
+input.switch:indeterminate { background: var(--action); }
+input.switch:indeterminate::after { transform: translateX(8px); }
 input.switch:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 input.switch:disabled { opacity: .45; cursor: not-allowed; }
 

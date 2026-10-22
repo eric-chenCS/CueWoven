@@ -24,6 +24,9 @@ const report = {checks: [], errors: []};
    const original = chrome.runtime.sendMessage.bind(chrome.runtime);
    chrome.runtime.sendMessage = async message => {
     if (['search', 'video-status', 'index-tab'].includes(message.type)) scopeCalls.push(message);
+    if (message.type === 'search' && message.query === 'no match scoped fixture') return {results:[]};
+    if (message.type === 'search' && message.query === 'empty scoped fixture') return {empty:true, results:[]};
+    if (message.type === 'search' && message.query === 'broken model fixture') return {error:'Controlled model error. Retry to reload it.'};
     if (message.type !== 'index-tab') return original(message);
     const {scopeFixture: fixture} = await chrome.storage.session.get('scopeFixture');
     if (fixture.index === 'captions') {
@@ -51,7 +54,7 @@ const report = {checks: [], errors: []};
   const search = async (page, value = query) => {
    await page.locator('#q').fill(value);
    await page.locator('#q').press('Enter');
-   await page.waitForFunction(() => document.querySelector('.result') || !document.querySelector('#search-retry').hidden || document.querySelector('.empty h2')?.textContent === 'No match yet', null, {timeout: 120000});
+   await page.waitForFunction(() => document.querySelector('.result') || !document.querySelector('#search-retry').hidden || document.querySelector('.empty h2')?.textContent === 'Add one more detail', null, {timeout: 120000});
   };
   const expectSaved = async (id, start, source) => {
    const page = await popup(id);
@@ -69,6 +72,23 @@ const report = {checks: [], errors: []};
   await captionPage.locator('#video-scope').uncheck();
   await captionPage.waitForFunction(() => scopeCalls.at(-1)?.type === 'search' && scopeCalls.at(-1).videoId === undefined && document.querySelector('.others-head'));
   await captionPage.close();
+  const noMoment = await popup('scope000001');
+  await search(noMoment, 'no match scoped fixture');
+  assert.equal(await noMoment.locator('.empty h2').innerText(), 'Add one more detail');
+  assert.match(await noMoment.locator('#refine-question').innerText(), /match scoped fixture/);
+  assert.equal(await noMoment.locator('#search-retry').isVisible(), false, 'an ordinary no-match is not a search failure');
+  assert.equal(await noMoment.locator('#refine').isVisible(), true);
+  if (process.env.RECALL_SCREENSHOT_DIR) await noMoment.screenshot({path: path.join(process.env.RECALL_SCREENSHOT_DIR, 'cuewoven-video-no-moment.png')});
+  await search(noMoment, 'empty scoped fixture');
+  assert.equal(await noMoment.locator('.empty h2').innerText(), 'Add one more detail', 'empty engine response still offers scoped guidance');
+  await search(noMoment, 'broken model fixture');
+  assert.equal(await noMoment.locator('.empty h2').innerText(), 'Couldn’t search this video');
+  assert.match(await noMoment.locator('.empty').innerText(), /Controlled model error/);
+  assert.equal(await noMoment.locator('#search-retry').isVisible(), true, 'actual errors retain diagnostics and retry');
+  await noMoment.locator('#video-scope').uncheck();
+  await noMoment.waitForFunction(() => document.querySelector('.empty h2')?.textContent === 'Search failed');
+  await noMoment.close();
+  report.checks.push({noMatchingMomentMessage: true});
   // The real engine can search this audio; previously the popup blocked it first.
   const audio = await f.send({type: 'search', query, videoId: 'scope000003', distinct: true});
   assert.equal(audio.results[0].start, 123);
@@ -93,6 +113,8 @@ const report = {checks: [], errors: []};
   const unavailable = await popup('scope000005');
   await search(unavailable);
   assert.match(await unavailable.locator('.empty').innerText(), /Captions unavailable/);
+  assert.equal(await unavailable.locator('.empty h2').innerText(), 'Couldn’t search this video');
+  assert.equal(await unavailable.locator('#search-retry').isVisible(), true);
   assert.equal(await unavailable.evaluate(() => scopeCalls.some(call => call.type === 'search')), false);
   await unavailable.close();
   report.checks.push({missingEvidenceError: true});

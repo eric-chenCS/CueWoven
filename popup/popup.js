@@ -7,6 +7,8 @@ import {resultLink} from '../lib/result-link.js';
 import {sampleFor} from '../lib/samples.js';
 import {videoIdFromUrl} from '../lib/video.js';
 import {openShortcut} from '../lib/shortcut.js';
+import {refinementQuestions} from '../lib/refinement-questions.js';
+import {hasSearchDetail} from '../lib/search-input.js';
 
 const $ = (id) => document.getElementById(id);
 const q = $('q');
@@ -59,10 +61,17 @@ function setRefineOpen(open, focus = open) {
   refineToggle.setAttribute('aria-expanded', String(open));
   if (focus) details.focus();
 }
-function showRefine(noMatch) {
+function showRefine(needsDetail) {
   $('refine').hidden = false;
-  refineToggle.textContent = noMatch ? 'No match? Add a detail you remember' : 'Not it? Add a detail';
-  if (noMatch && refinePanel.hidden) setRefineOpen(true, false);
+  const questions = refinementQuestions(submittedQuery);
+  $('refine-question').textContent = questions.primary;
+  document.querySelectorAll('.hint-chip').forEach(chip => {
+    chip.dataset.hint = questions[chip.dataset.question];
+    chip.setAttribute('aria-pressed', 'false');
+  });
+  details.placeholder = 'Add a detail you remember, then press Enter';
+  refineToggle.textContent = needsDetail ? 'Add one more detail to narrow it down' : 'Not it? Add a detail';
+  if (needsDetail && refinePanel.hidden) setRefineOpen(true, false);
 }
 function resetRefine() {
   clues = []; excluded.clear(); renderClues();
@@ -234,10 +243,15 @@ async function runSearch() {
   // Refinement belongs to this open popup; reopening starts with an independent query.
   chrome.storage.session.set({ lastQuery: original, sinceDays, customRange, inferFilters }).catch(() => {});
   if (!original) { $('refine').hidden = true; showIdle(); return; }
+  if (!hasSearchDetail(query)) {
+    empty('Describe something you remember', ['Try a topic, a name, an action, or a phrase.']);
+    $('refine').hidden = true;
+    return;
+  }
   // One distinct video per row, so "Other matches" are alternatives rather than more moments of the best one.
   const request = { type: 'search', query, sinceDays, ...customMs(), ...(excluded.size ? { exclude: [...excluded] } : {}), inferFilters, distinct: true, offset: 0, kind: $('kind-filter').value };
+  const videoId=$('video-scope').checked?currentMedia?.videoId:undefined;
   const res = await withTimeout((async()=>{
-    const videoId=$('video-scope').checked?currentMedia?.videoId:undefined;
     if(videoId){
       const state=await send({type:'video-status',videoId});
       if(state.error)throw Error(state.error);
@@ -250,24 +264,25 @@ async function runSearch() {
     .catch(e => ({ error: e.message || 'The search engine did not respond.' }));
   if (seq !== searchSeq) return; // a newer search started
   if (!res || res.error) {
-    empty('Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
+    empty(videoId ? 'Couldn’t search this video' : 'Search failed', [res ? res.error : 'The search engine did not respond.'], 'Try again in a moment.');
     $('search-retry').hidden=false;
     $('refine').hidden = true;
     return;
   }
-  $('applied-filters').textContent=res.filtersRelaxed?'No matches with the suggested filters. Showing results without them.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
+  $('applied-filters').textContent=res.filtersRelaxed?'No matches in that time range. Showing other dates'+(res.appliedFilters?.length?' on '+res.appliedFilters.join(' · '):'')+'.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
   $('applied-filters').hidden=!res.filtersRelaxed&&!res.appliedFilters?.length;
   $('ignore-inferred').hidden=!res.appliedFilters?.length;
+  $('ignore-inferred').textContent=res.appliedSource?'Search without suggested filters':'Ignore suggested filters';
   showChips(res.appliedSinceDays ?? sinceDays);
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   else if(res.visualPending){$('scene-status').textContent='Image search is preparing. Text results are ready; search again shortly for images.';$('scene-status').hidden=false;}
-  if (res.empty) {$('refine').hidden = true;showIdle();return;}
+  if (res.empty && !videoId && !res.appliedSource) {$('refine').hidden = true;showIdle();return;}
   if (!res.results.length) {
-    empty('No match yet', ['Nothing you’ve watched lines up with that.'], (res.appliedSinceDays||sinceDays||customRange) ? 'Try “Any time”, or describe it differently.' : 'Try describing it a different way.');
+    empty(res.appliedSource?'No matches on '+res.appliedSource:'Add one more detail', [], res.appliedSource?'Add another detail or search without suggested filters.':(res.appliedSinceDays||sinceDays||customRange) ? 'You can also try “Any time” to widen your search.' : 'Use a detail you remember to narrow your search.');
     showRefine(true);
     return;
   }
-  showRefine(false);
+  showRefine(res.nearTie === true || res.results[0].match === 'related');
   found = res.results; visible = Math.min(found.length, 1 + OTHERS_SHOWN);
   moreAvailable = found.length === PAGE; closeCall = res.nearTie === true; lastRequest = request;
   // Alternatives start folded so a confident answer reads as one; they open when the engine is unsure.
@@ -317,6 +332,7 @@ $('hidden-undo').addEventListener('click', e => { excluded.delete(e.currentTarge
 document.querySelectorAll('.hint-chip').forEach(chip => chip.addEventListener('click', () => {
   document.querySelectorAll('.hint-chip').forEach(c => c.setAttribute('aria-pressed', String(c === chip)));
   details.placeholder = chip.dataset.hint;
+  $('refine-question').textContent = chip.dataset.hint;
   details.focus();
 }));
 
@@ -405,10 +421,10 @@ function showModel(state) {
   if (!state || state.status === 'ready' || state.status === 'idle') { box.hidden = true; return; }
   box.hidden = false;
   if (state.status === 'error') {
-    $('model-text').textContent = 'Couldn’t load the search model: ' + (state.error || 'unknown error');
+    $('model-text').textContent = 'Couldn’t load the search engine: ' + (state.error || 'unknown error');
     $('model-bar').style.width = '0';
   } else {
-    $('model-text').textContent = `Loading search… ${Math.round((state.progress || 0) * 100)}%`;
+    $('model-text').textContent = `Loading search engine… ${Math.round((state.progress || 0) * 100)}%`;
     $('model-bar').style.width = Math.round((state.progress || 0) * 100) + '%';
   }
 }
@@ -432,6 +448,9 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'model-status') showModel(msg.state);
   if (msg.type === 'index-changed') refreshStatus();
   return false;
+});
+chrome.storage.onChanged.addListener((changes,area)=>{
+  if(area==='local'&&changes.settings&&!!changes.settings.oldValue?.lightMode!==!!changes.settings.newValue?.lightMode)prepareSearch();
 });
 
 // ---------------------------------------------------------------------------
@@ -520,12 +539,12 @@ $('start-empty').addEventListener('click', async () => {
   } else {
     showIdle();
   }
-  if (stats.total||stats.videos) send({ type: 'warmup',scenes:stats.scenes>0 }).catch(()=>{}); // no model download is needed for an empty library
+  if (stats.total||stats.videos) send({ type: 'warmup' }).catch(()=>{}); // Keep text responsive; visual models load only when needed.
 })();
 
 // Capture processing can report progress without adding manual controls to search.
 function renderVision(state={}) {
-  const message=state.status==='loading'?'Downloading scene model… '+Math.round((state.progress || 0)*100)+'%':state.status==='working'?'Processing scenes on this device…':state.status==='error'?state.error:'';
+  const message=state.status==='loading'?'Loading visual search… '+Math.round((state.progress || 0)*100)+'%':state.status==='working'?'Processing scenes on this device…':state.status==='error'?state.error:'';
   $('scene-status').textContent=message;$('scene-status').hidden=!message;
 }
 function renderEmbedding(state={}) {

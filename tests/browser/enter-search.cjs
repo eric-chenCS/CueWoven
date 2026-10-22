@@ -34,6 +34,15 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict');
  await page.locator('#q').fill('slow query');await page.locator('#q').press('Enter');await page.waitForFunction(()=>!!window.releaseSlow);
  await page.locator('#q').fill('new unfinished query');const before=await count();await page.evaluate(()=>releaseSlow());await page.waitForTimeout(400);assert.equal(await count(),before);assert.equal(await page.locator('.result').count(),0,'late reply cannot show matches while typing');
  await page.locator('#q').press('Enter');await result('new unfinished query');
+ // A previously running result cannot replace the filler-only submission hint.
+ await page.locator('#q').fill('slow query');await page.locator('#q').press('Enter');
+ await page.waitForFunction(()=>queries.at(-1)?.query==='slow query');
+ await page.locator('#q').fill('that');await page.locator('#q').press('Enter');
+ await page.waitForFunction(()=>document.querySelector('.empty h2')?.textContent==='Describe something you remember');
+ const blockedCount=await count();await page.evaluate(()=>releaseSlow());await page.waitForTimeout(200);
+ assert.equal(await count(),blockedCount);assert.equal(await page.locator('.result').count(),0);
+ assert.equal(await page.locator('.empty h2').innerText(),'Describe something you remember');
+ await page.locator('#q').fill('new unfinished query');await page.locator('#q').press('Enter');await result('new unfinished query');
  await page.reload();await page.waitForFunction(()=>document.querySelector('#q').value==='new unfinished query');await page.waitForTimeout(400);assert.equal(await count(),0);assert.equal(await page.locator('.result').count(),0,'restored query waits for Enter');
  await page.locator('#q').press('Enter');await result('new unfinished query');
  await page.locator('#q').fill('');assert.equal(await page.locator('.result').count(),0);assert.deepEqual(errors,[]);

@@ -27,7 +27,7 @@
   function privatePage() {
     if (document.querySelector("[data-recall-private],[data-private]")) return true;
     if([...document.querySelectorAll('a,button,[role="button"]')].slice(0,300).some(node=>rendered(node)&&/^(?:sign\s*out|log\s*out|logout|cerrar sesi[oó]n|d[eé]connexion|abmelden)$/i.test(node.textContent.trim())))return true;
-    if ([...document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[autocomplete^="cc-"]')].some(rendered)) return true;
+    if ([...document.querySelectorAll('input[type="password"],input[autocomplete="current-password"],input[autocomplete="new-password"],input[autocomplete~="one-time-code"],input[autocomplete^="cc-"]')].some(rendered)) return true;
     return [...document.querySelectorAll('[contenteditable]:not([contenteditable="false"]),textarea')].slice(0, 100).some((editor) => {
       if (!rendered(editor)) return false;
       const rect = editor.getBoundingClientRect(), width = Math.max(0, Math.min(innerWidth, rect.right) - Math.max(0, rect.left)), height = Math.max(0, Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top));
@@ -194,7 +194,7 @@
           if (force) return result;
         } else if (text.length < 40 && !google && !videoInfo) report("too-short");
       }
-      globalThis.__recallArticleImages?.tick({url:pageUrl,enabled:!settings.lightMode&&settings.articleImagesEnabled!==false,ready:lastSaved>0,isAllowed:()=>eligible()&&!document.hidden&&!settings.lightMode&&settings.articleImagesEnabled!==false}).catch(()=>{});
+      globalThis.__recallArticleImages?.tick({url:pageUrl,enabled:!settings.lightMode&&settings.articleImagesEnabled===true,ready:lastSaved>0,isAllowed:()=>eligible()&&!document.hidden&&!settings.lightMode&&settings.articleImagesEnabled===true}).catch(()=>{});
     } finally {
       busy = false;
     }

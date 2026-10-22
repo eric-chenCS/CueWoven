@@ -1,7 +1,7 @@
 const {chromium}=require(process.env.RECALL_PLAYWRIGHT||'playwright'),fs=require('fs'),path=require('path'),os=require('os'),assert=require('assert/strict');
 const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
 (async()=>{
- const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(),'recall-demo-fixes-')),{headless:true,executablePath:process.env.RECALL_BROWSER,viewport:{width:480,height:700},args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
+ const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(process.env.RECALL_TEST_ROOT||os.tmpdir(),'recall-demo-fixes-')),{headless:true,executablePath:process.env.RECALL_BROWSER,viewport:{width:480,height:700},args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
  try{
   await context.addInitScript(()=>{
    if(!location.pathname.endsWith('/popup/popup.html'))return;
@@ -19,7 +19,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
    };
   });
   const worker=context.serviceWorkers()[0]||await context.waitForEvent('serviceworker'),page=await context.newPage();await page.goto(`chrome-extension://${new URL(worker.url()).hostname}/popup/popup.html`);
-  await page.waitForFunction(()=>calls.some(call=>call.type==='warmup'));assert.equal(await page.evaluate(()=>calls.find(call=>call.type==='warmup').scenes),true);
+  await page.waitForFunction(()=>calls.some(call=>call.type==='warmup'));assert.notEqual(await page.evaluate(()=>calls.find(call=>call.type==='warmup').scenes),true);
   await page.locator('#q').fill('first');await page.locator('#q').press('Enter');await page.waitForSelector('.result');await page.locator('#q').press('Enter');
   await page.waitForFunction(()=>opened.length===1);assert.match((await page.evaluate(()=>opened[0])).url,/v=aaaaaaaaaaa&t=42s/);assert.equal(await page.evaluate(()=>closes),1);
   await page.locator('.others-head').click();await page.locator('#q').focus();await page.locator('#q').press('ArrowDown');await page.locator('#q').press('ArrowDown');await page.locator('#q').press('Control+Enter');
@@ -29,6 +29,6 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..');
   await page.evaluate(()=>releaseOld());await page.waitForTimeout(300);assert.equal(await page.locator('.best .title').textContent(),'new clue');assert.equal(await page.evaluate(()=>opened.length),3);
   await page.locator('#q').press('ArrowDown');await page.locator('#q').press('Control+Enter');await page.waitForFunction(()=>opened.length===4);
   await page.locator('#q').fill('');await page.locator('#q').press('Enter');assert.equal(await page.evaluate(()=>opened.length),4);
-  console.log('DEMO_FIXES_PASS: First Enter searches, second opens shown match, background modifier, stale-response rejection, list keyboard behavior, empty query, scene warmup on popup open. Controlled search/tabs.');
+  console.log('DEMO_FIXES_PASS: First Enter searches, second opens shown match, background modifier, stale-response rejection, list keyboard behavior, empty query, text-only warmup on popup open. Controlled search/tabs.');
  }finally{await context.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

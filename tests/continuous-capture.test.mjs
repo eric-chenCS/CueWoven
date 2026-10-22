@@ -66,6 +66,18 @@ test('idle text worker releases and reloads; inference timeout rejects every wai
     assert.notEqual(FakeWorker.instances.at(-1),first);
   }finally{model.release();}
 });
+
+test('the default text idle window keeps rapid searches warm and releases after one minute',async t=>{
+ t.mock.timers.enable({apis:['setTimeout']});
+ const model=createTextModel(()=>{},{WorkerClass:FakeWorker});
+ try{
+  const warm=model.warmup();t.mock.timers.tick(0);const first=FakeWorker.instances.at(-1);first.answer();await warm;t.mock.timers.tick(0);
+  t.mock.timers.tick(59999);assert.ok(!first.terminated);
+  t.mock.timers.tick(1);assert.equal(first.terminated,true);
+  const query=model.embed(['99'],{priority:'query'});t.mock.timers.tick(0);const second=FakeWorker.instances.at(-1);
+  assert.notEqual(second,first);second.answer();assert.equal((await query)[0][0],99);
+ }finally{model.release();}
+});
 test('popup timeout settles even if the engine never replies; normal responses pass through',async()=>{
   await assert.rejects(withTimeout(new Promise(()=>{}),10),/Retry/);
   assert.equal(await withTimeout(Promise.resolve('ready'),10),'ready');

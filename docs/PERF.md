@@ -1,4 +1,48 @@
-# Demo responsiveness and restore (v2.11)
+# Repeat transcript indexing (v3.3.37 working tree)
+
+Complete unchanged transcripts can reuse their packed vectors after a current `transcriptBatch` provenance marker has been written. Metadata and chunks are read from one readonly transaction. The ordered effective model inputs, row count, embedding version and packed-vector shape must match. History-title, speech and partial records use full inference. Existing unmarked records are processed normally once. Changed inputs retain the original full four-text inference batches; every timestamped passage remains.
+
+An isolated local Edge test with 10,000 saved entries measured three repetitions per workload. An unchanged 240-segment / 239-chunk transcript fell from a median 6,680 ms to 33 ms; the 80-segment case fell from 2,198 ms to 14 ms. Changed transcripts took approximately the same time (7,359 versus 7,501 ms for the long case). All 18 saved-passage/vector hashes and serialized row sizes matched baseline exactly. All 113 complete retrieval result lists matched. These are repeated-save measurements with local model files, not initial-download times or an ordinary-search speedup.
+
+Partial-passage reuse was rejected: changing q8 inference batch composition produced different vectors (minimum cosine 0.9914–0.9942 in controlled comparisons). The final implementation preserves the original composition for every changed transcript. Unit/browser regressions cover batch provenance, moved timestamps, duplicate moments, legacy vectors, restart, capture pause and metadata/vector snapshot races.
+
+There is no additional vector cache or model change. The marker adds about 50 JSON bytes per indexed video (a logical serialization estimate, not physical IndexedDB usage). Existing article deduplication, title indexes, retention and storage caps remain. A native Edge renderer crash recurred in an additional isolated reindex validation; its cause remains unresolved, and no browser-crash fix or RAM reduction is claimed by this optimization.
+
+# Atomic transcript write batching (v3.3.37 working tree)
+
+Transcript replacement/deletion reads at most 500 target keys per batch. Consecutive integer ranges are checked against all primary keys before deletion; a fractional neighbor forces exact-key deletion. The existing write transaction still preserves complete replacement and rollback. Models, ranking, capture settings and storage limits are unchanged.
+
+In isolated local Edge measurements with five repetitions per size, the existing cursor implementation replaced a 2,000-chunk transcript in a median 362 ms. Two runs of the guarded batching implementation took 138 and 158 ms; deletion took 50–64 ms versus 686 ms. A read queued behind the same write waited correspondingly less. These controlled measurements demonstrate reduced write contention, not faster ordinary searches or lower RAM on every device.
+
+Expanding the bounded long-text cache did not improve the 10,000-entry search workload; increasing database read batch sizes made it slower. Both experiments were rejected. Real IndexedDB regression coverage checks neighboring fractional/interleaved keys, batch boundaries, atomic reads, metadata preservation, rollback and string-key media isolation.
+
+# Current model residency
+
+Popup open warms the text search model and index, but does not preload CLIP just because the library contains saved scenes. Actual scene/image capture and visual-fallback queries still load CLIP when needed. Text search retains its worker during active use and releases it after 60 idle seconds, rather than five minutes. Queued processing and stored vectors are preserved. Vision, OCR and the selective reranker retain their existing 60-second idle windows; speech still loads only for fallback transcription and releases when its session ends.
+
+Paired isolated Edge measurements on the test i9 laptop found first visual searches with local model files took about 0.57–0.59 seconds with on-demand loading, versus about 0.024–0.025 seconds after eager visual preload. A final-code browser check returned a completed first visual result in 0.61 seconds and reloaded a text worker for a fresh query in 0.22 seconds. Opening a popup for text-only work avoids the visual warmup's processing and transient memory spike. A one-minute idle comparison sampled about 158 MiB less total browser working set with earlier text release. These are whole-browser endpoint measurements on controlled fixtures, not precise extension allocations, universal limits or first-download times.
+
+The optional visual-search response budget remains 1.2 seconds, and ready reranking remains bounded to 1.8 seconds. On a slower device or during initial downloads, optional images may still be pending and require submitting the search again; the budgets do not guarantee completed visual results in two seconds on every laptop. Cached-model browser acceptance requires a completed first visual response within two seconds on the measured setup.
+
+An experiment shortening OCR idle retention to 15 seconds was rejected: memory improvements were inconsistent and OCR reload work increased. Keeping it warm avoids repeatedly paying that cost. No capture settings, model weights, inference precision, ranking or saved-content limits were changed by this residency update.
+
+## Additional residency experiments
+
+Three sequential isolated Edge runs per strategy exercised the same MiniLM, CLIP and OCR inputs on the test i9 laptop. OCR frequency, models and precision were unchanged. The visual workload was explicitly enabled; it does not represent the new default with visual capture Off. All tested embeddings, OCR outputs, similarity scores and expected text rankings matched exactly. These direct-module experiments did not include speech, the reranker, application cancellation or sustained multi-tab capture.
+
+| Experimental policy | Index workload, median | Browser working set after 18 idle seconds, median | Text query after idle, median / maximum | Verdict |
+| --- | --- | --- | --- | --- |
+| Current 60-second residency | 934 ms | 1,679 MiB | 6 / 6 ms | Reference |
+| Queue inference but keep workers | 1,108 ms | 1,474 MiB | 6 / 7 ms | Memory change overlaps baseline variation; not adopted |
+| Queue and release workers after every operation | 1,587 ms | 765 MiB | 273 / 275 ms | Repeated reload cost; prototype only |
+| Release all three workers after 15 idle seconds | 796 ms | 729 MiB | 276 / 1,248 ms | Promising idle reduction; needs separate model attribution and application load tests |
+| Skip initial text warmup | 897 ms | 1,404 MiB | 6 / 33 ms | Avoids unused preparation, but retains models after actual use; prototype only |
+
+Working sets sum browser processes and can count shared pages repeatedly. These are stage-boundary samples, not true peaks, exclusive extension memory or ordinary-use averages. Baseline idle samples ranged from 1,247 to 1,739 MiB. CPU snapshots omit terminated-process history, so no CPU-time savings are claimed. Lower index time in a short-idle run does not establish that idle expiry speeds up indexing.
+
+A separate six-cycle trial used the vague query about a speaker getting old and having back pain. Preparing text before typing took 333–445 ms, followed by a 52–83 ms query. Deferring preparation until the query took 385–489 ms, with identical vectors. Loading work moves to the query rather than disappearing. None of these additional policies is enabled in the application; the existing 60-second timers remain.
+
+# Historical demo responsiveness and restore (v2.11)
 
 Popup open preloads CLIP text inference only when saved scene records exist, alongside text warmup. Inference still releases after 60 seconds idle; reopening begins loading sooner rather than keeping every model alive indefinitely. Warmup is coalesced, real queued searches take priority, and frame/restore image work waits for pending warmup. Unit/browser checks verify routing and worker reuse; no quantified real-device latency improvement is claimed.
 
