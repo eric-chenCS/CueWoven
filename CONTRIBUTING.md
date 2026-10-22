@@ -4,6 +4,10 @@
 
 Use Node.js 22+ and pnpm 11.25.0. Run `pnpm install --frozen-lockfile --ignore-scripts` followed by `pnpm run vendor` on a fresh clone, then load the repository root as an unpacked extension. The generated `vendor/` runtime is required but stays out of Git. This applies to both clones and GitHub source ZIPs. To install without a development toolchain, use the named [release asset](https://github.com/eric-chenCS/CueWoven/releases/latest) instead. See [INSTALL.md](INSTALL.md) for the complete loading, refresh and troubleshooting steps.
 
+The workspace omits Transformers.js's native `sharp` and `onnxruntime-node` dependencies because this extension uses its browser implementation. Node-side inference is outside this project's build setup. Keep installation scripts blocked and rebuild the browser runtime after dependency changes.
+
+Before release, run `pnpm audit --json --fetch-retries=0 --fetch-timeout=15000`. Use normal Node execution for pnpm: `--jitless` disables WebAssembly needed by its HTTP parser and can make the audit appear to hang. An audit error or timeout is incomplete validation; a completed audit with findings still requires review.
+
 ## Make a change
 
 Make small changes on a branch, run `pnpm test`, and open a pull request. Check the affected behavior in the browser too: Node tests do not prove live YouTube caption availability. Content scripts require refreshing YouTube tabs after reloading the extension. Rebuild with `pnpm run vendor` after changing `scripts/embedder-entry.js`, `scripts/vendor.mjs`, or the dependency graph.

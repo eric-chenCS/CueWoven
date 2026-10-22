@@ -3,3 +3,8 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
   sharp: false
+
+# This extension uses browser inference; native Node backends are unused.
+overrides:
+  '@huggingface/transformers>sharp': '-'
+  '@huggingface/transformers>onnxruntime-node': '-'

@@ -31,6 +31,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
   await f.options.evaluate(()=>scrollTo({top:document.querySelector('#sec-capture').offsetTop-32,behavior:'instant'}));
   await f.options.screenshot({path:path.join(output,'recall-gray-color-settings-'+theme+'.png')});
   await f.options.locator('.nav a[href="#sec-websites"]').click();
+  await f.options.waitForFunction(()=>document.querySelectorAll('#web-sites .site-group[data-group]').length===4);
   assert.equal(await f.options.locator('#web-sites .site-group[data-group]').count(),4);
   await f.options.evaluate(()=>scrollTo({top:document.querySelector('#sec-websites').offsetTop-32,behavior:'instant'}));
   if(theme==='dark'){
