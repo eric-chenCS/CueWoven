@@ -272,7 +272,6 @@ async function runSearch() {
   $('applied-filters').textContent=res.filtersRelaxed?'No matches in that time range. Showing other dates'+(res.appliedFilters?.length?' on '+res.appliedFilters.join(' · '):'')+'.':res.appliedFilters?.length?'Using: '+res.appliedFilters.join(' · '):'';
   $('applied-filters').hidden=!res.filtersRelaxed&&!res.appliedFilters?.length;
   $('ignore-inferred').hidden=!res.appliedFilters?.length;
-  $('ignore-inferred').textContent=res.appliedSource?'Search without suggested filters':'Ignore suggested filters';
   showChips(res.appliedSinceDays ?? sinceDays);
   if (res.sceneError) renderVision({status:'error',error:res.sceneError});
   else if(res.visualPending){$('scene-status').textContent='Image search is still loading. Search again in a moment to include images.';$('scene-status').hidden=false;}

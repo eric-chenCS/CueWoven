@@ -10,11 +10,14 @@ const $ = (id) => document.getElementById(id);
 $('version').textContent = 'v' + (chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 // Native confirm() can only say OK; name the action on the button and focus Cancel first.
+let confirmationPending = false;
 function confirmAction(message, action, {danger = true} = {}) {
+  if (confirmationPending) return Promise.resolve(false);
   const dialog = $('confirm-dialog');
   $('confirm-text').textContent = message;$('confirm-ok').textContent = action;$('confirm-ok').className = danger ? 'btn danger' : 'btn';dialog.returnValue = '';
   dialog.showModal();
-  return new Promise(resolve => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), {once: true}));
+  confirmationPending = true;
+  return new Promise(resolve => dialog.addEventListener('close', () => {confirmationPending = false;resolve(dialog.returnValue === 'ok');}, {once: true}));
 }
 let restoreBusy = false;
 let libraryRefresh;

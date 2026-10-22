@@ -8,7 +8,7 @@ import {spawn} from 'node:child_process';
 // A maintained regression set, not every historical experiment in tests/browser.
 export const browserCases={
   'transcript-dom':[], 'release-ui':[], 'transcript-label-refresh':['text'], 'late-captions':['text'], 'speech-caption-cancel':[],
-  'cuewoven-branding':['text'], 'gray-theme':[], 'security-hardening':['text'],
+  'cuewoven-branding':['text'], 'gray-theme':[], 'security-hardening':['text'], 'confirmation-actions':['text'],
   'video-overflow':['text'], 'single-video':[], 'capture-progress':['text'],
   'text-worker-recovery':['text'], 'scene-default':['text','vision'], 'video-scope':['text','vision'],
 };
