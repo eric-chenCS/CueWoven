@@ -39,7 +39,7 @@ self.postMessage=(data,...args)=>originalPost({...data,loaderProbe:{streamingCal
     }finally{model.release();}
    },fault);
    assert.equal(result.workers,2);assert.deepEqual(result.dimensions,[384,384]);assert.equal(result.finite,true);
-   if(fault==='missing')assert.match(result.failed,/Could not load the local search runtime/);
+   if(fault==='missing')assert.match(result.failed,/Could not load the local model runtime/);
    for(const probe of result.probes)assert.deepEqual(probe,{streamingCalls:0,wasmRequests:1,binaryConfigured:false});
    report.checks.push({fault,...result});
   }finally{await f.close();}

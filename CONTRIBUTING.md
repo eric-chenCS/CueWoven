@@ -24,6 +24,8 @@ Each run writes per-check logs and `results.json` to a fresh directory under `RE
 
 For the optional real speech-capture check, run `node tests/browser/speech-late-captions.cjs` with `RECALL_SPEECH_WAV` pointing to spoken audio and `RECALL_SPEECH_MODEL_DIR` pointing to cached `Xenova/whisper-tiny.en` assets. Use `RECALL_MODEL_DIR` for the MiniLM fixture as above. It plays audio on controlled YouTube pages through the actual AudioWorklet and local models, verifies late captions stop speech and its badge, and checks that a normal video end still saves buffered speech. This complements a manual check on real YouTube in a normal browser profile; it does not establish live caption availability.
 
+The optional `node tests/browser/onnx-wasm-workers.cjs` additionally needs the full MiniLM/CLIP fixture in `RECALL_MODEL_DIR`, the speech variables above, and `RECALL_ETTIN_MODELS` pointing to the pinned Ettin asset folder. It checks missing/corrupt runtime errors and fresh-worker recovery for speech, both CLIP encoders and reranking, with one local WASM fetch per worker and no streaming compilation. These extra model requirements keep it separate from the maintained suite.
+
 For the optional browser regression, install Playwright separately from the project's production dependencies. Set `RECALL_PLAYWRIGHT` to its module path and `RECALL_BROWSER` to a Chromium executable that supports loading unpacked extensions, then run:
 
 ```sh
