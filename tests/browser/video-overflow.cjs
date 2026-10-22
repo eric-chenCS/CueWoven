@@ -2,7 +2,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict');
 (async()=>{
  const f=await fixture();
  try{
-  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:false,maxAgeDays:0}}));
+  await f.options.evaluate(()=>chrome.storage.local.set({settings:{enabled:true,lightMode:true,maxAgeDays:0}}));
   await f.send({type:'warmup'});
   const saved=await f.send({target:'offscreen',type:'index',method:'captions',video:{videoId:'old00000000',title:'Old helium detector source',watchedAt:1e12},segments:[{start:64,text:'A unique helium detector inside the cabin finds a leaking valve.'}]});assert.ok(saved.chunkCount);
   await f.options.evaluate(async()=>{

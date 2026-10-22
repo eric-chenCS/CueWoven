@@ -24,7 +24,7 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const base=`chrome-extension://${new URL(worker.url()).hostname}`;
   const options=await context.newPage();await options.goto(`${base}/options/options.html`);
   await options.evaluate(async()=>{
-   await chrome.storage.local.set({onboardingComplete:true,settings:{enabled:false,maxAgeDays:0,perVideo:3}});
+   await chrome.storage.local.set({onboardingComplete:true,settings:{enabled:true,lightMode:true,maxAgeDays:0,perVideo:3}});
    const ready=await chrome.runtime.sendMessage({type:'warmup'});
    if(ready?.error)throw Error(ready.error);
    for(let i=0;i<13;i++){
@@ -76,7 +76,8 @@ const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
   const today=await expected('battery electrodes',1);assert.equal(today.length,1);
   await shows(today,0);assert.equal(await page.locator('.others-head').count(),0);assert.equal(await page.locator('.show-more').count(),0);
   await page.locator('.chip[data-days="0"]').click();await shows(changed,3);
-  await page.locator('#refine-toggle').click();await page.locator('#details').fill('a phone losing energy');await page.locator('#details').press('Enter');
+  if(!await page.locator('#details').isVisible())await page.locator('#refine-toggle').click();
+  await page.locator('#details').fill('a phone losing energy');await page.locator('#details').press('Enter');
   await shows(await expected('battery electrodes. a phone losing energy'),3);
   await page.locator('.clue button').click();
   await page.locator('#details').fill('chemical reactions');await page.locator('#details').press('Enter');
