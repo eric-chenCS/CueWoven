@@ -1,6 +1,6 @@
 {
   "name": "cuewoven-extension",
-  "version": "3.3.41",
+  "version": "3.3.42",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "description": "CueWoven: local semantic search over watched videos, articles and history, with optional website capture.",
@@ -9,6 +9,7 @@
     "setup": "pnpm install --frozen-lockfile --ignore-scripts && pnpm run vendor",
     "vendor": "node scripts/vendor.mjs",
     "test": "node --test tests/*.test.mjs",
+    "test:browser": "node scripts/browser-tests.mjs",
     "zip": "node scripts/zip.mjs"
   },
   "dependencies": {

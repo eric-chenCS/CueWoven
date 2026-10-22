@@ -100,3 +100,15 @@ test('A to home to A announces the video again in the same document',async()=>{
  f.location.pathname='/';f.location.search='';await f.docEvents.get('yt-navigate-finish')();assert.equal(f.posted.at(-1).type,'video-reset');
  f.location.pathname='/watch';f.location.search='?v='+id;await f.docEvents.get('yt-navigate-finish')();assert.equal(f.posted.filter(row=>row.type==='video').length,2);
 });
+
+test('late player captions announce availability once for the current video only',async()=>{
+ let available=false;const f=fixture({on:false,clockStep:1000,fetchBody:()=>available?body:''});
+ assert.match((await f.request()).error,/No transcript found/);
+ available=true;
+ await f.ctx.fetch(signed);await new Promise(resolve=>setTimeout(resolve,15));
+ await f.ctx.fetch(signed);await new Promise(resolve=>setTimeout(resolve,15));
+ const ready=f.posted.filter(row=>row.type==='captions-ready');
+ assert.equal(ready.length,1);assert.equal(ready[0].videoId,id);
+ await f.ctx.fetch(signed.replace(id,'bbbbbbbbbbb'));await new Promise(resolve=>setTimeout(resolve,15));
+ assert.equal(f.posted.filter(row=>row.type==='captions-ready').length,1);
+});

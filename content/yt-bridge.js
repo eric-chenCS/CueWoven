@@ -21,6 +21,7 @@
   const excludedSite=config=>(config?.blocked||[]).some(site=>['www.youtube.com','youtu.be'].some(host=>host===site||host.endsWith('.'+site)));
   let speechPending = null;
   let textCapture = null;
+  let captionRetryVideo = null;
   let dwellTimer = null;
   let dwellVisibility = null;
   let reqCounter = 0;
@@ -118,6 +119,7 @@
       return;
     }
     current = video;
+    captionRetryVideo = null;
     speechPending = null;
     clearDwell();
     const s = await settings();
@@ -167,6 +169,16 @@
   for (const event of ['play', 'playing', 'visibilitychange']) document.addEventListener(event, trySpeech, true);
 
   const running = new Map();
+  async function retryCapturedCaptions(videoId) {
+    const revision=captureRevision;
+    if(typeof videoId!=='string' || current?.videoId!==videoId || textCapture?.videoId!==videoId || textCapture.revision!==revision || captionRetryVideo===videoId)return;
+    captionRetryVideo=videoId;
+    await running.get(videoId);
+    if(current?.videoId===videoId && captureRevision===revision && textCapture?.reason==='captions-unavailable'){
+      speechPending=null;
+      await run(false);
+    }
+  }
   async function run(manual) {
     const id = current?.videoId;
     const revision = captureRevision;
@@ -217,8 +229,9 @@
     if (event.source !== window || event.origin !== location.origin) return;
     const d = event.data;
     if (!d || d.source !== FROM_MAIN) return;
-    if (d.type === 'video-reset') {captureRevision++;current=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();}
+    if (d.type === 'video-reset') {captureRevision++;current=null;captionRetryVideo=null;speechPending=null;clearDwell();globalThis.__recallScenes?.stop();globalThis.__recallScreen?.stop();}
     else if (d.type === 'video') onVideo(d.video);
+    else if (d.type === 'captions-ready') retryCapturedCaptions(d.videoId).catch(()=>{});
     else if (d.type === 'transcript' && pending.has(d.reqId)) {
       const resolve = pending.get(d.reqId);
       pending.delete(d.reqId);

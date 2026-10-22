@@ -12,6 +12,12 @@ Keep video metadata, transcript validation, original watch dates, optional site 
 
 ## Browser checks
 
+Run the maintained regression set with `pnpm run test:browser`, or select checks such as `node scripts/browser-tests.mjs transcript-dom release-ui late-captions`. This covers thirteen regression programs; it does not run every historical benchmark in `tests/browser`. Programs run sequentially to limit competing model loads.
+
+Set `RECALL_PLAYWRIGHT` to an installed Playwright module path and `RECALL_BROWSER` to a compatible Edge/Chromium executable. With `RECALL_MODEL_DIR` set, the runner checks required MiniLM/CLIP files before starting each applicable program. A text-only fixture blocks visual checks rather than reporting them as product failures. Without that override, programs can download their models. Missing setup is **BLOCKED**, assertion/runtime errors after launch are **FAILED**, and successful checks are **PASSED**. Exit codes are 0 for all passed, 1 for any failure, and 2 for blocked/incomplete setup. A failed check takes precedence over blocked ones; never report a blocked run as clean.
+
+Each run writes per-check logs and `results.json` to a fresh directory under `RECALL_REPORT_DIR` (the system temporary folder by default). Set `RECALL_TEST_ROOT` to an existing short scratch path on Windows to avoid profile-path limits. Browser profiles contain test data and may be large; close their browsers before deleting owned scratch folders. These checks neither diagnose nor automatically skip arbitrary failures in the older experiments below. Missing fixtures are identified before launch; corrupt or incompatible fixtures still fail when exercised.
+
 For the optional browser regression, install Playwright separately from the project's production dependencies. Set `RECALL_PLAYWRIGHT` to its module path and `RECALL_BROWSER` to a Chromium executable that supports loading unpacked extensions, then run:
 
 ```sh

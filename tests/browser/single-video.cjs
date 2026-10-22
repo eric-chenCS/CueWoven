@@ -5,7 +5,7 @@ const path=require('node:path');
 const assert=require('node:assert/strict');
 const root=process.env.RECALL_EXTENSION || path.resolve(__dirname,'../..');
 (async()=>{
- const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(),'recall-single-')),{executablePath:process.env.RECALL_BROWSER,headless:true,viewport:{width:480,height:650},args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
+ const context=await chromium.launchPersistentContext(fs.mkdtempSync(path.join(process.env.RECALL_TEST_ROOT||os.tmpdir(),'recall-single-')),{executablePath:process.env.RECALL_BROWSER,headless:true,viewport:{width:480,height:650},args:[`--disable-extensions-except=${root}`,`--load-extension=${root}`]});
  const errors=[];
  try {
   await context.route('https://i.ytimg.com/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="128" height="72"><rect width="128" height="72" fill="#666"/></svg>'}));

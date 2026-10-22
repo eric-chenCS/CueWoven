@@ -41,7 +41,11 @@
     try {
       if (typeof body !== 'string' || body.length > 16 * 1024 * 1024) return;
       const segments = P.parseTimedText(body).slice(0, 20000);
-      if (segments.length >= MIN_SEGMENTS) remember(capturedCaptionData, videoId, segments);
+      if (segments.length >= MIN_SEGMENTS) {
+        const first=!capturedCaptionData.has(videoId);
+        remember(capturedCaptionData, videoId, segments);
+        if(first && currentVideoId()===videoId)post({type:'captions-ready',videoId});
+      }
     } catch (_) { /* an unsupported player response must not affect playback */ }
   }
 
