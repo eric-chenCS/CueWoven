@@ -108,6 +108,7 @@ async function storeChunks(video, chunks, method, indexedAt) {
     packed.map(c => ({ ...c, videoId: record.videoId })),
     {backgroundCapture:indexedAt===undefined && !(video.watchedAt>0)}
   );
+  await refreshVideo(record.videoId);
   invalidate(false);
   return { chunkCount: chunks.length, video: saved };
 }
@@ -399,7 +400,7 @@ async function appendSpeech({video, segments, rangeStart, rangeEnd}) {
   if (!chunks.length) return {chunkCount: 0};
   const vecs = await embed(chunks.map(c => embeddingText({...video,method:'speech-local'},c.text)));
   const result = await db.appendSpeechVideo({...cleanVideo(video), watchedAt: Date.now()}, chunks.map((c, i) => ({videoId: video.videoId, start: c.start, text: c.text, vec: vecs[i],embeddingVersion:EMBEDDING_VERSION})), rangeStart, rangeEnd);
-  if (!result.skipped) {invalidate(false);broadcast({type: 'index-changed'});}
+  if (!result.skipped) {await refreshVideo(video.videoId);invalidate(false);broadcast({type: 'index-changed'});}
   return result;
 }
 

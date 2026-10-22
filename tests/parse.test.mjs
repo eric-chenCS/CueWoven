@@ -93,16 +93,19 @@ test('transcript panel parsing supports both YouTube layouts and skips malformed
     return [
       row('.segment-timestamp', '.segment-text', '0:42', '  legacy caption  '),
       row('.ytwTranscriptSegmentViewModelTimestamp', '.yt-core-attributed-string', '1:05', 'new caption'),
+      row('.ytwTranscriptSegmentViewModelTimestamp', '.ytAttributedStringHost', '1:12', 'current live caption'),
       row('.segment-timestamp', '.segment-text', 'invalid', 'skip me'),
       row('.segment-timestamp', '.segment-text', '0:00', '[Music]'),
     ];
   }};
   const result = P.parseTranscriptDom(document);
-  assert.equal(result.length, 2);
+  assert.equal(result.length, 3);
   assert.equal(result[0].start, 42);
   assert.equal(result[0].text, 'legacy caption');
   assert.equal(result[1].start, 65);
   assert.equal(result[1].text, 'new caption');
+  assert.equal(result[2].start, 72);
+  assert.equal(result[2].text, 'current live caption');
 });
 
 test('speech language prefers original metadata and ASR over translated captions',()=>{
