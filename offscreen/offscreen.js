@@ -456,6 +456,12 @@ const handlers = {
   'speech-prepare': data => speech.prepare(data),
   'speech-start': data => speech.start(data),
   'speech-stop': ({reason}) => speech.stop(reason),
+  'speech-page-ended': async ({id, tabId}) => {
+    const state = speech.status();
+    if (state.status === 'idle' || state.id !== id || state.tabId !== tabId) return {ignored: true};
+    // Match and begin the graceful stop without yielding to another session.
+    return speech.stop('The video ended or changed.');
+  },
   'speech-cancel-captions': async data => speech.cancelForCaptions(data),
   'speech-status': async () => speech.status(),
   'speech-pcm': async ({id, tabId, pcm, clock}) => {

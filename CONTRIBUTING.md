@@ -22,6 +22,8 @@ Set `RECALL_PLAYWRIGHT` to an installed Playwright module path and `RECALL_BROWS
 
 Each run writes per-check logs and `results.json` to a fresh directory under `RECALL_REPORT_DIR` (the system temporary folder by default). Set `RECALL_TEST_ROOT` to an existing short scratch path on Windows to avoid profile-path limits. Browser profiles contain test data and may be large; close their browsers before deleting owned scratch folders. These checks neither diagnose nor automatically skip arbitrary failures in the older experiments below. Missing fixtures are identified before launch; corrupt or incompatible fixtures still fail when exercised.
 
+For the optional real speech-capture check, run `node tests/browser/speech-late-captions.cjs` with `RECALL_SPEECH_WAV` pointing to spoken audio and `RECALL_SPEECH_MODEL_DIR` pointing to cached `Xenova/whisper-tiny.en` assets. Use `RECALL_MODEL_DIR` for the MiniLM fixture as above. It plays audio on controlled YouTube pages through the actual AudioWorklet and local models, verifies late captions stop speech and its badge, and checks that a normal video end still saves buffered speech. This complements a manual check on real YouTube in a normal browser profile; it does not establish live caption availability.
+
 For the optional browser regression, install Playwright separately from the project's production dependencies. Set `RECALL_PLAYWRIGHT` to its module path and `RECALL_BROWSER` to a Chromium executable that supports loading unpacked extensions, then run:
 
 ```sh

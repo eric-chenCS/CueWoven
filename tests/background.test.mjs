@@ -63,6 +63,18 @@ test('speech controls and audio forwarding reject unrelated pages', async () => 
   }
 });
 
+test('page-ended forwards session identity without a separate status/stop round trip',async()=>{
+ const calls=[];chrome.runtime.getContexts=async()=>[{}];chrome.runtime.sendMessage=async msg=>{calls.push(msg);return {ignored:true};};
+ const sender={id:'x',tab:{id:17},url:'https://www.youtube.com/watch?v=aaaaaaaaaaa'};
+ assert.deepEqual(await request({type:'speech-page-ended',id:'old-session'},sender),{ignored:true});
+ assert.deepEqual(calls,[{id:'old-session',tabId:17,type:'speech-page-ended',target:'offscreen'}]);
+ for(const patch of [{tab:undefined},{tab:{}}])assert.match((await request({type:'speech-page-ended',id:'old-session'},{...sender,...patch})).error,/Invalid/);
+ for(const id of [undefined,'',123])assert.match((await request({type:'speech-page-ended',id},sender)).error,/Invalid/);
+ assert.equal(calls.length,1,'invalid end notices never reach the engine');
+ await request({type:'speech-page-ended',id:'old-session'},{...sender,url:'https://example.com/login'});
+ assert.equal(calls.at(-1).type,'speech-page-ended','navigation to a private route must still allow cleanup of its old session');
+});
+
 test('scene capture respects off switches and validates the sending page',async()=>{
   chrome.storage={local:{get:async()=>({settings:{enabled:true,scenesEnabled:false}})}};
   assert.deepEqual(await request({type:'scene-frame'}),{disabled:true});

@@ -214,9 +214,8 @@ const handlers = {
     return engine('speech-pcm', {id, tabId: sender.tab.id, pcm, clock});
   },
   async 'speech-page-ended'({id}, sender) {
-    const state = await engine('speech-status');
-    if (state.id === id && state.tabId === sender.tab?.id) return engine('speech-stop', {reason: 'The video ended or changed.'});
-    return {ignored: true};
+    if (!Number.isInteger(sender.tab?.id) || typeof id !== 'string' || !id) throw new Error('Invalid speech end source.');
+    return engine('speech-page-ended', {id, tabId: sender.tab.id});
   },
   async 'speech-audio-open'({tabId, id}, sender) {
     if (sender.url !== chrome.runtime.getURL(OFFSCREEN_PATH)) throw new Error('Invalid audio capture request.');

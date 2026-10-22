@@ -15,7 +15,18 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
    if(unrelated.status!=='preparing'||unrelated.id!==ready.id)throw Error('Unrelated session cancelled');
    const stopped=await send({type:'speech-cancel-captions',tabId:71,videoId:'aaaaaaaaaaa'});
    if(stopped.status!=='idle'||stopped.error)throw Error(JSON.stringify(stopped));
-   return {scoped:true,stopped:stopped.status};
+   const next=await send({type:'speech-prepare',tabId:71,video:{videoId:'bbbbbbbbbbb'}});
+   for(const target of [{id:ready.id,tabId:71},{id:next.id,tabId:72}]){
+    const result=await send({type:'speech-page-ended',...target});
+    if(!result.ignored)throw Error('Stale or wrong-tab end notice affected the current session: '+JSON.stringify(result));
+    const state=await send({type:'speech-status'});
+    if(state.id!==next.id||state.status!=='preparing')throw Error('Replacement session was stopped');
+   }
+   const ended=await send({type:'speech-page-ended',id:next.id,tabId:71});
+   if(ended.status!=='idle'||ended.reason!=='The video ended or changed.')throw Error(JSON.stringify(ended));
+   const duplicate=await send({type:'speech-page-ended',id:next.id,tabId:71});
+   if(!duplicate.ignored)throw Error('Idle session accepted duplicate end notice');
+   return {scoped:true,stopped:stopped.status,pageEndedScoped:true};
   });
   report.worker=await f.options.evaluate(async()=>{
    const {createLiveSpeech}=await import(chrome.runtime.getURL('lib/live-speech.js'));
