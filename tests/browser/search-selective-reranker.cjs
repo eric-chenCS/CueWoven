@@ -70,7 +70,7 @@ const summary=rows=>{const known=rows.filter(r=>r.expected.length);return{total:
    const cleared=await f.send({type:'clear'});assert.equal(cleared.error,undefined);const empty=await f.send({type:'search',query:q,distinct:true});assert.deepEqual(empty.results,[]);
    assert.deepEqual(errors,[]);
    const phases=Object.fromEntries([...new Set(rows.map(r=>r.split))].map(split=>[split,summary(rows.filter(r=>r.split===split))]));
-   reports.push({label,browser:await f.context.browser().version(),phases,summary:summary(rows),cancellation,checks:{coldLoadNonblocking:label!=='baseline',pagination:true,exclusions:true,singleVideo:true,dateRange:true,kind:true,popup:true,delete:true,clear:true},downloads,errors,rows});
+   reports.push({label,browser:await f.context.browser()?.version(),phases,summary:summary(rows),cancellation,checks:{coldLoadNonblocking:label!=='baseline',pagination:true,exclusions:true,singleVideo:true,dateRange:true,kind:true,popup:true,delete:true,clear:true},downloads,errors,rows});
    fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'cuewoven-ettin-search-tests.json'),JSON.stringify({methodology:'Sequential isolated Edge profiles, real MiniLM indexing and selective Ettin inference; authored correlated fixtures, not a personal-library accuracy estimate. Same case phases/library sizes as the research study.',reports},null,2));
    console.log('ETTIN_SEARCH_RESULT',label,JSON.stringify(phases));
   }finally{await f.close();}

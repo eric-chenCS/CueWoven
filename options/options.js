@@ -7,6 +7,7 @@ import {beginLibraryTask,libraryBusy,onLibraryBusy} from '../lib/library-busy.js
 import {openShortcut,isPinned} from '../lib/shortcut.js';
 
 const $ = (id) => document.getElementById(id);
+$('version').textContent = 'v' + (chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version);
 const send = (msg) => chrome.runtime.sendMessage(msg);
 let restoreBusy = false;
 let libraryRefresh;

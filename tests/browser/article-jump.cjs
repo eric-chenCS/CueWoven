@@ -4,7 +4,7 @@ const phrase = 'Warm ocean water drives away symbiotic algae';
 const report = {checks: [], errors: []};
 (async () => {
  const f = await fixture();
- report.browser = await f.context.browser().version();
+ report.browser = await f.context.browser()?.version();
  f.context.on('weberror', event => report.errors.push(event.error().message));
  try {
   assert.equal((await f.send({type:'settings-defaults'})).error, undefined);

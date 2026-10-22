@@ -53,7 +53,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
   await article.goto('https://school.edu/research/coral');
   await f.wait(async()=>(await checked({type:'list'})).videos.some(v=>v.url==='https://school.edu/research/coral'));
   report.checks.push('visible OTP fields and private university routes refuse capture; public university research saves');
-  assert.deepEqual(report.errors,[]);report.pass=true;report.browser=await f.context.browser().version();
+  assert.deepEqual(report.errors,[]);report.pass=true;report.browser=await f.context.browser()?.version();
   if(process.env.RECALL_REPORT_DIR){fs.mkdirSync(process.env.RECALL_REPORT_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.RECALL_REPORT_DIR,'browser.json'),JSON.stringify(report,null,2));}
   console.log('PRIVACY_SITE_SEARCH_PASS',JSON.stringify(report));
  }finally{await f.close();}

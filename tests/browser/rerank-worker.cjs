@@ -71,7 +71,7 @@ const root=process.env.RECALL_EXTENSION||path.resolve(__dirname,'../..'),output=
   assert.equal(rejected.ready,false);assert.equal(rejected.state.status,'cooldown');corrupt=false;
   const healthy=await f.options.evaluate(async()=>{const rr=createReranker();const result=await rr.warmup();rr.release();return result;});assert.equal(healthy,true);
   assert.deepEqual(errors,[]);
-  const report={browser:await f.context.browser().version(),model:assets.RERANK_MODEL,revision:assets.RERANK_REVISION,initialLoad:initialized,control,expectedControl:expected,parityRows:rows,deadline:budget,checks:{poisonedCacheRecovered:true,cachedStartupOffline:true,pinnedGetRequestsOnly:true,malformedRequestsRejected:malformed.length,corruptDownloadRejected:true,subsequentReloadRecovered:true},requests,errors};
+  const report={browser:await f.context.browser()?.version(),model:assets.RERANK_MODEL,revision:assets.RERANK_REVISION,initialLoad:initialized,control,expectedControl:expected,parityRows:rows,deadline:budget,checks:{poisonedCacheRecovered:true,cachedStartupOffline:true,pinnedGetRequestsOnly:true,malformedRequestsRejected:malformed.length,corruptDownloadRejected:true,subsequentReloadRecovered:true},requests,errors};
   fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'cuewoven-ettin-worker-tests.json'),JSON.stringify(report,null,2));
   console.log('ETTIN_WORKER_PASS',JSON.stringify({...report,parityRows:rows.length,requests:requests.length}));
  }finally{await f.close();}

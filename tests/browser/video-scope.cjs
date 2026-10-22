@@ -4,7 +4,7 @@ const query = '"warm ocean water"', text = 'Coral bleaching happens when warm oc
 const report = {checks: [], errors: []};
 (async () => {
  const f = await fixture();
- report.browser = await f.context.browser().version();
+ report.browser = await f.context.browser()?.version();
  f.context.on('weberror', event => report.errors.push(event.error().message));
  try {
   await f.enable();

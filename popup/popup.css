@@ -124,8 +124,7 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 
 /* First run */
 .start-choice { margin: 0 16px 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
-.start-choice h2 { font-size: 14px; margin: 0 0 4px; }
-.start-choice p { font-size: 12px; color: var(--ink-2); margin: 0 0 10px; }
+.start-choice h2 { font-size: 14px; margin: 0 0 10px; }
 .start-actions { display: flex; gap: 8px; }
 
 /* This tab: compact rows for the page or video that's open. Hidden when nothing applies. */
@@ -146,7 +145,6 @@ body { width: 440px; min-height: 300px; max-height: 600px; display: flex; flex-d
 .link-btn { appearance: none; border: 0; background: none; padding: 0; font: 500 12px var(--font); color: var(--ink-2); cursor: pointer; }
 .link-btn:hover { color: var(--ink); text-decoration: underline; }
 
-.start-choice h2 { margin-bottom: 10px; }
 
 /* Current controls share the supplied compact layout. */
 body { overflow-y: auto; }

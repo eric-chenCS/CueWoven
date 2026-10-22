@@ -84,10 +84,14 @@ test('pickCaptionTrack prefers manual English', () => {
 });
 
 test('transcript panel parsing supports both YouTube layouts and skips malformed timestamps', () => {
-  const row = (timestampSelector, textSelector, timestamp, text) => ({
-    querySelector: selectors => selectors.split(', ').includes(timestampSelector) ? {textContent: timestamp}
-      : selectors.split(', ').includes(textSelector) ? {textContent: text} : null,
-  });
+  const row = (timestampSelector, textSelector, timestamp, text) => {
+    const timestampNode={textContent:timestamp},textNode={textContent:text,closest:()=>null,contains:()=>false};
+    return {
+      querySelector: selectors => selectors.split(', ').includes(timestampSelector) ? timestampNode
+        : selectors.split(', ').includes(textSelector) ? textNode : null,
+      querySelectorAll: selectors => selectors.split(', ').includes(textSelector) ? [textNode] : [],
+    };
+  };
   const document = {querySelectorAll: selector => {
     assert.equal(selector, 'ytd-transcript-segment-renderer, transcript-segment-view-model');
     return [

@@ -15,7 +15,7 @@ const query='a video of the speaker calling himselve old and having back pain';
  f.context.on('weberror',e=>report.errors.push(e.error().message));
  const offscreenPage=async()=>{const targets=await f.worker.evaluate(()=>chrome.runtime.getContexts({contextTypes:['OFFSCREEN_DOCUMENT']}));return targets[0].documentUrl;};
  try{
-  report.browser=await f.context.browser().version();
+  report.browser=await f.context.browser()?.version();
   const assets=await import(pathToFileURL(path.join(source,'offscreen/rerank-assets.js')).href),prefix=`https://huggingface.co/${assets.RERANK_MODEL}/resolve/${assets.RERANK_REVISION}/`;
   if(process.env.RECALL_ETTIN_MODELS)await f.context.route(prefix+'**',async route=>{
    const file=route.request().url().slice(prefix.length);assert.ok(Object.hasOwn(assets.RERANK_ASSETS,file));report.downloads.push(file);

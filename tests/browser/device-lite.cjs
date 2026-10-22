@@ -13,7 +13,7 @@ async function run({name, capacity, stored, failed = false, real = false, verify
  }});
  f.context.on('weberror', event => report.errors.push(event.error().message));
  try {
-  report.browser = await f.context.browser().version();
+  report.browser = await f.context.browser()?.version();
   await f.options.waitForFunction(() => document.querySelector('#maxAgeDays').value === '28');
   const defaults = await f.send({type:'settings-defaults'});
   const state = await f.options.evaluate(() => chrome.storage.local.get(['settings', 'liteModeInitialized']));

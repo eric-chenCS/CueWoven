@@ -3,7 +3,7 @@
   <head><script src="../styles/theme.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CueWoven v3.3.35 · Library &amp; settings</title>
+    <title>CueWoven · Library &amp; settings</title>
     <link rel="stylesheet" href="../styles/base.css" />
     <link rel="stylesheet" href="options.css" />
   </head>
@@ -12,7 +12,7 @@
     <div class="shell">
       <aside class="side">
         <div class="brand"><img src="../icons/icon48.png" alt="" width="28" height="28" /><h1>CueWoven</h1></div>
-        <span class="version">v3.3.35</span>
+        <span id="version" class="version"></span>
         <nav aria-label="Settings sections">
           <ul class="nav">
             <li><a href="#sec-library">Library</a></li>
@@ -130,7 +130,7 @@
             </label>
             <label class="setting"><span class="setting-text">Transcribe when there are no captions<span class="hint">Local English audio recognition; only played portions, no microphone.</span></span><input type="checkbox" role="switch" class="switch" id="speechEnabled" /></label>
             <label class="setting"><span class="setting-text">Save visual details<span class="hint">Saves video scenes and article images. Uses substantial RAM and CPU. Previously saved visuals stay searchable.</span><span id="visual-mixed" class="hint" hidden></span></span><input type="checkbox" class="switch" id="scenesEnabled" aria-describedby="visual-mixed" /></label>
-            <label class="setting"><span class="setting-text">Read on-screen text</span><input type="checkbox" role="switch" class="switch" id="screenTextEnabled" /></label>
+            <label class="setting"><span class="setting-text">Read on-screen text<span class="hint">Reads text shown in videos, like slides and code, so you can search it.</span></span><input type="checkbox" role="switch" class="switch" id="screenTextEnabled" /></label>
             <div class="block">
               <button id="reset-settings" type="button" class="btn ghost">Reset settings to default</button>
               <p class="hint">Restore capture, search and appearance defaults. Your library, retention choices, allowed sites and exclusions stay unchanged.</p>

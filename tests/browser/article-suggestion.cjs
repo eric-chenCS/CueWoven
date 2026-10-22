@@ -3,7 +3,7 @@ const fs = require('node:fs'), path = require('node:path');
 const text = 'Coral bleaching occurs when warm ocean water drives away symbiotic algae. The coral turns white and loses an important source of food.';
 const report = {checks: [], errors: []};
 (async () => {
- const f = await fixture(); report.browser = await f.context.browser().version();
+ const f = await fixture(); report.browser = await f.context.browser()?.version();
  f.context.on('weberror', event => report.errors.push(event.error().message));
  try {
   await f.enable();

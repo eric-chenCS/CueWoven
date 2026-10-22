@@ -7,5 +7,5 @@ const rows=[];for(const dtype of ['q8','fp32']){
  const load=await f.options.evaluate(async dtype=>{const t=performance.now();window.pipe=await tf.pipeline('text2text-generation','Xenova/flan-t5-small',{dtype,device:'wasm'});return performance.now()-t;},dtype);const results=[];
  for(const prompt of prompts){const r=await f.options.evaluate(async prompt=>{const t=performance.now(),out=await pipe(prompt,{max_new_tokens:48,do_sample:false});return{prompt,output:out[0].generated_text,ms:performance.now()-t};},prompt);results.push(r);console.log('PRECISION_CHECK',dtype,JSON.stringify(r));}
  await f.options.evaluate(async()=>{await pipe.dispose();});rows.push({dtype,loadMs:load,results});
-}fs.writeFileSync(path.join(process.env.RECALL_REPORT_DIR,'cuewoven-rewriter-precision.json'),JSON.stringify({model:'Xenova/flan-t5-small',revision:'311454e83bc784267fd7eef5940ee854144abbec',browser:await f.context.browser().version(),rows},null,2));
+}fs.writeFileSync(path.join(process.env.RECALL_REPORT_DIR,'cuewoven-rewriter-precision.json'),JSON.stringify({model:'Xenova/flan-t5-small',revision:'311454e83bc784267fd7eef5940ee854144abbec',browser:await f.context.browser()?.version(),rows},null,2));
 }finally{await f.close();}})().catch(e=>{console.error(e);process.exitCode=1});

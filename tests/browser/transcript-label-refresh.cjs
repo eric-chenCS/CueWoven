@@ -23,7 +23,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
    }
    report.checks.push(previous+' upgrade: fresh and repeated searches use Transcript labels and timestamp links');
   }
-  report.pass=true;report.browser=await f.context.browser().version();console.log('TRANSCRIPT_LABEL_REFRESH_PASS',JSON.stringify(report));
+  report.pass=true;report.browser=await f.context.browser()?.version();console.log('TRANSCRIPT_LABEL_REFRESH_PASS',JSON.stringify(report));
  }catch(error){report.error=error.stack;throw error;}
  finally{if(process.env.RECALL_REPORT_DIR){fs.mkdirSync(process.env.RECALL_REPORT_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.RECALL_REPORT_DIR,'transcript-label-refresh.json'),JSON.stringify(report,null,2));}await f.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

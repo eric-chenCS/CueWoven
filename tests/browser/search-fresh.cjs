@@ -15,7 +15,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
     rows.push({id:i+1,...q,expected,latencyMs:performance.now()-begin,top1:position===0,top5:position>=0&&position<5,top20:position>=0,hits:hits.slice(0,5).map(h=>({videoId:h.videoId,score:h.score,match:h.match,text:h.text}))});
    }
    const groups={};for(const row of rows){const g=groups[row.group]||={total:0,top1:0,top5:0};g.total++;g.top1+=Number(row.top1);g.top5+=Number(row.top5);}
-   const report={label,browser:await f.context.browser().version(),total:rows.length,videos:base.videos.length+fresh.videos.length,top1:rows.filter(r=>r.top1).length,top5:rows.filter(r=>r.top5).length,p50Ms:quantile(rows.map(r=>r.latencyMs),.5),p95Ms:quantile(rows.map(r=>r.latencyMs),.95),groups,errors,rows};reports.push(report);
+   const report={label,browser:await f.context.browser()?.version(),total:rows.length,videos:base.videos.length+fresh.videos.length,top1:rows.filter(r=>r.top1).length,top5:rows.filter(r=>r.top5).length,p50Ms:quantile(rows.map(r=>r.latencyMs),.5),p95Ms:quantile(rows.map(r=>r.latencyMs),.95),groups,errors,rows};reports.push(report);
    console.log('FRESH_RESULT',JSON.stringify({...report,rows:undefined}));assert.deepEqual(errors,[]);
   }finally{await f.close();}
  }

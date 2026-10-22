@@ -2,7 +2,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('node:assert/strict'),
 (async()=>{
  const f=await fixture(),report={errors:[]};f.context.on('weberror',event=>report.errors.push(event.error().message));
  try{
-  report.browser=await f.context.browser().version();
+  report.browser=await f.context.browser()?.version();
   report.result=await f.options.evaluate(async()=>{
    const {createTextModel}=await import(chrome.runtime.getURL('offscreen/text-model.js')),workers=[];
    let retired,late=false,unreadable=false;
