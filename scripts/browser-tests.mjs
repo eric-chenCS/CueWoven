@@ -10,7 +10,7 @@ export const browserCases={
   'transcript-dom':[], 'release-ui':[], 'transcript-label-refresh':['text'], 'late-captions':['text'], 'speech-caption-cancel':[],
   'cuewoven-branding':['text'], 'gray-theme':[], 'security-hardening':['text'], 'confirmation-actions':['text'],
   'video-overflow':['text'], 'single-video':[], 'capture-progress':['text'],
-  'text-worker-recovery':['text'], 'scene-default':['text','vision'], 'video-scope':['text','vision'],
+  'text-worker-recovery':['text'], 'text-wasm-loader':['text'], 'scene-default':['text','vision'], 'video-scope':['text','vision'],
 };
 const assets={
   text:['config.json','tokenizer.json','tokenizer_config.json','onnx/model_quantized.onnx'].map(file=>'Xenova/all-MiniLM-L6-v2/'+file),

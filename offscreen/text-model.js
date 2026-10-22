@@ -1,5 +1,5 @@
 // Queries pass background work at each four-text inference boundary.
-export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,idleMs=60000,timeoutMs=180000,restartWindowMs=60000}={}){
+export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,idleMs=60000,timeoutMs=180000,restartWindowMs=60000,now=()=>performance.now()}={}){
   let worker=null,running=null,nextId=0,idle,deadline,scheduled=false;
   const queries=[],background=[],starts=[];
   function release(error=new Error('Text processing stopped.')){
@@ -16,11 +16,11 @@ export function createTextModel(onState=()=>{},{WorkerClass=globalThis.Worker,id
     clearTimeout(idle);
     try{
       if(!worker){
-        const now=Date.now();
-        while(starts.length&&now-starts[0]>=restartWindowMs)starts.shift();
+        const started=now();
+        while(starts.length&&started-starts[0]>=restartWindowMs)starts.shift();
         // Edge can retain terminated workers' WASM memory; bound rapid restarts.
-        if(starts.length>=2)throw new Error(`The search engine restarted repeatedly. Try again in ${Math.max(1,Math.ceil((restartWindowMs-now+starts[0])/1000))} seconds.`);
-        starts.push(now);
+        if(starts.length>=2)throw new Error(`The search engine restarted repeatedly. Try again in ${Math.max(1,Math.ceil((restartWindowMs-started+starts[0])/1000))} seconds.`);
+        starts.push(started);
         onState({status:'loading',progress:0});
         worker=new WorkerClass(new URL('text-worker.js',import.meta.url),{type:'module'});
         const current=worker;

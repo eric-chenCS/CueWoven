@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createTextModel} from '../offscreen/text-model.js';
 
-function fixture(t){
+function fixture(t,options={}){
   t.mock.timers.enable({apis:['setTimeout','Date']});
   const workers=[];
   class Worker extends EventTarget {
@@ -11,7 +11,7 @@ function fixture(t){
     answer(){const {id,texts}=this.sent.at(-1);this.onmessage({data:{id,vectors:texts.map(text=>Float32Array.of(Number(text)))}});}
     terminate(){this.terminated=true;}
   }
-  return {workers,model:createTextModel(()=>{},{WorkerClass:Worker,idleMs:10,timeoutMs:50})};
+  return {workers,model:createTextModel(()=>{},{WorkerClass:Worker,idleMs:10,timeoutMs:50,now:()=>Date.now(),...options})};
 }
 
 for(const reason of ['release','idle','timeout'])test(`late errors from a worker retired by ${reason} cannot cancel its replacement`,async t=>{
@@ -45,6 +45,21 @@ test('rapid retirement allows one replacement, then blocks restarts until the mi
     const early=model.embed(['4']).catch(error=>error);t.mock.timers.tick(0);assert.match((await early).message,/1 seconds/);assert.equal(workers.length,2);
     t.mock.timers.tick(1);
     const retry=model.embed(['5']);t.mock.timers.tick(0);workers[2].answer();assert.equal((await retry)[0][0],5);
+  }finally{model.release();}
+});
+
+test('system-clock jumps cannot bypass or extend the default restart cooldown',async t=>{
+  let elapsed=0;t.mock.method(performance,'now',()=>elapsed);
+  const {workers,model}=fixture(t,{now:undefined});
+  try{
+    for(let i=0;i<2;i++){const work=model.warmup();t.mock.timers.tick(0);workers[i].answer();await work;model.release();}
+    t.mock.timers.setTime(3600000);
+    const blocked=model.warmup().catch(error=>error);t.mock.timers.tick(0);
+    assert.equal(workers.length,2,'moving wall time forward must not bypass cooldown');
+    assert.match((await blocked).message,/60 seconds/);
+    t.mock.timers.setTime(0);elapsed=60000;
+    const retry=model.warmup();t.mock.timers.tick(0);
+    assert.equal(workers.length,3,'moving wall time backward must not extend cooldown');workers[2].answer();await retry;
   }finally{model.release();}
 });
 
