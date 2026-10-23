@@ -55,4 +55,4 @@ CueWoven follows the Microsoft Edge Add-ons developer policies: browsing content
 
 ## Changes and contact
 
-Changes to this policy will be posted here with a new date. Questions can be asked on the project's [GitHub issues page](https://github.com/eric-chenCS/CueWoven/issues).
+Changes to this policy will be posted here with a new date. Questions can be sent to [support@fusilite.com](mailto:support@fusilite.com) or asked on the project's [GitHub issues page](https://github.com/eric-chenCS/CueWoven/issues).

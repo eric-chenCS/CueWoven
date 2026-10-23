@@ -11,7 +11,7 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 | Language | English |
 | Homepage / website | https://github.com/eric-chenCS/CueWoven |
 | Support | https://github.com/eric-chenCS/CueWoven/issues |
-| Privacy policy URL | https://github.com/eric-chenCS/CueWoven/blob/main/docs/PRIVACY.md |
+| Privacy policy URL | https://fusilite.com/cuewoven/privacy/ |
 | Pricing | Free, no in-app purchases |
 
 **Short description (132 characters max; Chrome uses the manifest description):**
