@@ -73,7 +73,7 @@ jobs:
           }
 
       - name: Install Playwright
-        run: npm install --prefix "$env:RUNNER_TEMP\pw" playwright-core@1.48.2 --no-audit --no-fund
+        run: npm install --prefix "$env:RUNNER_TEMP\pw" playwright-core@1.64.1 --no-audit --no-fund
 
       - name: Browser tests (failures retried once)
         run: |
