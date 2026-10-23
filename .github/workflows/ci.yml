@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-edge:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RECALL_BROWSER: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+      RECALL_MODEL_DIR: ${{ github.workspace }}\..\models
+      RECALL_TEST_ROOT: ${{ runner.temp }}\cwt
+      RECALL_REPORT_DIR: ${{ runner.temp }}\reports
+      RECALL_PLAYWRIGHT: ${{ github.workspace }}\.github\ci\playwright-shim.cjs
+      PLAYWRIGHT_CORE: ${{ runner.temp }}\pw\node_modules\playwright-core
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install and vendor runtime
+        run: pnpm run setup
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Browser version
+        run: (Get-Item $env:RECALL_BROWSER).VersionInfo.ProductVersion
+
+      - name: Cache model fixtures
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}\..\models
+          key: models-minilm-clip-v1
+
+      - name: Download model fixtures
+        run: |
+          $files = @(
+            'Xenova/all-MiniLM-L6-v2/config.json','Xenova/all-MiniLM-L6-v2/tokenizer.json','Xenova/all-MiniLM-L6-v2/tokenizer_config.json','Xenova/all-MiniLM-L6-v2/onnx/model_quantized.onnx',
+            'Xenova/clip-vit-base-patch32/config.json','Xenova/clip-vit-base-patch32/preprocessor_config.json','Xenova/clip-vit-base-patch32/tokenizer.json','Xenova/clip-vit-base-patch32/tokenizer_config.json',
+            'Xenova/clip-vit-base-patch32/onnx/text_model_quantized.onnx','Xenova/clip-vit-base-patch32/onnx/vision_model_quantized.onnx')
+          foreach ($file in $files) {
+            $target = Join-Path $env:RECALL_MODEL_DIR $file
+            if (Test-Path $target) { continue }
+            $parts = $file -split '/'
+            $url = "https://huggingface.co/$($parts[0])/$($parts[1])/resolve/main/$(($parts | Select-Object -Skip 2) -join '/')"
+            New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
+            Invoke-WebRequest $url -OutFile $target
+          }
+
+      - name: Install Playwright
+        run: npm install --prefix "$env:RUNNER_TEMP\pw" playwright-core@1.48.2 --no-audit --no-fund
+
+      - name: Browser tests (failures retried once)
+        run: |
+          node scripts/browser-tests.mjs
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+          $results = Get-ChildItem $env:RECALL_REPORT_DIR -Recurse -Filter results.json | Sort-Object LastWriteTime | Select-Object -Last 1
+          $rows = Get-Content $results.FullName -Raw | ConvertFrom-Json
+          if ($rows -isnot [array]) { $rows = $rows.results }
+          $retry = @($rows | Where-Object status -ne 'passed' | ForEach-Object test)
+          Write-Host "Retrying: $($retry -join ', ')"
+          node scripts/browser-tests.mjs @retry
+          exit $LASTEXITCODE
+
+      - name: Upload reports and crash dumps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-reports
+          path: |
+            ${{ runner.temp }}\reports
+            ${{ runner.temp }}\cwt\**\Crashpad\reports\*.dmp
+          if-no-files-found: ignore
+          retention-days: 14
