@@ -95,9 +95,10 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 | store/screenshot-3-dates.png | 1280×800 | Typed dates narrow results |
 | store/screenshot-4-library.png | 1280×800 | Library & settings |
 | store/promo-small-440x280.png | 440×280 | Chrome small promo tile (required) |
-| icons/icon128.png | 128×128 | Store icon (both stores; Edge accepts 128 or larger) |
+| store/logo-300.png | 300×300 | Edge extension logo (Microsoft's recommended size) |
+| icons/icon128.png | 128×128 | Chrome store icon |
 
-Before submitting, recapture the screenshots if the UI has changed since the version they show.
+Screenshots show real NASA videos (public domain) captured by CueWoven 3.3.53 from live YouTube in a normally launched Edge. Recapture them if the UI changes. Automated (Playwright-launched) browsers do not work for this: YouTube does not load videos or captions for them, so CueWoven saves titles only.
 
 ## Submission gates
 
