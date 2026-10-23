@@ -23,12 +23,16 @@ jobs:
     env:
       RECALL_BROWSER: C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
       RECALL_MODEL_DIR: ${{ github.workspace }}\..\models
-      RECALL_TEST_ROOT: ${{ runner.temp }}\cwt
-      RECALL_REPORT_DIR: ${{ runner.temp }}\reports
       RECALL_PLAYWRIGHT: ${{ github.workspace }}\.github\ci\playwright-shim.cjs
-      PLAYWRIGHT_CORE: ${{ runner.temp }}\pw\node_modules\playwright-core
     steps:
       - uses: actions/checkout@v4
+
+      # The runner context is unavailable in job-level env, so temp paths are set here.
+      - name: Temp paths
+        run: |
+          "RECALL_TEST_ROOT=$env:RUNNER_TEMP\cwt" >> $env:GITHUB_ENV
+          "RECALL_REPORT_DIR=$env:RUNNER_TEMP\reports" >> $env:GITHUB_ENV
+          "PLAYWRIGHT_CORE=$env:RUNNER_TEMP\pw\node_modules\playwright-core" >> $env:GITHUB_ENV
 
       - uses: pnpm/action-setup@v4
 
