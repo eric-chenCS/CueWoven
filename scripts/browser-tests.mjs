@@ -11,6 +11,7 @@ export const browserCases={
   'cuewoven-branding':['text'], 'gray-theme':[], 'security-hardening':['text'], 'confirmation-actions':['text'],
   'video-overflow':['text'], 'single-video':[], 'capture-progress':['text'],
   'text-worker-recovery':['text'], 'text-wasm-loader':['text'], 'scene-default':['text','vision'], 'video-scope':['text','vision'],
+  'popup-startup':['text'], 'text-cache-recovery':['text'],
 };
 const assets={
   text:['config.json','tokenizer.json','tokenizer_config.json','onnx/model_quantized.onnx'].map(file=>'Xenova/all-MiniLM-L6-v2/'+file),

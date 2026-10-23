@@ -511,6 +511,7 @@ $('start-empty').addEventListener('click', async () => {
 // Boot
 // ---------------------------------------------------------------------------
 (async () => {
+  const initialSearchSeq=searchSeq;
   q.focus();
   const saved = await chrome.storage.session.get(['lastQuery', 'sinceDays', 'customRange', 'inferFilters']).catch(() => ({}));
   const today = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
@@ -522,21 +523,24 @@ $('start-empty').addEventListener('click', async () => {
   $('start-choice').hidden = !!onboardingComplete || (stats.total||stats.videos) > 0;
   await setupCaptureContext();
   send({type:'vision-status'}).then(renderVision).catch(()=>{});
-  inferFilters = saved?.inferFilters !== false;
-  if (saved?.customRange) {
-    customRange = { from: saved.customRange.from || '', to: saved.customRange.to || '' };
-    $('range-from').value = customRange.from; $('range-to').value = customRange.to;
-  }
-  if (saved && (saved.sinceDays || customRange)) {
-    sinceDays = customRange ? 0 : saved.sinceDays;
-    showChips(sinceDays);
-  }
-  if (saved && saved.lastQuery) {
-    q.value = saved.lastQuery;
-    q.select();
-    prepareSearch();
-  } else {
-    showIdle();
+  // Typing, submitting or changing filters during boot takes precedence over saved state.
+  if (searchSeq===initialSearchSeq) {
+    inferFilters = saved?.inferFilters !== false;
+    if (saved?.customRange) {
+      customRange = { from: saved.customRange.from || '', to: saved.customRange.to || '' };
+      $('range-from').value = customRange.from; $('range-to').value = customRange.to;
+    }
+    if (saved && (saved.sinceDays || customRange)) {
+      sinceDays = customRange ? 0 : saved.sinceDays;
+      showChips(sinceDays);
+    }
+    if (saved && saved.lastQuery) {
+      q.value = saved.lastQuery;
+      q.select();
+      prepareSearch();
+    } else {
+      showIdle();
+    }
   }
   if (stats.total||stats.videos) send({ type: 'warmup' }).catch(()=>{}); // Keep text responsive; visual models load only when needed.
 })();

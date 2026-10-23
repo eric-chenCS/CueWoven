@@ -1,6 +1,7 @@
 // Keep inference off the document event loop so indexing cannot freeze search UI.
 import {pipeline,env} from '../vendor/transformers.bundle.js';
 import {createWasmLoader} from './wasm-loader.js';
+import {discardInvalidTextWeights} from './text-cache.js';
 env.allowLocalModels=false;
 env.useBrowserCache=true;
 env.backends.onnx.wasm.wasmPaths=new URL('../vendor/',import.meta.url).href;
@@ -19,5 +20,5 @@ self.onmessage=async({data:{id,texts}})=>{
       for(let i=0;i<texts.length;i++)vectors.push(Float32Array.from(tensor.data.subarray(i*dim,(i+1)*dim)));
     }
     self.postMessage({id,vectors},vectors.map(vec=>vec.buffer));
-  }catch(error){self.postMessage({id,error:String(error.message||error)});}
+  }catch(error){await discardInvalidTextWeights(error);self.postMessage({id,error:String(error.message||error)});}
 };

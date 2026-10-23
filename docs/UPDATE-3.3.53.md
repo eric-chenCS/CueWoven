@@ -1,0 +1,9 @@
+# CueWoven 3.3.53 beta
+
+Opening the popup no longer lets a late session restore overwrite new typing, cancel an early search, or replace filters already changed during startup. Untouched popups still restore their previous query and date filters.
+
+If ONNX rejects the cached MiniLM weight file as malformed protobuf data, CueWoven now discards just that weight entry before reporting the error. Retrying can download a valid copy without restarting the extension. Offline, timeout, memory and unrelated parsing errors keep valid downloads. Other models, saved memories and library data are preserved. If the cache itself is unavailable, the original model error still reaches the caller. This is scoped text-weight recovery, not general validation of every optional model asset.
+
+Model weights, precision, ranking, capture policy, permissions and feature defaults are unchanged. The new regression tests exercise actual popup searches and real ONNX inference, repaired-cache offline reload, and preserved unrelated cache entries. The earlier rare native Edge/V8 crashes remain unproven fixed; live YouTube captions in the isolated browser and physical low-RAM/multi-day testing remain separate gaps. Only the install ZIP is published; the store copy stays local.
+
+Validation: 406 unit tests and all 18 maintained Edge browser programs pass. Both new bug reproductions failed before the fixes. The original blocked/reset/corrupt/delayed-download matrix now passes, and 118 offline searches retain the published version's result order, timestamps, labels and filters. The shared browser fixture now waits for install initialization before setting test preferences; an earlier run's theme/capture failures were traced to test setup replacing its own website list, and those checks also pass on published runtime code with the corrected fixture. Dependency audit: zero known advisories.

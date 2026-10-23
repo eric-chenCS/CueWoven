@@ -19,8 +19,13 @@ module.exports = async function fixture({ sites = ["example.com", "instagram.com
   fs.writeFileSync(manifestPath, JSON.stringify(manifest));
   if (prepareExtension) await prepareExtension(extension);
   const context = await chromium.launchPersistentContext(path.join(directory, "profile"), { headless: true, executablePath: process.env.RECALL_BROWSER, viewport: { width: 1e3, height: 800 }, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`] });
-  const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker"), base = `chrome-extension://${new URL(worker.url()).hostname}`, options = await context.newPage();
-  await options.goto(`${base}/options/options.html`);
+  const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker"), base = `chrome-extension://${new URL(worker.url()).hostname}`;
+  // Reuse the install page; two settings pages can race first-run initialization.
+  let options;const setupDeadline=Date.now()+10000;
+  while(!(options=context.pages().find(page=>page.url().startsWith(base+'/options/options.html')))){
+    if(Date.now()>setupDeadline){await context.close();throw Error('Install settings page did not open');}
+    await new Promise(resolve=>setTimeout(resolve,50));
+  }
   const send = (msg) => options.evaluate((msg2) => chrome.runtime.sendMessage(msg2), msg), wait = async (predicate) => {
     const deadline = Date.now() + 18e4;
     do {
@@ -30,6 +35,10 @@ module.exports = async function fixture({ sites = ["example.com", "instagram.com
     } while (Date.now() < deadline);
     throw Error("Web integration timed out");
   };
+  try{
+    await options.waitForLoadState();
+    await wait(()=>options.evaluate(async()=> (await chrome.storage.local.get('webCapture')).webCapture?.siteDefaultsVersion===2));
+  }catch(error){await context.close();throw error;}
   const enable = async ({ audio = false, scenes = false, ocr = false, images = false } = {}) => {
     await options.evaluate(async ({ audio: audio2, scenes: scenes2, ocr: ocr2, images: images2, sites: sites2 }) => {
       await chrome.storage.local.set({ webCapture: { enabled: true, allSites: false, paused: false, domains: sites2, blocked: [], audio: audio2 }, settings: { enabled: true, dwellSeconds: 0, maxAgeDays: 0, scenesEnabled: scenes2, screenTextEnabled: ocr2, articleImagesEnabled:images2, speechEnabled: true } });
