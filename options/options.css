@@ -133,6 +133,8 @@ textarea { width: 100%; resize: vertical; margin: 0 0 10px; font-family: ui-mono
 .diagnostic-table th, .diagnostic-table td { padding: 8px 14px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
 .diagnostic-table tbody tr:last-child td { border-bottom: 0; }
 #capture-empty:not([hidden]) + .diagnostic-table { display: none; }
+#report { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+#report-text { font-family: inherit; font-size: 13px; }
 
 code { font-size: 12px; }
 .foot { color: var(--ink-3); font-size: 12px; border-top: 1px solid var(--line); padding-top: 16px; }

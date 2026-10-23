@@ -1,6 +1,6 @@
 # CueWoven privacy policy
 
-*Last updated: October 20, 2026*
+*Last updated: October 22, 2026*
 
 CueWoven is a browser extension that lets you search videos and pages you have watched or read. It processes and stores the library on your computer. There is no CueWoven account, developer-operated server, analytics or advertising. The extension does not send your library or search queries to the developer.
 
@@ -26,6 +26,7 @@ The library is stored in your browser profile on your computer, using the extens
 - **YouTube captions and transcripts** are requested from YouTube for the current video. These requests can use your existing YouTube session cookies; CueWoven does not send those cookies to the developer or an AI service.
 - **Article images** on allowed pages are fetched again without cookies so they can be processed locally.
 - **Thumbnails and the pages you open** load from their own websites. Those sites can receive ordinary connection information, and opening a result follows that site's normal cookie and privacy behavior.
+- **Problem reports** are never sent automatically. If you write one under Diagnostics, CueWoven can open a pre-filled GitHub issue for you to review and submit, or copy it to your clipboard. Opening the issue page passes the report text to GitHub in the page address; it is posted only if you submit it. A report contains only your description, CueWoven and browser versions, storage used and which features are turned on, not sites, history or searches. Issues submitted on GitHub are public and follow GitHub's privacy policy.
 
 ## Permissions
 

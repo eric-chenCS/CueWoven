@@ -1,4 +1,5 @@
 import { captureLabel } from "../lib/capture-reason.js";
+import { buildReport } from "../lib/bug-report.js";
 const $ = (id) => document.getElementById(id);
 async function refresh() {
   try {
@@ -24,4 +25,21 @@ $("diagnostics-clear").addEventListener("click", async () => {
   await chrome.runtime.sendMessage({type:'capture-log-clear'});
   refresh();
 });
+// The user-agent string hides minor versions; crash triage needs the exact browser build.
+async function browserVersion() {
+  const ua = await navigator.userAgentData?.getHighEntropyValues(["fullVersionList", "platformVersion"]).catch(() => null);
+  const brand = ua?.fullVersionList?.find((b) => b.brand === "Microsoft Edge") || ua?.fullVersionList?.find((b) => b.brand === "Chromium");
+  return brand ? `${brand.brand} ${brand.version} on ${ua.platform} ${ua.platformVersion}` : navigator.userAgent;
+}
+async function report() {
+  const [estimate, { settings }, userAgent] = await Promise.all([navigator.storage.estimate().catch(() => ({})), chrome.storage.local.get("settings"), browserVersion()]);
+  const manifest = chrome.runtime.getManifest();
+  return buildReport({ text: $("report-text").value, version: manifest.version_name || manifest.version, userAgent, storageMB: estimate.usage / 1024 / 1024, settings });
+}
+async function send(action, done) {
+  try { await action(await report()); $("report-msg").textContent = done; }
+  catch (error) { $("report-msg").textContent = error.message; }
+}
+$("report-open").addEventListener("click", () => send(({ url }) => chrome.tabs.create({ url }), "Opened GitHub. Review the report there, then submit it."));
+$("report-copy").addEventListener("click", () => send(({ body }) => navigator.clipboard.writeText(body), "Report copied. Paste it into an email or a GitHub issue."));
 refresh();
