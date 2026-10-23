@@ -1,8 +1,8 @@
 # CueWoven privacy policy
 
-*Last updated: October 22, 2026*
+*Last updated: October 23, 2026*
 
-CueWoven is a browser extension that lets you search videos and pages you have watched or read. It processes and stores the library on your computer. There is no CueWoven account, developer-operated server, analytics or advertising. The extension does not send your library or search queries to the developer.
+CueWoven is a Microsoft Edge extension (it also works in Chrome) that lets you search videos and pages you have watched or read. It processes and stores the library on your computer. There is no CueWoven account, developer-operated server, analytics or advertising. The extension does not send your library or search queries to the developer.
 
 ## What CueWoven saves
 
@@ -31,7 +31,7 @@ The library is stored in your browser profile on your computer, using the extens
 ## Permissions
 
 - **YouTube access** lets CueWoven read the video you are watching and its captions.
-- **Access to other websites** is optional. Chrome or Edge asks you before granting it, and only for the sites you choose.
+- **Access to other websites** is optional. Microsoft Edge (or Chrome) asks you before granting it, and only for the sites you choose.
 - **Storage and unlimited storage** keep your library on your computer.
 - **System memory** checks physical RAM locally to choose the initial Lite mode default for devices with 8 GB or less. The capacity value is not saved or sent to the developer; your Lite mode preference and a setup-complete flag are saved locally.
 - **Offscreen document, alarms and favicon** run the local search models in the background, remove old items on schedule, and show site icons in results.
@@ -49,9 +49,9 @@ Uninstalling CueWoven deletes its saved library from the browser.
 
 CueWoven is not directed at children under 13. The extension processes browsing content locally as described above; the developer does not receive that library data.
 
-## Limited Use
+## Store policies
 
-CueWoven's use of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including the Limited Use requirements. Browsing content is used only to provide the extension's local capture, search and data-management features. It is not sold or used for advertising, creditworthiness or lending decisions.
+CueWoven follows the Microsoft Edge Add-ons developer policies: browsing content is used only for the extension's single purpose of letting you search what you have watched or read, and it is not sold or transferred to third parties. When distributed through the Chrome Web Store, CueWoven's use of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including the Limited Use requirements. Browsing content is used only to provide the extension's local capture, search and data-management features. It is not sold or used for advertising, creditworthiness or lending decisions.
 
 ## Changes and contact
 
