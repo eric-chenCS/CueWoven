@@ -3,6 +3,8 @@ allowBuilds:
   onnxruntime-node: false
   protobufjs: false
   sharp: false
+  # Its postinstall only prints a funding message.
+  tesseract.js: false
 
 # This extension uses browser inference; native Node backends are unused.
 overrides:
