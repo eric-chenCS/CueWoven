@@ -15,7 +15,7 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),fs=re
   await popup.locator('.best .copy-link').click();assert.equal(await popup.evaluate(()=>window.copiedLink),sampleUrl);
   const player=await f.context.newPage();await player.goto(f.base+'/samples/player.html?id=rcDemo00001&t=8');
   await player.waitForFunction(()=>document.querySelector('video').readyState>=2&&document.querySelector('video').currentTime>=7.9);
-  assert.match(await player.locator('#caption').textContent(),/Repeated charging/);
+  assert.match(await player.locator('#caption').textContent(),/repeated charging/i);
   await player.close();
   const backup=await f.send({type:'export'});await f.send({type:'clear'});
   assert.equal((await f.send({type:'import',data:backup})).error,undefined);

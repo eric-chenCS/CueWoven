@@ -17,7 +17,7 @@ GitHub source downloads and clones omit generated runtime files. If you delibera
 
 ## First search
 
-Open CueWoven from its toolbar icon and choose **Try samples**. The five original demos let you search before collecting any history. Try “why does a phone battery hold less charge as it ages”, then press **Enter**. Initial model loading requires internet access and may take a little time.
+Open CueWoven from its toolbar icon and choose **Try samples**. The five original demos let you search before collecting any history. The search box is filled in with “why do batteries wear out”; press **Enter**. Initial model loading requires internet access and may take a little time.
 
 To test saving, use a normal, non-InPrivate/non-incognito window. Check **Library & settings → Settings → Save automatically**, then play a YouTube video in the visible tab. The default watch delay is 10 seconds for longer videos and up to 5 seconds for short videos; model setup and processing can take additional time. CueWoven attempts available captions and can collect played speech or visual evidence according to your settings. A saved title can appear before transcript processing finishes. The popup shows **Preparing searchable text…** while captions are being retrieved/indexed or initial player speech is being processed; wait for **Saved on this device** before expecting spoken-content matches. Open the popup and describe what you remember.
 

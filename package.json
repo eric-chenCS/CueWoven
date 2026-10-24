@@ -1,6 +1,6 @@
 {
   "name": "cuewoven-extension",
-  "version": "3.3.56",
+  "version": "3.3.57",
   "private": true,
   "packageManager": "pnpm@11.25.0",
   "description": "CueWoven: local semantic search over watched videos, articles and history, with optional website capture.",

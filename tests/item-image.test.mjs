@@ -14,7 +14,8 @@ test('website icons use the browser endpoint and only disclose the origin to it'
 test('saved scenes and YouTube thumbnails remain preferred, with local fallbacks for all kinds',()=>{
  const video={videoId:'aaaaaaaaaaa',image:'data:image/jpeg;base64,AAAA'};
  assert.deepEqual(imageSources(video,runtime),[video.image,'https://i.ytimg.com/vi/aaaaaaaaaaa/mqdefault.jpg',runtime.getURL('icons/web.svg')]);
- assert.deepEqual(imageSources({sample:true,videoId:'rcDemo00001'},runtime),[runtime.getURL('icons/web.svg')]);
+ assert.deepEqual(imageSources({sample:true,videoId:'rcDemo00001'},runtime),[runtime.getURL('samples/rcDemo00001.jpg'),runtime.getURL('icons/web.svg')]);
+ assert.deepEqual(imageSources({sample:true,videoId:'../evil'},runtime),[runtime.getURL('icons/web.svg')],'only bundled sample ids map to bundled posters');
  assert.deepEqual(imageSources({kind:'page',url:'invalid'},runtime),[runtime.getURL('icons/site.svg')]);
 });
 test('broken images fall through to the local icon without looping or keeping scene alt text',()=>{

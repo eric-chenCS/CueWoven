@@ -81,7 +81,7 @@ function renderLibrary() {
   if (!list.length) {
     const p = document.createElement('p');
     p.className = 'empty-lib';
-    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing indexed yet. Watch YouTube or enable website capture below.';
+    p.textContent = videos.length ? 'No items match that filter.' : 'Nothing saved yet. Watch a YouTube video, or open CueWoven from the toolbar and choose Try samples.';
     lib.append(p);
     return;
   }
