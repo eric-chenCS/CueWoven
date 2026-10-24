@@ -26,7 +26,7 @@ The library is stored in your browser profile on your computer, using the extens
 - **YouTube captions and transcripts** are requested from YouTube for the current video. These requests can use your existing YouTube session cookies; CueWoven does not send those cookies to the developer or an AI service.
 - **Article images** on allowed pages are fetched again without cookies so they can be processed locally.
 - **Thumbnails and the pages you open** load from their own websites. Those sites can receive ordinary connection information, and opening a result follows that site's normal cookie and privacy behavior.
-- **Problem reports** are never sent automatically. If you write one under Diagnostics, CueWoven can open a pre-filled GitHub issue for you to review and submit, or copy it to your clipboard. Opening the issue page passes the report text to GitHub in the page address; it is posted only if you submit it. A report contains only your description, CueWoven and browser versions, storage used and which features are turned on, not sites, history or searches. Issues submitted on GitHub are public and follow GitHub's privacy policy.
+- **Problem reports** are never sent automatically. If you write one under Diagnostics, CueWoven can open a pre-filled email to support@fusilite.com in your email app for you to review and send, or copy it to your clipboard. It is sent only if you send the email yourself. A report contains only your description, CueWoven and browser versions, storage used and which features are turned on, not sites, history or searches.
 
 ## Permissions
 
@@ -55,4 +55,4 @@ CueWoven follows the Microsoft Edge Add-ons developer policies: browsing content
 
 ## Changes and contact
 
-Changes to this policy will be posted here with a new date. Questions can be sent to [support@fusilite.com](mailto:support@fusilite.com) or asked on the project's [GitHub issues page](https://github.com/eric-chenCS/CueWoven/issues).
+Changes to this policy will be posted here with a new date. Questions can be sent to [support@fusilite.com](mailto:support@fusilite.com).

@@ -9,8 +9,8 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 | Name | CueWoven: Search Your History (from the manifest) |
 | Category | Productivity |
 | Language | English |
-| Homepage / website | https://github.com/eric-chenCS/CueWoven |
-| Support | https://github.com/eric-chenCS/CueWoven/issues |
+| Homepage / website | https://fusilite.com |
+| Support | support@fusilite.com |
 | Privacy policy URL | https://fusilite.com/cuewoven/privacy/ |
 | Pricing | Free, no in-app purchases |
 

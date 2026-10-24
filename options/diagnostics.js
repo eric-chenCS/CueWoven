@@ -40,6 +40,8 @@ async function send(action, done) {
   try { await action(await report()); $("report-msg").textContent = done; }
   catch (error) { $("report-msg").textContent = error.message; }
 }
-$("report-open").addEventListener("click", () => send(({ url }) => chrome.tabs.create({ url }), "Opened GitHub. Review the report there, then submit it."));
-$("report-copy").addEventListener("click", () => send(({ body }) => navigator.clipboard.writeText(body), "Report copied. Paste it into an email or a GitHub issue."));
+// A link click hands mailto: to the email app; opening it as a tab would leave an empty tab behind.
+const openLink = (url) => Object.assign(document.createElement("a"), { href: url }).click();
+$("report-open").addEventListener("click", () => send(({ url }) => openLink(url), "Opened a new email to support@fusilite.com. Review it, then send it. If no email app opened, use Copy report instead."));
+$("report-copy").addEventListener("click", () => send(({ body }) => navigator.clipboard.writeText(body), "Report copied. Paste it into an email to support@fusilite.com."));
 refresh();
