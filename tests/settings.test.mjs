@@ -7,7 +7,7 @@ test('reset preferences restores capture/search/appearance without changing rete
  assert.deepEqual(settings,original);
  for(const key of ['enabled','lightMode','scenesEnabled','screenTextEnabled','speechEnabled','dwellSeconds','perVideo'])assert.equal(result.settings[key],DEFAULT_SETTINGS[key]);
  assert.equal(result.settings.maxAgeDays,0);assert.equal(result.settings.importMaxAgeDays,90);assert.equal(result.settings.sceneStorageMB,1024);assert.equal(result.settings.otherPreference,'keep');
- assert.equal(result.theme,'system');
+ assert.equal(result.theme,'light');
  assert.deepEqual(Object.keys(result).sort(),['settings','theme']);
  assert.deepEqual(resetPreferences().settings,DEFAULT_SETTINGS);
  assert.equal(resetPreferences({maxAgeDays:7,importMaxAgeDays:0}).settings.importMaxAgeDays,0);

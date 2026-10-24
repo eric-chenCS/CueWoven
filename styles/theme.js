@@ -1,6 +1,8 @@
 (() => {
-  const valid = value => ['light', 'dark'].includes(value) ? value : 'system';
-  let current = 'system';
+  // Light unless the person picks Dark or System; set before storage loads so pages never flash dark.
+  const valid = value => ['dark', 'system'].includes(value) ? value : 'light';
+  let current = 'light';
+  document.documentElement.dataset.theme = current;
   function apply(value) {
     current = valid(value);
     if (current === 'system') delete document.documentElement.dataset.theme;
