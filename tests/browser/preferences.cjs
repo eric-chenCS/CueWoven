@@ -5,11 +5,9 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  const labels=async selector=>(await f.options.locator(selector).allTextContents()).map(text=>text.replace(' (default option)',''));
  for(const id of ['maxAgeDays'])assert.deepEqual(await labels('#'+id+' option'),expected);
  assert.equal(await f.options.locator('#sec-capture #theme').count(),1);
- const defaults={theme:'light',dwellSeconds:'10',maxAgeDays:'28',sceneStorageMB:'240'};
+ const defaults={theme:'system',dwellSeconds:'10',maxAgeDays:'28',sceneStorageMB:'240'};
  for(const [id,value] of Object.entries(defaults)){const option=f.options.locator('#'+id+' option[data-default]');assert.equal(await option.count(),1);assert.equal(await option.getAttribute('value'),value);assert.match(await option.textContent(),/\(default option\)/);}
- const popup=await f.context.newPage();await popup.emulateMedia({colorScheme:'dark'});await popup.goto(f.base+'/popup/popup.html');
- // A fresh install is light even when the system is dark.
- assert.equal(await popup.evaluate(()=>document.documentElement.dataset.theme),'light');
+ const popup=await f.context.newPage();await popup.goto(f.base+'/popup/popup.html');
  for(const theme of ['light','dark']){
   const opposite=theme==='dark'?'light':'dark';await f.options.emulateMedia({colorScheme:opposite});await popup.emulateMedia({colorScheme:opposite});
   await f.options.locator('#theme').selectOption(theme);
@@ -49,13 +47,13 @@ const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=
  await f.options.locator('#reset-settings').click();await f.options.waitForFunction(()=>document.querySelector('#reset-msg').textContent.startsWith('Settings reset'));
  const reset=await f.options.evaluate(()=>chrome.storage.local.get(['settings','theme','singleVideoView','otherData']));
  for(const [key,value] of Object.entries({enabled:true,lightMode:false,speechEnabled:true,scenesEnabled:false,screenTextEnabled:true,dwellSeconds:10,perVideo:2,maxAgeDays:0,importMaxAgeDays:90}))assert.equal(reset.settings[key],value,key);
- assert.equal(reset.theme,'light');assert.equal(reset.otherData,'keep');
+ assert.equal(reset.theme,'system');assert.equal(reset.otherData,'keep');
  assert.deepEqual(await f.send({type:'list'}),libraryBefore);
  assert.deepEqual(await f.options.evaluate(()=>chrome.storage.local.get('webCapture')),sitesBefore);
  assert.deepEqual(await f.options.evaluate(()=>chrome.permissions.getAll()),permissionsBefore);
  for(const key of ['speechEnabled','scenesEnabled','screenTextEnabled'])assert.equal(await f.options.locator('#'+key).isDisabled(),false);
  await f.options.reload();await f.options.waitForFunction(()=>document.querySelector('#lightMode').checked===false&&document.querySelector('#dwellSeconds').value==='10');
- assert.equal(await f.options.locator('#theme').inputValue(),'light');assert.equal(await f.options.locator('#dwellSeconds').inputValue(),'10');
+ assert.equal(await f.options.locator('#theme').inputValue(),'system');assert.equal(await f.options.locator('#dwellSeconds').inputValue(),'10');
  await f.options.locator('#sec-capture').screenshot({path:path.join(process.env.RECALL_SCREENSHOT_DIR||os.tmpdir(),'recall-v3.3.6-settings.png')});
  await f.options.evaluate(()=>{window.realSave=chrome.storage.local.set.bind(chrome.storage.local);chrome.storage.local.set=async()=>{throw Error('Controlled storage failure');};});
  await f.options.locator('#reset-settings').click();await f.options.waitForFunction(()=>document.querySelector('#reset-msg').textContent.includes('Could not reset settings: Controlled storage failure'));

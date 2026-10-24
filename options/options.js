@@ -147,7 +147,7 @@ function setControls() {
 // ---------------------------------------------------------------------------
 // Settings
 // ---------------------------------------------------------------------------
-for (const [id, value] of Object.entries({ ...DEFAULTS, theme: 'light' })) {
+for (const [id, value] of Object.entries({ ...DEFAULTS, theme: 'system' })) {
   const control = $(id);
   if (control?.tagName === 'SELECT') {
     const option = [...control.options].find(option => option.value === String(value));
