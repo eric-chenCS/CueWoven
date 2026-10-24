@@ -6,7 +6,7 @@ export function createOcrModel(onState=()=>{},load=async()=>{
   const worker=await createWorker('eng',1,{
     workerPath:chrome.runtime.getURL('vendor/ocr/worker.min.js'),
     corePath:chrome.runtime.getURL('vendor/ocr/'),langPath:chrome.runtime.getURL('vendor/ocr'),
-    workerBlobURL:false,cacheMethod:'none',
+    workerBlobURL:false,cacheMethod:'none',gzip:false, // store packages may not contain compressed files
   });
   return {worker,PSM};
 },{timeoutMs=20000,idleMs=60000}={}) {

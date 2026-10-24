@@ -11,7 +11,7 @@ CueWoven runs in desktop Chrome and Microsoft Edge. The manifest requires Chromi
 5. Enable **Developer mode**, click **Load unpacked**, and select the folder that directly contains `manifest.json`. If extraction created an outer folder, open it and select the inner extension folder.
 6. Confirm CueWoven appears and is enabled. Refresh any YouTube or website tabs that were open before installation, then open CueWoven from the extensions menu. Pin it if you want quick toolbar access.
 
-The selected folder must contain both `manifest.json` and `vendor/`. The runtime includes `vendor/transformers.bundle.js`, the ONNX `.mjs` and `.wasm` files, and the OCR files under `vendor/ocr/`, including `ocr.bundle.js`, `worker.min.js` and `eng.traineddata.gz`. Keep the whole folder in place after loading it.
+The selected folder must contain both `manifest.json` and `vendor/`. The runtime includes `vendor/transformers.bundle.js`, the ONNX `.mjs` and `.wasm` files, and the OCR files under `vendor/ocr/`, including `ocr.bundle.js`, `worker.min.js` and `eng.traineddata`. Keep the whole folder in place after loading it.
 
 GitHub source downloads and clones omit generated runtime files. If you deliberately use source code, complete [Build from source](CONTRIBUTING.md#build-from-source) before loading it.
 

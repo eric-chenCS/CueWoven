@@ -2,10 +2,11 @@
 // Chrome MV3 extensions can't load code from a CDN, so these must ship inside the extension.
 // Run with:  pnpm run setup   (installs packages, then runs this)
 import { build } from 'esbuild';
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {createRequire} from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { gunzipSync } from 'node:zlib';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const vendor = join(root, 'vendor');
@@ -73,7 +74,9 @@ const ocrRequire=createRequire(require.resolve('tesseract.js/package.json'));
 const notices=[['is-url','LICENSE-MIT'],['regenerator-runtime','LICENSE'],['wasm-feature-detect','LICENSE'],['zlibjs','LICENSE']].map(([name,file])=>name+'\n'+readFileSync(join(dirname(ocrRequire.resolve(name+'/package.json')),file),'utf8'));
 writeFileSync(join(root,'licenses/tesseract-dependencies.txt'),notices.join('\n\n'));
 for(const name of ['tesseract-core-lstm.wasm.js','tesseract-core-simd-lstm.wasm.js','tesseract-core-relaxedsimd-lstm.wasm.js'])copyFileSync(join(core,name),join(ocr,name));
-copyFileSync(join(nm,'@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz'),join(ocr,'eng.traineddata.gz'));
+// Edge Add-ons rejects packages that contain compressed files, so ship the language data unzipped.
+writeFileSync(join(ocr,'eng.traineddata'),gunzipSync(readFileSync(join(nm,'@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz'))));
+rmSync(join(ocr,'eng.traineddata.gz'),{force:true});
 copyFileSync(join(nm,'tesseract.js/LICENSE.md'),join(root,'licenses/tesseract-LICENSE.txt'));
 copyFileSync(join(core,'LICENSE'),join(root,'licenses/tesseract-core-LICENSE.txt'));
 console.log('✓ bundled local OCR worker, LSTM cores and English data');

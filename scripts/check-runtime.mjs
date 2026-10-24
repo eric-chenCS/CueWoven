@@ -1,4 +1,4 @@
-import {readFileSync,statSync} from 'node:fs';
+import {existsSync,readFileSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 
 export function checkRuntime(root) {
@@ -12,9 +12,10 @@ export function checkRuntime(root) {
   const onnx=[...new Set(bundle.match(/ort-wasm[a-z0-9.-]*\.(?:wasm|mjs)/g)||[])];
   if(!onnx.some(file=>file.endsWith('.wasm'))||!onnx.some(file=>file.endsWith('.mjs')))throw Error('Cannot identify the bundled ONNX runtime files.');
   const files=['vendor/transformers.bundle.js',...onnx.map(file=>'vendor/'+file),
-    'vendor/ocr/ocr.bundle.js','vendor/ocr/worker.min.js','vendor/ocr/eng.traineddata.gz',
+    'vendor/ocr/ocr.bundle.js','vendor/ocr/worker.min.js','vendor/ocr/eng.traineddata',
     ...['','simd-','relaxedsimd-'].map(kind=>'vendor/ocr/tesseract-core-'+kind+'lstm.wasm.js')];
   files.forEach(requireFile);
+  if(existsSync(join(root,'vendor/ocr/eng.traineddata.gz')))throw Error('Remove vendor/ocr/eng.traineddata.gz: store packages may not contain compressed files. Run "pnpm run vendor".');
   for(const file of files.filter(file=>file.endsWith('.wasm'))){
     if(!readFileSync(join(root,file)).subarray(0,4).equals(Buffer.from([0,97,115,109])))throw Error('Invalid WASM runtime file: '+file);
   }

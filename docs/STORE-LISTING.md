@@ -82,9 +82,14 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 ## Microsoft Edge Add-ons (Partner Center)
 
 - Use the same ZIP, category and images. Use Edge-specific wording in the description and privacy policy; Microsoft requires the policy to primarily refer to Microsoft Edge. Do not copy Chrome dashboard labels into the Edge listing.
-- **Search terms** (up to 7): video search, history search, transcript search, YouTube history, local AI, memory, find video
-- **Notes for certification:** paste the reviewer notes above.
-- Edge requires the description to be at least 250 characters; the detailed description above qualifies.
+- **Package:** Edge rejects packages that contain compressed files ("The uploaded package consists of a compressed file"), so the OCR language data ships as `vendor/ocr/eng.traineddata`, not `.gz`. `check-runtime.mjs` fails packaging if the `.gz` reappears.
+- **Availability:** Public, all markets.
+- **Properties:** Category Productivity; Website https://fusilite.com; Support contact support@fusilite.com; Mature content unchecked.
+- **Privacy page:** Edge asks the same questions as the Chrome privacy tab. Use the single purpose, permission justifications, remote code answer ("No, I am not using remote code"), data usage and certifications above, and the privacy policy URL from Shared details.
+- **Store listing:** description above (Edge requires 250 to 10,000 characters), logo `store/logo-300.png`, small promotional tile `store/promo-small-440x280.png`, the four 1280×800 screenshots (up to 6 allowed). The large promotional tile (1400×560) is optional and not provided.
+- **YouTube video URL** (optional): the demo video. Microsoft asks that ads be turned off on it.
+- **Search terms** (up to 7 terms, 30 characters each, 21 words total): video search, history search, transcript search, YouTube history, local AI, memory, find video
+- **Notes for certification:** paste the reviewer notes above, followed by: "Bundled JavaScript and WebAssembly (Transformers.js, ONNX Runtime, Tesseract.js) are unmodified npm releases bundled by scripts/vendor.mjs; source is at https://github.com/eric-chenCS/CueWoven."
 
 ## Images
 
