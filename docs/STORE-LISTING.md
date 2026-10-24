@@ -86,7 +86,7 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 - **Availability:** Public, all markets.
 - **Properties:** Category Productivity; Website https://fusilite.com; Support contact support@fusilite.com; Mature content unchecked.
 - **Privacy page:** Edge asks the same questions as the Chrome privacy tab. Use the single purpose, permission justifications, remote code answer ("No, I am not using remote code"), data usage and certifications above, and the privacy policy URL from Shared details.
-- **Store listing:** description above (Edge requires 250 to 10,000 characters), logo `store/logo-300.png`, small promotional tile `store/promo-small-440x280.png`, the four 1280×800 screenshots (up to 6 allowed). The large promotional tile (1400×560) is optional and not provided.
+- **Store listing:** description above (Edge requires 250 to 10,000 characters), logo `store/logo-300.png`, small promotional tile `store/promo-small-440x280.png`, the four 1280×800 screenshots (up to 6 allowed). large promotional tile `store/promo-large-1400x560.png`.
 - **YouTube video URL** (optional): the demo video. Microsoft asks that ads be turned off on it.
 - **Search terms** (up to 7 terms, 30 characters each, 21 words total): video search, history search, transcript search, YouTube history, local AI, memory, find video
 - **Notes for certification:** paste the reviewer notes above, followed by: "Bundled JavaScript and WebAssembly (Transformers.js, ONNX Runtime, Tesseract.js) are unmodified npm releases bundled by scripts/vendor.mjs; source is at https://github.com/eric-chenCS/CueWoven."
@@ -100,6 +100,7 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 | store/screenshot-3-dates.png | 1280×800 | Say when you saw it ("today") |
 | store/screenshot-4-library.png | 1280×800 | Library & settings |
 | store/promo-small-440x280.png | 440×280 | Chrome small promo tile (required) |
+| store/promo-large-1400x560.png | 1400×560 | Edge large promotional tile (optional) |
 | store/logo-300.png | 300×300 | Edge extension logo (Microsoft's recommended size) |
 | icons/icon128.png | 128×128 | Chrome store icon |
 
