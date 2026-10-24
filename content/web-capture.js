@@ -183,16 +183,16 @@
       }
       if (force || Date.now() - eligibleAt >= 5e3 && Date.now() - lastChecked >= 1e4 && (!lastSaved || Date.now() - lastSaved >= 6e4)) {
         lastChecked = Date.now();
-        const google = /^(?:www\.)?google\.[a-z.]+$/i.test(location.hostname) && location.pathname === "/search", text = google ? "" : pageText(), title = google ? new URL(location.href).searchParams.get("q") || document.title : document.title;
-        if ((text !== lastText || Date.now() - lastSaved >= 6e4 || force) && (text.length >= 40 || google || force)) {
-          const result = await send({ type: "web-capture", kind: google ? "search" : "page", url: pageUrl, title, text });
+        const query = P.searchQuery(new URL(location.href)), searchPage = query !== null, text = searchPage ? "" : pageText(), title = searchPage ? query || document.title : document.title;
+        if ((text !== lastText || Date.now() - lastSaved >= 6e4 || force) && (text.length >= 40 || searchPage || force)) {
+          const result = await send({ type: "web-capture", kind: searchPage ? "search" : "page", url: pageUrl, title, text });
           report(result.error ? "model-error" : result.unchanged ? "duplicate" : result.ok ? "saved" : "hidden");
           if (result.ok) {
             lastText = text;
             lastSaved = Date.now();
           }
           if (force) return result;
-        } else if (text.length < 40 && !google && !videoInfo) report("too-short");
+        } else if (text.length < 40 && !searchPage && !videoInfo) report("too-short");
       }
       globalThis.__recallArticleImages?.tick({url:pageUrl,enabled:!settings.lightMode&&settings.articleImagesEnabled===true,ready:lastSaved>0,isAllowed:()=>eligible()&&!document.hidden&&!settings.lightMode&&settings.articleImagesEnabled===true}).catch(()=>{});
     } finally {

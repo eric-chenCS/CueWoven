@@ -1,6 +1,6 @@
 # CueWoven privacy policy
 
-*Last updated: October 23, 2026*
+*Last updated: October 24, 2026*
 
 CueWoven is a Microsoft Edge extension (it also works in Chrome) that lets you search videos and pages you have watched or read. It processes and stores the library on your computer. There is no CueWoven account, developer-operated server, analytics or advertising. The extension does not send your library or search queries to the developer.
 
@@ -12,7 +12,7 @@ Only on YouTube and on websites you choose to allow, CueWoven saves:
 - **Speech text:** if a video has no captions, an English transcript of the audio you played, made on your computer. Audio is buffered temporarily for processing and is not retained in the library or backup.
 - **Scenes and on-screen text:** sampled still frames from videos you watch and text read from them.
 - **Page text:** up to 2,000 visible words from allowed pages, up to three visible article images, and their captions.
-- **Google searches:** only if you turn on "Save my Google searches" (off by default).
+- **Web searches:** your searches on Google, Bing, DuckDuckGo, Yahoo, Brave Search and Ecosia, only if you turn on "Save my web searches" (off by default). Obvious medical searches are never saved.
 
 CueWoven does not capture incognito windows, and it skips known private services, sign-in and account pages, and sensitive routes. It also removes some text patterns that look like personal data, such as email addresses, phone numbers, card numbers, recognizable API keys, authorization tokens and private-key blocks. Secret detection is best-effort and does not cover every credential format. These filters reduce unwanted capture but cannot recognize every private page, and saved images are not redacted.
 

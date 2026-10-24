@@ -101,6 +101,17 @@ test('new private routes are blocked while public articles about those topics st
   assert.equal(policy.allowed(url,{enabled:true,allSites:true}),false);
   assert.equal(policy.allowed(url,{enabled:true,allSites:true,searches:true}),true);
 });
+test('every major search engine follows the web searches setting and the medical filter',()=>{
+  const searches={'https://www.bing.com/search?q=coral+reefs&form=QBLH':'q','https://www.bing.com/videos/search?q=coral+reefs':'q','https://duckduckgo.com/?q=coral+reefs&ia=web':'q','https://html.duckduckgo.com/html/?q=coral+reefs':'q','https://search.yahoo.com/search?p=coral+reefs&fr=yfp':'p','https://search.brave.com/search?q=coral+reefs':'q','https://www.ecosia.org/search?q=coral+reefs':'q','https://www.google.co.uk/search?q=coral+reefs&sca=1':'q'};
+  for(const [url,key] of Object.entries(searches)){
+    const safe=policy.safeUrl(url);
+    assert.equal(safe.search,'?'+key+'=coral%20reefs',url);assert.equal(policy.searchQuery(safe),'coral reefs',url);
+    assert.equal(policy.allowed(url,{enabled:true,allSites:true}),false,url);
+    assert.equal(policy.allowed(url,{enabled:true,allSites:true,searches:true}),true,url);
+    assert.equal(policy.safeUrl(url.replace('coral+reefs','diabetes+treatment')),null,url);
+  }
+  for(const url of ['https://www.bing.com/','https://duckduckgo.com/about','https://www.bing.com/maps?q=coral','https://en.wikipedia.org/w/index.php?search=coral'])assert.equal(policy.searchUrl(new URL(url)),false,url);
+});
 test('personal text is redacted and suggestion markup cannot inject formatting',()=>{
   const text=policy.redactText('Contact eric@example.com or (212) 555-0199. SSN 123-45-6789 card 4111 1111 1111 1111. Coral reefs are colorful.');
   for(const secret of ['eric@example.com','555-0199','123-45-6789','4111'])assert.ok(!text.includes(secret));

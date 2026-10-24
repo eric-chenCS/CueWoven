@@ -6,7 +6,7 @@ Copy these answers into each dashboard. Upload `cuewoven-store-v<version>.zip` f
 
 | Field | Value |
 |---|---|
-| Name | CueWoven – Search Your History (from the manifest) |
+| Name | CueWoven: Search Your History (from the manifest) |
 | Category | Productivity |
 | Language | English |
 | Homepage / website | https://github.com/eric-chenCS/CueWoven |
@@ -77,7 +77,7 @@ Leave all others unchecked. Note in any free-text field that this data is stored
 
 **Notes for the reviewer (Test instructions field):**
 
-> No account is needed. Install, complete first-run setup, and open a public YouTube video. After the configured watch delay and model setup, available evidence appears under Library & settings. For a repeatable demonstration, click "Try sample videos" in the popup to load five bundled demos, search "why do batteries wear out", and press Enter. All inference is local. Network requests include model downloads from Hugging Face and its download infrastructure, YouTube caption/transcript requests, permitted article-image fetches, and thumbnails. Download hosts and content sites receive ordinary connection information; saved content and search queries are not sent to an AI service or the developer. Pause saving while a caption request is pending to verify that the late result is discarded.
+> No account is needed. Install, complete first-run setup, and open a public YouTube video. After the configured watch delay and model setup, available evidence appears under Library & settings. For a repeatable demonstration, click "Try samples" in the popup to load five bundled demos, search "why do batteries wear out", and press Enter. All inference is local. Network requests include model downloads from Hugging Face and its download infrastructure, YouTube caption/transcript requests, permitted article-image fetches, and thumbnails. Download hosts and content sites receive ordinary connection information; saved content and search queries are not sent to an AI service or the developer. Pause saving while a caption request is pending to verify that the late result is discarded.
 
 ## Microsoft Edge Add-ons (Partner Center)
 

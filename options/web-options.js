@@ -213,7 +213,7 @@ $("web-all").addEventListener("change", (event) => run(async () => {
   if (isOn()) await requestAccess(ALL_ORIGINS);
   await save({ allSites: true }, isOn() ? "Now saving from eligible public websites." : "Eligible public websites will be saved once you turn saving on.");
 }));
-$("web-searches").addEventListener("change", (event) => run(() => save({ searches: event.target.checked }, event.target.checked ? "Google searches will be saved." : "Google searches won't be saved.")));
+$("web-searches").addEventListener("change", (event) => run(() => save({ searches: event.target.checked }, event.target.checked ? "Web searches will be saved." : "Web searches won't be saved.")));
 $("web-audio").addEventListener("change", (event) => run(() => save({ audio: event.target.checked })));
 
 chrome.storage.onChanged.addListener((changes, area) => {

@@ -1,7 +1,7 @@
 const fixture=require('./web-fixture.cjs'),assert=require('assert/strict'),path=require('path'),os=require('os');
 (async()=>{const f=await fixture();try{
  const manifest=await f.options.evaluate(()=>chrome.runtime.getManifest());
- assert.equal(manifest.name,'CueWoven – Search Your History');assert.equal(manifest.short_name,'CueWoven');assert.equal(manifest.action.default_title,'CueWoven');
+ assert.equal(manifest.name,'CueWoven: Search Your History');assert.equal(manifest.short_name,'CueWoven');assert.equal(manifest.action.default_title,'CueWoven');
  assert.equal(manifest.commands._execute_action.suggested_key.default,'Ctrl+Shift+F');assert.equal(manifest.omnibox,undefined,'no address-bar keyword');
  assert.equal(await f.options.locator('.brand h1').innerText(),'CueWoven');assert.match(await f.options.title(),/^CueWoven /);
  const oldTitle='Recall techniques in psychology',videoId='rename00001';

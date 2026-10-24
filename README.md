@@ -17,7 +17,7 @@ CueWoven is a local-first extension for desktop Chrome and Microsoft Edge. No ac
 1. Use desktop Chrome or Microsoft Edge. Open the [latest release](https://github.com/eric-chenCS/CueWoven/releases/latest), expand **Assets** if needed, and download **`cuewoven-v<version>.zip`**. You do not need Node.js or pnpm for this download.
 2. Extract the **entire ZIP** into a permanent folder. On Windows, use **Extract All** before proceeding. Keep `manifest.json` and the `vendor/` folder together; do not move only the manifest or open files inside the ZIP.
 3. Open `chrome://extensions` or `edge://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select the extracted folder that directly contains `manifest.json`; open an inner folder first if extraction created an extra outer folder.
-4. Confirm CueWoven is enabled, then refresh any YouTube or website tabs that were already open. Open CueWoven from the toolbar and choose **Try sample videos**.
+4. Confirm CueWoven is enabled, then refresh any YouTube or website tabs that were already open. Open CueWoven from the toolbar and choose **Try samples**.
 5. Wait for the search model to finish loading, search **“why do batteries wear out”**, then press **Enter** to show matches. Open a result to visit the matching moment.
 
 The first use of a model requires an internet connection to download its files. Setup time depends on the connection and your computer.
@@ -30,7 +30,7 @@ The named release asset includes the browser runtime. **Code → Download ZIP**,
 
 Watch YouTube videos as usual. YouTube is the only default capture site. After the watch delay, CueWoven attempts to save available captions and video information. When captions are unavailable, local English speech recognition starts automatically while you play the video. Missing or undetermined language metadata also allows an English attempt; known non-English audio is skipped. Control transcription under **Library & settings → Settings**, not in the search popup. Enabled visual features sample scenes and read on-screen text.
 
-To save pages from other websites, choose sites during first-run setup or add them under **Library & settings → Websites**, grant browser access, and refresh already-open tabs. Website audio transcription and saving Google searches are off by default. Only compatible browser video players are supported; protected players may prevent capture.
+To save pages from other websites, choose sites during first-run setup or add them under **Library & settings → Websites**, grant browser access, and refresh already-open tabs. Website audio transcription and saving web searches are off by default. Only compatible browser video players are supported; protected players may prevent capture.
 
 Videos are saved as you watch them. The default watch delay is 10 seconds for longer videos and up to 5 seconds for short videos. The popup shows **Preparing searchable text…** while captions or initial player speech are processing. CueWoven does not scan previous browser visits, import Google Takeout files, or accept pasted video links for background transcript fetching. You can restore a library previously exported from CueWoven.
 

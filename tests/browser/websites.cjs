@@ -63,7 +63,7 @@ const SUGGESTED=31;
   const more=o.locator('details.fold',{has:o.locator('#web-all')});
   assert.equal(await more.evaluate(n=>n.open),false);
   await more.locator('summary').first().click();
-  await o.locator('#web-searches').check();await msg('Google searches will be saved');
+  await o.locator('#web-searches').check();await msg('Web searches will be saved');
   await o.locator('#web-audio').check();await o.waitForFunction(()=>document.querySelector('#web-options-summary').textContent==='Selected: searches, video audio');
   await o.evaluate(()=>chrome.storage.local.get('settings').then(({settings})=>chrome.storage.local.set({settings:{...settings,lightMode:true}})));
   await o.waitForFunction(()=>document.querySelector('#web-options-summary').textContent.includes('paused by Lite mode'));

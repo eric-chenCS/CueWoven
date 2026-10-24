@@ -68,3 +68,12 @@ test("query expiry, bounded LRU size, filters and failures trigger fresh work", 
   await assert.rejects(cache.get("error", 0, 1), /broken/);
   assert.equal(calls, 7);
 });
+
+test('a search that ran before the image model was ready is asked again, as the popup tells the user to', async () => {
+  let calls = 0;
+  const cache = createQueryCache(async () => ({results: [{id: ++calls}], visualPending: calls === 1}));
+  assert.equal((await cache.get('q', 0, 1, {retryPending: true})).visualPending, true);
+  const again = await cache.get('q', 0, 1, {retryPending: true});
+  assert.equal(again.results[0].id, 2); assert.equal(again.visualPending, false);
+  await cache.get('q', 0, 1, {retryPending: true}); assert.equal(calls, 2, 'complete results stay cached');
+});
